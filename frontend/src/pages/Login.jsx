@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
+import API from "../api/api";
 import { useNavigate } from "react-router-dom";
 
 const Login = () => {
@@ -23,7 +23,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:5004/api/users/login", formData);
+      const res = await API.post("/users/login", formData);
 
       console.log(res.data.user);
 

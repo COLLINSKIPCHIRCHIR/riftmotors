@@ -7,7 +7,7 @@ import {
 } from "../controllers/estimateController.js";
 import { convertEstimate } from "../controllers/spareInvoiceController.js";
 
-import { validateEstimate } from "../validators/estimateValidators.js";
+import { validateEstimate } from "../validators/estimatevalidators.js";
 import { validateRequest } from "../middleware/validateRequest.js";
 
 
