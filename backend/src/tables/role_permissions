@@ -1,0 +1,111 @@
+CREATE TABLE role_permissions (
+
+id SERIAL PRIMARY KEY,
+
+role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+
+permission_id INTEGER NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+
+UNIQUE(role_id, permission_id)
+
+);
+
+
+INSERT INTO role_permissions(role_id, permission_id)
+
+SELECT
+    r.id,
+    p.id
+
+FROM roles r
+CROSS JOIN permissions p
+
+WHERE r.name='Boss';
+
+
+
+INSERT INTO role_permissions(role_id, permission_id)
+
+SELECT
+    r.id,
+    p.id
+
+FROM roles r
+CROSS JOIN permissions p
+
+WHERE r.name='admin';
+
+
+
+INSERT INTO role_permissions(role_id, permission_id)
+
+SELECT
+r.id,
+p.id
+
+FROM roles r
+JOIN permissions p
+ON TRUE
+
+WHERE r.name='Sales Manager'
+
+AND (
+
+p.module='vehicles'
+
+OR p.module='customers'
+
+OR p.module='reports'
+
+OR p.name='inventory.view'
+
+);
+
+
+
+INSERT INTO role_permissions(role_id, permission_id)
+
+SELECT
+    r.id,
+    p.id
+
+FROM roles r
+JOIN permissions p
+ON TRUE
+
+WHERE r.name='Manager'
+
+AND p.name NOT IN (
+
+'users.delete',
+
+'roles.edit',
+
+'permissions.assign',
+
+'settings.edit'
+
+);
+
+
+INSERT INTO role_permissions(role_id, permission_id)
+
+SELECT
+r.id,
+p.id
+
+FROM roles r
+JOIN permissions p
+ON TRUE
+
+WHERE r.name='Service Advisor'
+
+AND (
+
+p.module='services'
+
+OR p.module='customers'
+
+OR p.module='vehicles'
+
+);

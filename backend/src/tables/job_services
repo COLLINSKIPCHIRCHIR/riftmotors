@@ -1,0 +1,18 @@
+CREATE TABLE job_services (
+
+id SERIAL PRIMARY KEY,
+
+
+job_id INTEGER REFERENCES service_jobs(id)
+ON DELETE CASCADE,
+
+
+service_id INTEGER REFERENCES service_catalog(id),
+
+
+quantity INTEGER DEFAULT 1,
+
+
+price DECIMAL(10,2)
+
+);

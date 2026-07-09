@@ -1,0 +1,38 @@
+CREATE TABLE customer_vehicles (
+
+id SERIAL PRIMARY KEY,
+
+
+customer_id INTEGER REFERENCES customers(id)
+ON DELETE CASCADE,
+
+
+registration_number VARCHAR(50) UNIQUE NOT NULL,
+
+
+make VARCHAR(100),
+
+model VARCHAR(100),
+
+year INTEGER,
+
+
+mileage INTEGER,
+
+
+color VARCHAR(50),
+
+
+fuel_type VARCHAR(50),
+
+transmission VARCHAR(50),
+
+
+engine_number VARCHAR(100),
+
+chassis_number VARCHAR(100),
+
+
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+);

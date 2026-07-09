@@ -1,0 +1,50 @@
+CREATE TABLE job_parts (
+
+id SERIAL PRIMARY KEY,
+
+
+job_id INTEGER REFERENCES service_jobs(id)
+ON DELETE CASCADE,
+
+
+sparepart_id INTEGER REFERENCES spareparts(id),
+
+
+quantity INTEGER,
+
+
+unit_price DECIMAL(10,2)
+
+);
+
+
+ALTER TABLE job_parts
+ADD COLUMN total_price NUMERIC(12,2);
+
+
+ALTER TABLE job_parts
+ALTER COLUMN quantity SET DEFAULT 1;
+
+
+ALTER TABLE job_parts
+ALTER COLUMN total_price 
+SET DEFAULT 0;
+
+ALTER TABLE job_parts
+ALTER COLUMN quantity SET DEFAULT 1;
+
+
+ALTER TABLE job_parts
+ALTER COLUMN total_price SET DEFAULT 0;
+
+
+ALTER TABLE job_parts
+ALTER COLUMN quantity SET NOT NULL;
+
+
+ALTER TABLE job_parts
+ALTER COLUMN unit_price SET NOT NULL;
+
+ALTER TABLE job_parts
+ADD CONSTRAINT unique_job_part 
+UNIQUE(job_id, sparepart_id);

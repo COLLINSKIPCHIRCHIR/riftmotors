@@ -1,0 +1,37 @@
+CREATE TABLE service_jobs (
+
+id SERIAL PRIMARY KEY,
+
+
+job_number VARCHAR(50) UNIQUE NOT NULL,
+
+
+customer_id INTEGER REFERENCES customers(id),
+
+
+vehicle_id INTEGER REFERENCES customer_vehicles(id),
+
+
+
+complaint TEXT,
+
+
+diagnosis TEXT,
+
+
+notes TEXT,
+
+
+status VARCHAR(30)
+DEFAULT 'Pending',
+
+
+created_by INTEGER REFERENCES users(id),
+
+
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+
+completed_at TIMESTAMP
+
+);

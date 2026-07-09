@@ -1,0 +1,15 @@
+CREATE TABLE mechanics (
+
+id SERIAL PRIMARY KEY,
+
+name VARCHAR(100) NOT NULL,
+
+phone VARCHAR(50),
+
+specialization VARCHAR(100),
+
+active BOOLEAN DEFAULT true,
+
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+);

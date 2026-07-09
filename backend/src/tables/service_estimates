@@ -1,0 +1,78 @@
+CREATE TABLE service_estimates(
+
+id SERIAL PRIMARY KEY,
+
+job_id INTEGER REFERENCES service_jobs(id),
+
+customer_name VARCHAR(100),
+
+customer_phone VARCHAR(30),
+
+subtotal NUMERIC DEFAULT 0,
+
+discount NUMERIC DEFAULT 0,
+
+total NUMERIC DEFAULT 0,
+
+status VARCHAR(30)
+DEFAULT 'pending',
+
+created_at TIMESTAMP DEFAULT NOW()
+
+);
+
+
+CREATE TABLE service_estimate_items(
+
+id SERIAL PRIMARY KEY,
+
+estimate_id INTEGER REFERENCES service_estimates(id)
+ON DELETE CASCADE,
+
+item_type VARCHAR(20),
+
+service_id INTEGER,
+
+sparepart_id INTEGER,
+
+description VARCHAR(200),
+
+quantity INTEGER,
+
+unit_price NUMERIC,
+
+total_price NUMERIC
+
+);
+
+
+ALTER TABLE service_estimates
+
+ADD COLUMN tax_rate NUMERIC DEFAULT 0,
+
+ADD COLUMN tax_amount NUMERIC DEFAULT 0;
+
+ALTER TABLE service_estimates
+ADD COLUMN discount_type VARCHAR(20) DEFAULT 'amount';
+
+
+ALTER TABLE service_estimate_items
+
+ADD COLUMN original_price NUMERIC DEFAULT 0,
+ADD COLUMN adjustment NUMERIC DEFAULT 0;
+
+ALTER TABLE service_estimate_items
+
+ADD COLUMN discount_type VARCHAR(20) DEFAULT 'amount',
+
+ADD COLUMN discount_value NUMERIC DEFAULT 0,
+
+ADD COLUMN min_price NUMERIC DEFAULT 0,
+
+ADD COLUMN max_price NUMERIC DEFAULT 0;
+
+ALTER TABLE service_estimate_items
+
+ADD CONSTRAINT positive_prices
+
+CHECK(total_price >= 0);

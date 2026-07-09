@@ -1,0 +1,82 @@
+CREATE TABLE service_receipts (
+
+id SERIAL PRIMARY KEY,
+
+
+receipt_number VARCHAR(50) UNIQUE,
+
+
+invoice_id INTEGER REFERENCES service_invoices(id),
+
+
+job_id INTEGER REFERENCES service_jobs(id),
+
+
+customer_name VARCHAR(100),
+
+
+customer_phone VARCHAR(30),
+
+
+subtotal NUMERIC DEFAULT 0,
+
+
+discount NUMERIC DEFAULT 0,
+
+
+total NUMERIC DEFAULT 0,
+
+
+payment_method VARCHAR(50),
+
+
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+);
+
+
+
+CREATE TABLE service_receipt_items (
+
+
+id SERIAL PRIMARY KEY,
+
+
+receipt_id INTEGER REFERENCES service_receipts(id)
+
+ON DELETE CASCADE,
+
+
+item_type VARCHAR(20),
+
+
+service_id INTEGER,
+
+
+sparepart_id INTEGER,
+
+
+description VARCHAR(200),
+
+
+quantity INTEGER,
+
+
+unit_price NUMERIC,
+
+
+total_price NUMERIC
+
+
+);
+
+ALTER TABLE service_receipts
+
+ADD COLUMN tax_rate NUMERIC DEFAULT 0,
+ADD COLUMN tax_amount NUMERIC DEFAULT 0;
+
+ALTER TABLE service_receipt_items
+ADD COLUMN original_price NUMERIC DEFAULT 0,
+ADD COLUMN adjustment NUMERIC DEFAULT 0,
+ADD COLUMN discount_type VARCHAR(20),
+ADD COLUMN discount_value NUMERIC DEFAULT 0;

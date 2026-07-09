@@ -1,0 +1,15 @@
+CREATE TABLE kra_transactions(
+
+id SERIAL PRIMARY KEY,
+
+invoice_id INTEGER REFERENCES service_invoices(id),
+
+request_payload JSONB,
+
+response_payload JSONB,
+
+status VARCHAR(30),
+
+created_at TIMESTAMP DEFAULT NOW()
+
+);

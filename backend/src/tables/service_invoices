@@ -1,0 +1,100 @@
+CREATE TABLE service_invoices (
+
+id SERIAL PRIMARY KEY,
+
+
+invoice_number VARCHAR(50) UNIQUE,
+
+
+estimate_id INTEGER REFERENCES service_estimates(id),
+
+
+job_id INTEGER REFERENCES service_jobs(id),
+
+
+customer_name VARCHAR(100),
+
+
+customer_phone VARCHAR(30),
+
+
+subtotal NUMERIC DEFAULT 0,
+
+
+discount NUMERIC DEFAULT 0,
+
+
+total NUMERIC DEFAULT 0,
+
+
+status VARCHAR(30) DEFAULT 'unpaid',
+
+
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+);
+
+CREATE TABLE service_invoice_items (
+
+id SERIAL PRIMARY KEY,
+
+
+invoice_id INTEGER REFERENCES service_invoices(id)
+ON DELETE CASCADE,
+
+
+item_type VARCHAR(20),
+
+
+service_id INTEGER,
+
+
+sparepart_id INTEGER REFERENCES spareparts(id),
+
+
+description VARCHAR(200),
+
+
+quantity INTEGER,
+
+
+unit_price NUMERIC,
+
+
+total_price NUMERIC
+
+);
+
+
+ALTER TABLE service_invoices
+
+ADD COLUMN tax_rate NUMERIC DEFAULT 0,
+
+ADD COLUMN tax_amount NUMERIC DEFAULT 0;
+
+ALTER TABLE service_invoices
+ADD COLUMN discount_type VARCHAR(20) DEFAULT 'amount';
+
+
+ALTER TABLE service_invoice_items
+
+ADD COLUMN discount_type VARCHAR(20) DEFAULT 'amount',
+
+ADD COLUMN discount_value NUMERIC DEFAULT 0;
+
+ALTER TABLE service_invoices
+ADD COLUMN discount_type VARCHAR(20) DEFAULT 'amount';
+
+
+ALTER TABLE service_invoice_items
+
+ADD COLUMN original_price NUMERIC DEFAULT 0,
+
+ADD COLUMN adjustment NUMERIC DEFAULT 0,
+
+ADD COLUMN discount_type VARCHAR(20),
+
+ADD COLUMN discount_value NUMERIC DEFAULT 0;
+
+ALTER TABLE service_invoices
+ADD COLUMN IF NOT EXISTS discount_value NUMERIC DEFAULT 0;

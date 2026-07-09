@@ -1,0 +1,17 @@
+CREATE TABLE company_settings(
+
+id SERIAL PRIMARY KEY,
+
+business_name VARCHAR(200),
+
+kra_pin VARCHAR(50),
+
+vat_number VARCHAR(50),
+
+branch_number VARCHAR(50),
+
+etims_device_id VARCHAR(100),
+
+etims_environment VARCHAR(20)
+
+);

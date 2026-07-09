@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+
+@media print {
+
+
+body{
+
+background:white;
+
+}
+
+
+
+.print\:hidden{
+
+display:none !important;
+
+}
+
+
+
+.print-container{
+
+background:white !important;
+
+padding:0 !important;
+
+}
+
+
+
+.print-document{
+
+
+max-width:80mm;
+
+width:100%;
+
+margin:auto;
+
+padding:10px;
+
+
+box-shadow:none !important;
+
+border:none !important;
+
+
+}
+
+
+
+table{
+
+width:100%;
+
+border-collapse:collapse;
+
+font-size:12px;
+
+
+}
+
+
+
+th,td{
+
+padding:4px;
+
+}
+
+
+
+}

@@ -1,0 +1,27 @@
+CREATE TABLE service_assignments (
+
+id SERIAL PRIMARY KEY,
+
+
+job_id INTEGER REFERENCES service_jobs(id)
+ON DELETE CASCADE,
+
+
+user_id INTEGER REFERENCES users(id),
+
+
+assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+);
+
+
+ALTER TABLE service_assignments
+DROP COLUMN user_id;
+
+
+ALTER TABLE service_assignments
+ADD COLUMN mechanic_id INTEGER REFERENCES mechanics(id);
+
+ALTER TABLE service_assignments
+ADD CONSTRAINT unique_job_mechanic
+UNIQUE(job_id, mechanic_id);
