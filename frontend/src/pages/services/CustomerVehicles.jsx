@@ -5,7 +5,7 @@ getCustomerVehicles,
 createCustomerVehicle
 } from "../../api/serviceApi";
 
-import {getCustomers} from "../../api/customerApi";
+import {getCustomers} from "../../api/CustomerApi";
 
 import {
 FaCar,

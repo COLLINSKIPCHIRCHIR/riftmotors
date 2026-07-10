@@ -12,7 +12,7 @@ import VehicleInventory from "./pages/VehicleInventory";
 import SellVehicle from "./pages/SellVehicle";
 import SpareParts from "./pages/SpareParts";
 import Services from "./pages/Services";
-import CarWash from "./pages/CarWash";
+import CarWash from "./pages/Carwash";
 import SalesTransactions from "./pages/SalesTransactions";
 import Employees from "./pages/Employees";
 import Inventory from "./pages/Inventory";
