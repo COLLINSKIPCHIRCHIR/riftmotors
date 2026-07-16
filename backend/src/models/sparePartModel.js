@@ -173,3 +173,21 @@ export const getLowStockParts = async () => {
   const result = await pool.query(query);
   return result.rows;
 };
+
+
+export const getInventoryStats = async () => {
+  const query = `
+    SELECT
+      COUNT(*) AS total_parts,
+      COALESCE(SUM(quantity),0) AS total_units,
+      COALESCE(SUM(quantity * buying_price),0) AS inventory_value,
+      COALESCE(SUM(quantity * selling_price),0) AS potential_sales_value,
+      COUNT(*) FILTER (WHERE quantity <= 5) AS low_stock_items,
+      COUNT(*) FILTER (WHERE quantity = 0) AS out_of_stock_items
+    FROM spareparts
+    WHERE is_deleted IS NOT TRUE;
+  `;
+
+  const result = await pool.query(query);
+  return result.rows[0];
+};

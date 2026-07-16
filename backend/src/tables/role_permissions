@@ -109,3 +109,50 @@ OR p.module='customers'
 OR p.module='vehicles'
 
 );
+
+
+INSERT INTO role_permissions(role_id, permission_id)
+
+SELECT
+r.id,
+p.id
+
+FROM roles r
+JOIN permissions p
+ON TRUE
+
+WHERE r.name='Accountant'
+
+AND (
+
+p.name LIKE 'reports.%'
+
+OR p.name LIKE 'spareparts.receipts%'
+
+OR p.name LIKE 'spareparts.invoices%'
+
+OR p.name LIKE 'services.receipts%'
+
+OR p.name LIKE 'services.invoices%'
+
+OR p.name='sales.view'
+
+OR p.name='customers.view'
+
+);
+
+
+
+INSERT INTO role_permissions
+(
+    role_id,
+    permission_id
+)
+SELECT
+    6,
+    id
+FROM permissions
+WHERE name = 'users.resetpassword';
+
+
+JSON.parse(localStorage.getItem("user"))

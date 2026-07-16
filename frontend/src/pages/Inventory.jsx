@@ -118,7 +118,7 @@ const Inventory = () => {
               {/* ✅ Vehicle / Spare Image */}
               {item.image_url ? (
                 <img
-                  src={`http://localhost:5004${item.image_url.startsWith("/") ? item.image_url : `/${item.image_url}`}`}
+                  src={`${import.meta.env.VITE_IMAGE_BASE_URL || "http://localhost:5004"}${item.image_url.startsWith("/") ? item.image_url : `/${item.image_url}`}`}
                   alt={item.name}
                   className="w-full h-48 object-cover"
                 />

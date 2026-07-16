@@ -24,7 +24,7 @@ export default function SellSpareParts() {
   useEffect(() => {
     const fetchSpareParts = async () => {
   try {
-    const res = await API.get("/spareparts");
+    const res = await API.get("/spareparts?limit=10000");
 
     const data =
       res.data?.data ||

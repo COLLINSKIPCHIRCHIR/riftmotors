@@ -1,0 +1,27 @@
+CREATE TABLE roles (
+
+id SERIAL PRIMARY KEY,
+
+name VARCHAR(100) UNIQUE NOT NULL,
+
+description TEXT,
+
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+);
+
+
+
+INSERT INTO roles (name, description)
+VALUES
+('Boss', 'Has full access to the entire system'),
+
+('Manager', 'Oversees operations and staff'),
+
+('admin','System administrator'),
+
+('Sales Manager', 'Manages vehicle sales operations'),
+
+('Service Advisor', 'Handles workshop jobs and customers'),
+
+('Accountant', 'Handles invoices, receipts, reports and payments');

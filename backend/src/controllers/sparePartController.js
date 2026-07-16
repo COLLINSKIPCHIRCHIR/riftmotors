@@ -5,7 +5,8 @@ import {
   getSparePartById,
   updateSparePart,
   deleteSparePart,
-  getLowStockParts
+  getLowStockParts,
+  getInventoryStats,
 } from "../models/sparePartModel.js";
 
 // ➤ Add Spare Part
@@ -69,3 +70,12 @@ export const fetchLowStockParts = async (req, res) => {
   }
 };
 
+
+export const fetchInventoryStats = async (req, res, next) => {
+  try {
+    const stats = await getInventoryStats();
+    res.json(stats);
+  } catch (error) {
+    next(error);
+  }
+};

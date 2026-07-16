@@ -98,3 +98,26 @@ ADD COLUMN discount_value NUMERIC DEFAULT 0;
 
 ALTER TABLE service_invoices
 ADD COLUMN IF NOT EXISTS discount_value NUMERIC DEFAULT 0;
+
+
+ALTER TABLE service_invoices
+
+ADD COLUMN kra_invoice_number VARCHAR(100),
+
+ADD COLUMN kra_control_number VARCHAR(100),
+
+ADD COLUMN kra_qr_code TEXT,
+
+ADD COLUMN kra_status VARCHAR(30) DEFAULT 'pending';
+
+
+ALTER TABLE service_invoices
+
+ADD COLUMN kra_response JSONB;
+
+
+ALTER TABLE service_invoice_items
+
+ADD COLUMN tax_type VARCHAR(30),
+
+ADD COLUMN kra_item_code VARCHAR(100);

@@ -15,3 +15,16 @@ etims_device_id VARCHAR(100),
 etims_environment VARCHAR(20)
 
 );
+
+
+ALTER TABLE company_settings
+
+ADD COLUMN etims_serial_number VARCHAR(100),
+
+ADD COLUMN etims_branch_id VARCHAR(100),
+
+ADD COLUMN currency VARCHAR(10) DEFAULT 'KES',
+
+ADD COLUMN api_key TEXT,
+
+ADD COLUMN api_secret TEXT;

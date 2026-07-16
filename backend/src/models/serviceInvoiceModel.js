@@ -245,6 +245,37 @@ const kraResponse =
 await sendInvoiceToKRA(invoiceData);
 
 
+await client.query(
+`
+UPDATE service_invoices
+
+SET
+
+kra_invoice_number=$1,
+
+kra_control_number=$2,
+
+kra_qr_code=$3,
+
+kra_status=$4,
+
+kra_response=$5
+
+WHERE id=$6
+
+`,
+[
+kraResponse.invoiceNumber,
+kraResponse.controlNumber,
+kraResponse.qrCode,
+"success",
+kraResponse,
+invoiceId
+]
+
+);
+
+
 
 
 // move items

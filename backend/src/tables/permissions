@@ -1,0 +1,188 @@
+CREATE TABLE permissions (
+
+id SERIAL PRIMARY KEY,
+
+name VARCHAR(150) UNIQUE NOT NULL,
+
+module VARCHAR(100) NOT NULL,
+
+description TEXT,
+
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+);
+
+
+INSERT INTO permissions(name,module,description) VALUES
+
+('vehicles.view','vehicles','View vehicles'),
+
+('vehicles.create','vehicles','Add vehicles'),
+
+('vehicles.edit','vehicles','Edit vehicles'),
+
+('vehicles.delete','vehicles','Delete vehicles'),
+
+('vehicles.sell','vehicles','Sell vehicles');
+
+
+
+INSERT INTO permissions(name,module,description) VALUES
+
+('customers.view','customers','View customers'),
+
+('customers.create','customers','Add customers'),
+
+('customers.edit','customers','Edit customers'),
+
+('customers.delete','customers','Delete customers');
+
+
+INSERT INTO permissions(name,module,description) VALUES
+
+('spareparts.view','spareparts','View spare parts'),
+
+('spareparts.create','spareparts','Add spare parts'),
+
+('spareparts.edit','spareparts','Edit spare parts'),
+
+('spareparts.delete','spareparts','Delete spare parts'),
+
+('spareparts.sell','spareparts','Sell spare parts'),
+
+('spareparts.purchase','spareparts','Create purchases'),
+
+('spareparts.stock.view','spareparts','View stock history'),
+
+('spareparts.estimates','spareparts','Manage estimates'),
+
+('spareparts.invoices','spareparts','Manage invoices'),
+
+('spareparts.receipts','spareparts','Manage receipts');
+
+
+
+INSERT INTO permissions(name,module,description) VALUES
+
+('reports.view','reports','View reports'),
+
+('reports.export','reports','Export reports');
+
+
+
+
+INSERT INTO permissions(name,module,description) VALUES
+
+('inventory.view','inventory','View inventory');
+
+
+
+INSERT INTO permissions(name,module,description) VALUES
+
+('employees.view','employees','View employees'),
+
+('employees.create','employees','Create employees'),
+
+('employees.edit','employees','Edit employees'),
+
+('employees.delete','employees','Delete employees');
+
+
+INSERT INTO permissions(name,module,description) VALUES
+
+('users.view','users','View users'),
+
+('users.create','users','Create users'),
+
+('users.edit','users','Edit users'),
+
+('users.delete','users','Delete users');
+
+
+INSERT INTO permissions(name,module,description) VALUES
+
+('roles.view','roles','View roles'),
+
+('roles.edit','roles','Edit roles'),
+
+('permissions.assign','roles','Assign permissions');
+
+
+INSERT INTO permissions(name,module,description) VALUES
+
+('settings.view','settings','View settings'),
+
+('settings.edit','settings','Edit settings');
+
+
+INSERT INTO permissions(name,module,description) VALUES
+
+('etims.submit','etims','Submit invoices to KRA'),
+
+('etims.retry','etims','Retry failed submissions'),
+
+('etims.view','etims','View eTIMS status');
+
+
+
+INSERT INTO permissions(name,module,description)
+VALUES
+
+('services.view','services','View workshop module'),
+
+('services.jobs','services','Manage service jobs'),
+
+('services.vehicles','services','Manage customer vehicles'),
+
+('services.catalog','services','Manage service catalogue'),
+
+('services.mechanics','services','Manage mechanics'),
+
+('services.estimates','services','Manage service estimates'),
+
+('services.invoices','services','Manage service invoices'),
+
+('services.receipts','services','Manage service receipts');
+
+INSERT INTO permissions(name,module,description)
+VALUES
+('suppliers.view','suppliers','View suppliers'),
+('suppliers.create','suppliers','Create suppliers'),
+('suppliers.edit','suppliers','Edit suppliers'),
+('suppliers.delete','suppliers','Delete suppliers');
+
+
+INSERT INTO permissions(name,module,description)
+VALUES
+('carwash.view','carwash','View car wash'),
+('carwash.create','carwash','Create car wash jobs'),
+('carwash.edit','carwash','Edit car wash jobs'),
+('carwash.delete','carwash','Delete car wash jobs');
+
+
+INSERT INTO permissions(name,module,description)
+VALUES
+('sales.view','sales','View sales'),
+('sales.create','sales','Create sales'),
+('sales.edit','sales','Edit sales'),
+('sales.delete','sales','Delete sales');
+
+
+INSERT INTO permissions(name,module,description)
+VALUES
+('inventory.adjust','inventory','Adjust inventory'),
+('inventory.transfer','inventory','Transfer stock');
+
+
+INSERT INTO permissions
+(
+    name,
+    module,
+    description
+)
+VALUES
+(
+    'users.resetpassword',
+    'users',
+    'Reset user passwords'
+);
