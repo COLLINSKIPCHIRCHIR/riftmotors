@@ -7,7 +7,7 @@ export default function AddCustomer() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    name: "", phone: "", email: "", address: ""
+    name: "", phone: "", email: "", address: "", kra_pin: ""
   });
 
   const handleChange = (e) =>
@@ -41,6 +41,7 @@ export default function AddCustomer() {
             { name: "name", label: "Full Name", type: "text", required: true },
             { name: "phone", label: "Phone Number", type: "text" },
             { name: "email", label: "Email Address", type: "email" },
+            { name: "kra_pin", label: "KRA Pin", type: "text" },
           ].map((field) => (
             <div key={field.name}>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">

@@ -1,8 +1,5 @@
 import pool from "../config/db.js";
 
-
-
-
 /* =========================
    CREATE ESTIMATE
 ========================= */
@@ -21,16 +18,13 @@ export const createEstimate = async (data) => {
 
   const taxRate = data.tax_rate || 0;
 
-
   const taxAmount =
-  subtotal * (Number(taxRate)/100);
-
+    subtotal * (Number(taxRate) / 100);
 
   const total =
-  subtotal 
-  + taxAmount
-  - discount;
-
+    subtotal
+    + taxAmount
+    - discount;
 
   const client = await pool.connect();
 
@@ -101,8 +95,8 @@ export const getAllEstimates = async ({ status, customer_name, from, to } = {}) 
     values.push(to);
   }
 
-  const where = conditions.length 
-    ? `WHERE ${conditions.join(" AND ")}` 
+  const where = conditions.length
+    ? `WHERE ${conditions.join(" AND ")}`
     : "";
 
   const result = await pool.query(
@@ -115,16 +109,23 @@ export const getAllEstimates = async ({ status, customer_name, from, to } = {}) 
 
 /* =========================
    GET ESTIMATE BY ID
-========================= */
-/* =========================
-   GET ESTIMATE BY ID
+   Now left-joins customers so we can pull kra_pin/address/email
+   when customer_id is set. Uses LEFT JOIN + COALESCE so legacy
+   rows with no customer_id (or walk-in customers) still work fine -
+   they just fall back to the plain text columns on the estimate itself.
 ========================= */
 export const getEstimateById = async (estimateId) => {
-  // Fetch estimate
   const estimateResult = await pool.query(
-    `SELECT *
-     FROM spare_estimates
-     WHERE id = $1`,
+    `SELECT
+        se.*,
+        COALESCE(c.name, se.customer_name)   AS customer_name,
+        COALESCE(c.phone, se.customer_phone) AS customer_phone,
+        c.kra_pin  AS customer_kra_pin,
+        c.address  AS customer_address,
+        c.email    AS customer_email
+     FROM spare_estimates se
+     LEFT JOIN customers c ON c.id = se.customer_id
+     WHERE se.id = $1`,
     [estimateId]
   );
 
@@ -134,7 +135,7 @@ export const getEstimateById = async (estimateId) => {
 
   // Fetch items and join spareparts for name & part_number
   const itemsResult = await pool.query(
-    `SELECT 
+    `SELECT
         sei.id AS item_id,
         sei.sparepart_id,
         sei.quantity,
@@ -148,7 +149,6 @@ export const getEstimateById = async (estimateId) => {
     [estimateId]
   );
 
-  // Map items so frontend can use { name, part_number, quantity, unit_price, total, sparepart_id }
   const items = itemsResult.rows.map((item) => ({
     id: item.item_id,
     sparepart_id: item.sparepart_id,
@@ -164,4 +164,3 @@ export const getEstimateById = async (estimateId) => {
     items,
   };
 };
-

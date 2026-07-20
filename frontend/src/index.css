@@ -6,72 +6,82 @@
 
 @media print {
 
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
 
-body{
+  body{
 
-background:white;
+  background:white;
 
-}
-
-
-
-.print\:hidden{
-
-display:none !important;
-
-}
+  }
 
 
 
-.print-container{
+  .print\:hidden{
 
-background:white !important;
+  display:none !important;
 
-padding:0 !important;
-
-}
+  }
 
 
 
-.print-document{
+  .print-container{
 
+  background:white !important;
 
-max-width:80mm;
+  padding:0 !important;
 
-width:100%;
-
-margin:auto;
-
-padding:10px;
-
-
-box-shadow:none !important;
-
-border:none !important;
-
-
-}
+  }
 
 
 
-table{
+  /*
+    Was previously constrained to max-width:80mm (a thermal receipt
+    width), which squeezed every A4 document - invoices, estimates -
+    into a tiny centered column, leaving large blank margins on all
+    sides. Now spans the full printable A4 area instead.
+  */
+  .print-document{
 
-width:100%;
+  max-width:none;
 
-border-collapse:collapse;
+  width:100%;
 
-font-size:12px;
+  margin:0;
 
-
-}
-
+  padding:10mm;
 
 
-th,td{
+  box-shadow:none !important;
 
-padding:4px;
+  border:none !important;
 
-}
+  border-radius:0 !important;
+
+  }
+
+
+
+  table{
+
+  width:100%;
+
+  border-collapse:collapse;
+
+  font-size:12px;
+
+
+  }
+
+
+
+  th,td{
+
+  padding:4px;
+
+  }
 
 
 

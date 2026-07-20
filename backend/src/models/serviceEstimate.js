@@ -1,565 +1,542 @@
 import pool from "../config/db.js";
 
 
-export  const recalculateEstimateTotals = async(client, estimate_id)=>{
+export const recalculateEstimateTotals = async (client, estimate_id) => {
 
+  const items = await client.query(
+    `
+    SELECT
+    total_price
 
-const items = await client.query(
+    FROM service_estimate_items
 
-`
-SELECT 
-total_price
+    WHERE estimate_id=$1
 
-FROM service_estimate_items
+    `,
+    [
+      estimate_id
+    ]
 
-WHERE estimate_id=$1
+  );
 
-`,
-[
-estimate_id
-]
 
-);
+  let subtotal = 0;
 
 
+  items.rows.forEach(item => {
 
-let subtotal = 0;
+    subtotal += Number(item.total_price);
 
+  });
 
-items.rows.forEach(item=>{
 
-subtotal += Number(item.total_price);
+  const estimate = await client.query(
 
-});
+    `
+    SELECT
 
+    tax_rate,
+    discount_type,
+    discount
 
+    FROM service_estimates
 
+    WHERE id=$1
 
+    `,
+    [
+      estimate_id
+    ]
 
-const estimate = await client.query(
+  );
 
-`
-SELECT
 
-tax_rate,
-discount_type,
-discount
+  const data = estimate.rows[0];
 
-FROM service_estimates
 
-WHERE id=$1
+  const taxAmount =
+    subtotal * (Number(data.tax_rate) / 100);
 
-`,
-[
-estimate_id
-]
 
-);
+  let discountAmount = 0;
 
 
-const data = estimate.rows[0];
+  if (data.discount_type === "percentage") {
 
+    discountAmount =
+      subtotal *
+      (Number(data.discount) / 100);
 
+  } else {
 
-const taxAmount =
-subtotal * (Number(data.tax_rate)/100);
+    discountAmount =
+      Number(data.discount);
 
+  }
 
 
+  const total =
+    subtotal +
+    taxAmount -
+    discountAmount;
 
 
-let discountAmount = 0;
+  await client.query(
 
+    `
 
+    UPDATE service_estimates
 
-if(data.discount_type==="percentage"){
+    SET
 
+    subtotal=$1,
 
-discountAmount =
-subtotal *
-(Number(data.discount)/100);
+    tax_amount=$2,
 
+    total=$3
 
-}else{
+    WHERE id=$4
 
 
-discountAmount =
-Number(data.discount);
+    `,
 
+    [
 
-}
+      subtotal,
 
+      taxAmount,
 
+      total,
 
+      estimate_id
 
+    ]
 
-
-const total =
-subtotal +
-taxAmount -
-discountAmount;
-
-
-
-
-
-await client.query(
-
-`
-
-UPDATE service_estimates
-
-SET
-
-subtotal=$1,
-
-tax_amount=$2,
-
-total=$3
-
-WHERE id=$4
-
-
-`,
-
-[
-
-subtotal,
-
-taxAmount,
-
-total,
-
-estimate_id
-
-]
-
-);
-
+  );
 
 
 }
 
 
 // CREATE SERVICE ESTIMATE FROM JOB
-export const createServiceEstimate = async(
-    {
+export const createServiceEstimate = async (
+  {
+    job_id,
+    discount_type = "amount",
+    discount = 0,
+    tax_rate = 0
+  }) => {
+
+
+  const client = await pool.connect();
+
+
+  try {
+
+
+    await client.query("BEGIN");
+
+
+
+    // get job customer details
+
+    const jobResult = await client.query(
+
+      `
+      SELECT
+      sj.id,
+      c.name AS customer_name,
+      c.phone AS customer_phone
+
+      FROM service_jobs sj
+
+      LEFT JOIN customers c
+      ON sj.customer_id = c.id
+
+      WHERE sj.id=$1
+
+      `,
+      [job_id]
+
+    );
+
+
+
+    if (jobResult.rows.length === 0) {
+
+      throw new Error("Job not found");
+
+    }
+
+
+    const job = jobResult.rows[0];
+
+
+
+
+    // get services
+
+    const services = await client.query(
+
+      `
+      SELECT
+
+      js.service_id,
+
+      sc.name,
+
+      js.quantity,
+
+      js.price,
+
+      sc.min_price,
+
+      sc.max_price
+
+      FROM job_services js
+
+
+      JOIN service_catalog sc
+
+      ON js.service_id=sc.id
+
+
+      WHERE js.job_id=$1
+
+      `,
+      [job_id]
+
+    );
+
+
+
+
+    // get parts
+
+    const parts = await client.query(
+
+      `
+      SELECT
+
+      jp.sparepart_id,
+
+      sp.name,
+
+      jp.quantity,
+
+      jp.unit_price
+
+      FROM job_parts jp
+
+
+      JOIN spareparts sp
+
+      ON jp.sparepart_id=sp.id
+
+
+      WHERE jp.job_id=$1
+
+      `,
+      [job_id]
+
+    );
+
+
+
+
+    let subtotal = 0;
+
+
+
+
+    services.rows.forEach(item => {
+
+      subtotal +=
+        Number(item.price) *
+        Number(item.quantity);
+
+    });
+
+
+    parts.rows.forEach(item => {
+
+      subtotal +=
+        Number(item.unit_price) *
+        Number(item.quantity);
+
+    });
+
+
+    const taxAmount =
+      subtotal * (Number(tax_rate) / 100);
+
+
+
+    let discountAmount = 0;
+
+
+
+    if (discount_type === "percentage") {
+
+
+      discountAmount =
+        subtotal * (Number(discount) / 100);
+
+
+    } else {
+
+
+      discountAmount =
+        Number(discount);
+
+
+    }
+
+
+
+
+    const total =
+      subtotal +
+      taxAmount -
+      discountAmount;
+
+
+
+
+    // create estimate
+
+
+    const estimate = await client.query(
+
+      `
+      INSERT INTO service_estimates
+
+      (
+      job_id,
+      customer_name,
+      customer_phone,
+      subtotal,
+      discount_type,
+      discount,
+      tax_rate,
+      tax_amount,
+      total,
+      status
+
+      )
+
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending')
+
+
+      RETURNING *
+
+      `,
+
+      [
+
         job_id,
-        discount_type="amount",
-        discount=0,
-        tax_rate=0
-    })=>{
 
+        job.customer_name,
 
-const client = await pool.connect();
+        job.customer_phone,
 
+        subtotal,
 
-try{
+        discount_type,
 
+        discount,
+        tax_rate,
+        taxAmount,
+        total
 
-await client.query("BEGIN");
+      ]
 
+    );
 
 
-// get job customer details
 
-const jobResult = await client.query(
+    const estimate_id =
+      estimate.rows[0].id;
 
-`
-SELECT
-sj.id,
-c.name AS customer_name,
-c.phone AS customer_phone
 
-FROM service_jobs sj
 
-LEFT JOIN customers c
-ON sj.customer_id = c.id
 
-WHERE sj.id=$1
 
-`,
-[job_id]
+    // insert services
 
-);
 
+    for (const service of services.rows) {
 
 
-if(jobResult.rows.length===0){
+      const originalPrice =
+        Number(service.price) *
+        Number(service.quantity);
 
-throw new Error("Job not found");
 
-}
+      const adjustment = 0;
 
 
-const job = jobResult.rows[0];
+      const finalPrice =
+        originalPrice - adjustment;
 
 
 
+      await client.query(
 
-// get services
+        `
+        INSERT INTO service_estimate_items
 
-const services = await client.query(
+        (
+        estimate_id,
+        item_type,
+        service_id,
+        description,
+        quantity,
+        unit_price,
+        original_price,
+        adjustment,
+        total_price,
+        min_price,
+        max_price
 
-`
-SELECT
+        )
 
-js.service_id,
+        VALUES($1,'service',$2,$3,$4,$5,$6,$7,$8,$9,$10)
 
-sc.name,
+        `,
 
-js.quantity,
+        [
 
-js.price,
+          estimate_id,
 
-sc.min_price,
+          service.service_id,
 
-sc.max_price
+          service.name,
 
-FROM job_services js
+          service.quantity,
 
+          service.price,
 
-JOIN service_catalog sc
+          originalPrice,
 
-ON js.service_id=sc.id
+          adjustment,
 
+          finalPrice,
 
-WHERE js.job_id=$1
+          service.min_price,
 
-`,
-[job_id]
+          service.max_price
 
-);
 
+        ]
 
+      );
 
 
-// get parts
+    }
 
-const parts = await client.query(
 
-`
-SELECT
 
-jp.sparepart_id,
 
-sp.name,
+    // insert parts
 
-jp.quantity,
 
-jp.unit_price
+    for (const part of parts.rows) {
 
-FROM job_parts jp
 
+      const originalPrice =
+        Number(part.unit_price) *
+        Number(part.quantity);
 
-JOIN spareparts sp
 
-ON jp.sparepart_id=sp.id
+      const adjustment = 0;
 
 
-WHERE jp.job_id=$1
+      const finalPrice =
+        originalPrice;
 
-`,
-[job_id]
 
-);
+      await client.query(
 
+        `
+        INSERT INTO service_estimate_items
 
+        (
+        estimate_id,
+        item_type,
+        sparepart_id,
+        description,
+        quantity,
+        unit_price,
+        original_price,
+        adjustment,
+        total_price,
+        discount_type,
+        discount_value
 
+        )
 
-let subtotal = 0;
+        VALUES($1,'sparepart',$2,$3,$4,$5,$6,$7,$8,$9,$10)
 
+        `,
 
+        [
 
+          estimate_id,
 
-services.rows.forEach(item=>{
+          part.sparepart_id,
 
-subtotal += 
-Number(item.price) *
-Number(item.quantity);
+          part.name,
 
-});
+          part.quantity,
 
+          part.unit_price,
 
-parts.rows.forEach(item=>{
+          originalPrice,
 
-subtotal +=
-Number(item.unit_price) *
-Number(item.quantity);
+          adjustment,
 
-});
+          finalPrice,
 
+          "amount",
 
-const taxAmount =
-subtotal * (Number(tax_rate)/100);
+          0
 
+        ]
 
+      );
 
-let discountAmount = 0;
 
+    }
 
+    await recalculateEstimateTotals(
+      client,
+      estimate_id
+    );
 
-if(discount_type==="percentage"){
 
+    await client.query("COMMIT");
 
-discountAmount =
-subtotal * (Number(discount)/100);
 
+    return estimate.rows[0];
 
-}else{
 
 
-discountAmount =
-Number(discount);
+  } catch (error) {
 
 
-}
+    await client.query("ROLLBACK");
 
+    throw error;
 
 
+  } finally {
 
-const total =
-subtotal +
-taxAmount -
-discountAmount;
 
+    client.release();
 
 
-
-// create estimate
-
-
-const estimate = await client.query(
-
-`
-INSERT INTO service_estimates
-
-(
-job_id,
-customer_name,
-customer_phone,
-subtotal,
-discount_type,
-discount,
-tax_rate,
-tax_amount,
-total,
-status
-
-)
-
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending')
-
-
-RETURNING *
-
-`,
-
-[
-
-job_id,
-
-job.customer_name,
-
-job.customer_phone,
-
-subtotal,
-
-discount_type,
-
-discount,
-tax_rate,
-taxAmount,
-total
-
-]
-
-);
-
-
-
-const estimate_id =
-estimate.rows[0].id;
-
-
-
-
-
-// insert services
-
-
-for(const service of services.rows){
-
-
-const originalPrice =
-Number(service.price) *
-Number(service.quantity);
-
-
-const adjustment = 0;
-
-
-const finalPrice =
-originalPrice - adjustment;
-
-
-
-await client.query(
-
-`
-INSERT INTO service_estimate_items
-
-(
-estimate_id,
-item_type,
-service_id,
-description,
-quantity,
-unit_price,
-original_price,
-adjustment,
-total_price,
-min_price,
-max_price
-
-)
-
-VALUES($1,'service',$2,$3,$4,$5,$6,$7,$8,$9,$10)
-
-`,
-
-[
-
-estimate_id,
-
-service.service_id,
-
-service.name,
-
-service.quantity,
-
-service.price,
-
-originalPrice,
-
-adjustment,
-
-finalPrice,
-
-service.min_price,
-
-service.max_price
-
-
-]
-
-);
-
-
-}
-
-
-
-
-// insert parts
-
-
-for(const part of parts.rows){
-
-
-const originalPrice =
-Number(part.unit_price) *
-Number(part.quantity);
-
-
-const adjustment = 0;
-
-
-const finalPrice =
-originalPrice;
-
-
-await client.query(
-
-`
-INSERT INTO service_estimate_items
-
-(
-estimate_id,
-item_type,
-sparepart_id,
-description,
-quantity,
-unit_price,
-original_price,
-adjustment,
-total_price,
-discount_type,
-discount_value
-
-)
-
-VALUES($1,'sparepart',$2,$3,$4,$5,$6,$7,$8,$9,$10)
-
-`,
-
-[
-
-estimate_id,
-
-part.sparepart_id,
-
-part.name,
-
-part.quantity,
-
-part.unit_price,
-
-originalPrice,
-
-adjustment,
-
-finalPrice,
-
-"amount",
-
-0
-
-]
-
-);
-
-
-}
-
-await recalculateEstimateTotals(
-client,
-estimate_id
-);
-
-
-await client.query("COMMIT");
-
-
-return estimate.rows[0];
-
-
-
-}catch(error){
-
-
-await client.query("ROLLBACK");
-
-throw error;
-
-
-}finally{
-
-
-client.release();
-
-
-}
+  }
 
 
 };
@@ -571,24 +548,24 @@ client.release();
 
 // GET ALL ESTIMATES
 
-export const getServiceEstimates = async()=>{
+export const getServiceEstimates = async () => {
 
 
-const result = await pool.query(
+  const result = await pool.query(
 
-`
-SELECT *
+    `
+    SELECT *
 
-FROM service_estimates
+    FROM service_estimates
 
-ORDER BY created_at DESC
+    ORDER BY created_at DESC
 
-`
+    `
 
-);
+  );
 
 
-return result.rows;
+  return result.rows;
 
 
 };
@@ -601,64 +578,94 @@ return result.rows;
 
 
 // GET SINGLE ESTIMATE
+// Now pulls vehicle details (via service_jobs -> customer_vehicles) and
+// customer KRA pin (via service_jobs -> customers). All LEFT JOINs, so a
+// job with no vehicle attached, or a customer with no kra_pin, still
+// returns cleanly - those fields just come back null and the frontend
+// renders them as "N/A".
+
+export const getServiceEstimateById = async (id) => {
 
 
-export const getServiceEstimateById = async(id)=>{
+  const estimate = await pool.query(
 
+    `
+    SELECT
 
-const estimate = await pool.query(
+    se.*,
 
-`
-SELECT *
+    sj.job_number,
 
-FROM service_estimates
+    cv.registration_number,
+    cv.make      AS vehicle_make,
+    cv.model     AS vehicle_model,
+    cv.year      AS vehicle_year,
+    cv.mileage,
+    cv.color     AS vehicle_color,
+    cv.vin_no,
+    cv.engine_number,
 
-WHERE id=$1
+    c.kra_pin  AS customer_kra_pin,
+    c.address  AS customer_address,
+    c.email    AS customer_email
 
-`,
-[id]
+    FROM service_estimates se
 
-);
+    LEFT JOIN service_jobs sj
+    ON se.job_id = sj.id
 
+    LEFT JOIN customer_vehicles cv
+    ON sj.vehicle_id = cv.id
 
+    LEFT JOIN customers c
+    ON sj.customer_id = c.id
 
-if(estimate.rows.length===0){
+    WHERE se.id=$1
 
-return null;
+    `,
+    [id]
 
-}
-
-
-
-
-const items = await pool.query(
-
-`
-SELECT *
-
-FROM service_estimate_items
-
-WHERE estimate_id=$1
-
-ORDER BY id
-
-`,
-[id]
-
-);
+  );
 
 
 
+  if (estimate.rows.length === 0) {
 
-return {
+    return null;
 
-
-...estimate.rows[0],
-
-items:items.rows
+  }
 
 
-};
+
+
+  const items = await pool.query(
+
+    `
+    SELECT *
+
+    FROM service_estimate_items
+
+    WHERE estimate_id=$1
+
+    ORDER BY id
+
+    `,
+    [id]
+
+  );
+
+
+
+
+  return {
+
+
+    ...estimate.rows[0],
+
+    items: items.rows
+
+
+  };
 
 
 };

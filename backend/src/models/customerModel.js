@@ -4,13 +4,13 @@ import pool from "../config/db.js";
    CREATE CUSTOMER
 ========================= */
 export const createCustomer = async (data) => {
-  const { name, phone, email, address } = data;
+  const { name, phone, email, address, kra_pin } = data;
 
   const result = await pool.query(
-    `INSERT INTO customers (name, phone, email, address)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO customers (name, phone, email, address, kra_pin)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING *`,
-    [name, phone || null, email || null, address || null]
+    [name, phone || null, email || null, address || null, kra_pin || null]
   );
 
   return result.rows[0];
@@ -45,7 +45,7 @@ export const getCustomerById = async (id) => {
    UPDATE CUSTOMER
 ========================= */
 export const updateCustomer = async (id, data) => {
-  const { name, phone, email, address } = data;
+  const { name, phone, email, address, kra_pin } = data;
 
   const result = await pool.query(
     `UPDATE customers
@@ -53,10 +53,11 @@ export const updateCustomer = async (id, data) => {
          phone = $2,
          email = $3,
          address = $4,
+         kra_pin = $5,
          updated_at = now()
-     WHERE id = $5
+     WHERE id = $6
      RETURNING *`,
-    [name, phone, email, address, id]
+    [name, phone, email, address, kra_pin || null, id]
   );
 
   return result.rows[0];

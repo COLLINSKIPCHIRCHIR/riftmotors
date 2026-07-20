@@ -7,12 +7,16 @@ export const createSpareSalesTables = async () => {
   const query = `
     CREATE TABLE IF NOT EXISTS spare_sales (
       id SERIAL PRIMARY KEY,
+      customer_id INT REFERENCES customers(id),
       customer_name VARCHAR(150),
       customer_phone VARCHAR(50),
       subtotal NUMERIC(12,2) NOT NULL,
       discount NUMERIC(12,2) DEFAULT 0,
+      tax_rate NUMERIC(12,2) DEFAULT 0,
+      tax_amount NUMERIC(12,2) DEFAULT 0,
       total NUMERIC(12,2) NOT NULL,
       payment_method VARCHAR(50),
+      receipt_number VARCHAR(50) UNIQUE,
       sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -45,103 +49,102 @@ export const recordSpareSale = async (saleData) => {
     await client.query("BEGIN");
 
     // 1️⃣ Calculate totals
-    // 1️⃣ Calculate totals
 
-let subtotal = 0;
+    let subtotal = 0;
 
-items.forEach(item => {
-  subtotal += item.quantity * item.unit_price;
-});
-
-
-const tax_rate = 16;
-
-const taxableAmount = subtotal - discount;
+    items.forEach(item => {
+      subtotal += item.quantity * item.unit_price;
+    });
 
 
-const tax_amount = taxableAmount * (tax_rate / 100);
+    const tax_rate = 16;
+
+    const taxableAmount = subtotal - discount;
 
 
-const total = taxableAmount + tax_amount;
+    const tax_amount = taxableAmount * (tax_rate / 100);
 
 
-const receiptNumber = await generateReceiptNumber(client);
+    const total = taxableAmount + tax_amount;
+
+
+    const receiptNumber = await generateReceiptNumber(client);
 
 
 
-// 2️⃣ Insert sale
+    // 2️⃣ Insert sale
 
-const saleQuery = `
-INSERT INTO spare_sales
-(
-customer_id,
-customer_name,
-customer_phone,
-subtotal,
-discount,
-tax_rate,
-tax_amount,
-total,
-payment_method,
-receipt_number
-)
+    const saleQuery = `
+    INSERT INTO spare_sales
+    (
+    customer_id,
+    customer_name,
+    customer_phone,
+    subtotal,
+    discount,
+    tax_rate,
+    tax_amount,
+    total,
+    payment_method,
+    receipt_number
+    )
 
-VALUES
-($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    VALUES
+    ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 
-RETURNING *;
-`;
+    RETURNING *;
+    `;
 
 
-const saleResult = await client.query(
-saleQuery,
-[
-saleData.customer_id || null,
-customer_name,
-customer_phone,
-subtotal,
-discount,
-tax_rate,
-tax_amount,
-total,
-payment_method,
-receiptNumber
-]
-);
+    const saleResult = await client.query(
+      saleQuery,
+      [
+        saleData.customer_id || null,
+        customer_name,
+        customer_phone,
+        subtotal,
+        discount,
+        tax_rate,
+        tax_amount,
+        total,
+        payment_method,
+        receiptNumber
+      ]
+    );
 
     const saleId = saleResult.rows[0].id;
 
     // 3️⃣ Insert sale items + deduct stock
     for (const item of items) {
 
-       // 1️⃣ Lock & check stock
-   const stockResult = await client.query(
-    `SELECT quantity FROM spareparts WHERE id = $1 FOR UPDATE`,
-    [item.sparepart_id]
-  );
+      // 1️⃣ Lock & check stock
+      const stockResult = await client.query(
+        `SELECT quantity FROM spareparts WHERE id = $1 FOR UPDATE`,
+        [item.sparepart_id]
+      );
 
-  if (stockResult.rows.length === 0) {
-    throw new Error("Spare part not found");
-  }
+      if (stockResult.rows.length === 0) {
+        throw new Error("Spare part not found");
+      }
 
-  const availableQty = stockResult.rows[0].quantity;
+      const availableQty = stockResult.rows[0].quantity;
 
-   if (availableQty < item.quantity) {
-    throw new Error(
-      `Insufficient stock for spare part ID ${item.sparepart_id}. Available: ${availableQty}`
-    );
-   }
+      if (availableQty < item.quantity) {
+        throw new Error(
+          `Insufficient stock for spare part ID ${item.sparepart_id}. Available: ${availableQty}`
+        );
+      }
 
       const itemTotal = item.quantity * item.unit_price;
 
-       await client.query(
-          `INSERT INTO spare_sale_items
-          (sale_id, sparepart_id, quantity, unit_price, total_price)
-          VALUES ($1, $2, $3, $4, $5)`,
-          [saleId, item.sparepart_id, item.quantity, item.unit_price, itemTotal]
-        );
+      await client.query(
+        `INSERT INTO spare_sale_items
+        (sale_id, sparepart_id, quantity, unit_price, total_price)
+        VALUES ($1, $2, $3, $4, $5)`,
+        [saleId, item.sparepart_id, item.quantity, item.unit_price, itemTotal]
+      );
 
-     await client.query(
+      await client.query(
         `UPDATE spareparts
         SET quantity = quantity - $1
         WHERE id = $2`,
@@ -149,14 +152,14 @@ receiptNumber
       );
 
       // 🔥 Record stock movement
-    await recordStockMovement(
-      client,
-      item.sparepart_id,
-      "OUT",          // was "sale"
-      item.quantity,
-      "sale",
-      saleId
-    );
+      await recordStockMovement(
+        client,
+        item.sparepart_id,
+        "OUT",          // was "sale"
+        item.quantity,
+        "sale",
+        saleId
+      );
 
     }
 
@@ -183,9 +186,25 @@ const generateReceiptNumber = async (client) => {
   return `RFT-${year}-${String(next).padStart(5, "0")}`;
 };
 
+/*
+  Same LEFT JOIN pattern as spareInvoiceModel's getInvoiceById: pulls
+  kra_pin/address/email from customers when customer_id happens to be set
+  on the sale. LEFT JOIN + COALESCE, so walk-in sales with no customer_id
+  on file still work fine - those fields just come back null and the
+  frontend renders "N/A".
+*/
 export const getSpareSaleReceipt = async (saleId) => {
   const sale = await pool.query(
-    `SELECT * FROM spare_sales WHERE id=$1`,
+    `SELECT
+        ss.*,
+        COALESCE(c.name, ss.customer_name)   AS customer_name,
+        COALESCE(c.phone, ss.customer_phone) AS customer_phone,
+        c.kra_pin  AS customer_kra_pin,
+        c.address  AS customer_address,
+        c.email    AS customer_email
+     FROM spare_sales ss
+     LEFT JOIN customers c ON c.id = ss.customer_id
+     WHERE ss.id=$1`,
     [saleId]
   );
 
@@ -194,7 +213,7 @@ export const getSpareSaleReceipt = async (saleId) => {
   }
 
   const items = await pool.query(
-    `SELECT ssi.*, sp.name
+    `SELECT ssi.*, sp.name, sp.part_number
      FROM spare_sale_items ssi
      JOIN spareparts sp ON sp.id = ssi.sparepart_id
      WHERE sale_id=$1`,

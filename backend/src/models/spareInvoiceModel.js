@@ -286,12 +286,26 @@ export const getAllInvoices = async () => {
   return result.rows;
 };
 
+/*
+  NOTE: spare invoices don't link to a vehicle (see spare_estimates - same
+  reasoning: walk-in sparepart customers don't necessarily have a vehicle
+  on file). This LEFT JOIN only pulls kra_pin/address/email from customers
+  when customer_id happens to be set - otherwise those come back null and
+  the frontend renders "N/A".
+*/
 export const getInvoiceById = async (id) => {
 
   const invoice = await pool.query(
-    `SELECT * 
-     FROM spare_invoices 
-     WHERE id = $1`,
+    `SELECT
+        si.*,
+        COALESCE(c.name, si.customer_name)   AS customer_name,
+        COALESCE(c.phone, si.customer_phone) AS customer_phone,
+        c.kra_pin  AS customer_kra_pin,
+        c.address  AS customer_address,
+        c.email    AS customer_email
+     FROM spare_invoices si
+     LEFT JOIN customers c ON c.id = si.customer_id
+     WHERE si.id = $1`,
     [id]
   );
 

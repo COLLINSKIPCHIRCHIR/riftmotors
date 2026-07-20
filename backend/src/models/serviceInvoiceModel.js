@@ -97,6 +97,13 @@ return `SRV-${year}-${String(result.rows[0].next).padStart(5,"0")}`;
 }
 
 
+// NOTE ON KRA e-INVOICING:
+// KRA submission (sendInvoiceToKRA) isn't built yet. The kra_invoice_number /
+// kra_control_number / kra_qr_code / kra_status / kra_response columns on
+// service_invoices are already nullable, so we simply leave them NULL for
+// now. When the KRA integration exists, insert a call + UPDATE here (right
+// after the invoice items are inserted, using invoiceId) rather than before
+// items exist like the old broken version did.
 export const convertServiceEstimateToInvoice = async(estimateId)=>{
 
 
@@ -223,57 +230,10 @@ total
 
 
 
-const invoiceData = invoiceRes.rows[0];
-
-
-const invoiceItems = await client.query(
-`
-SELECT *
-FROM service_invoice_items
-WHERE invoice_id=$1
-`,
-[
-invoiceId
-]
-);
-
-
-invoiceData.items = invoiceItems.rows;
-
-
-const kraResponse =
-await sendInvoiceToKRA(invoiceData);
-
-
-await client.query(
-`
-UPDATE service_invoices
-
-SET
-
-kra_invoice_number=$1,
-
-kra_control_number=$2,
-
-kra_qr_code=$3,
-
-kra_status=$4,
-
-kra_response=$5
-
-WHERE id=$6
-
-`,
-[
-kraResponse.invoiceNumber,
-kraResponse.controlNumber,
-kraResponse.qrCode,
-"success",
-kraResponse,
-invoiceId
-]
-
-);
+// This was missing before - every reference below to invoiceId was
+// pointing at an undefined variable, which threw a ReferenceError and
+// broke every service estimate -> invoice conversion.
+const invoiceId = invoiceRes.rows[0].id;
 
 
 
@@ -504,14 +464,48 @@ const invoice =
 await pool.query(
 
 `
-SELECT *
-FROM service_invoices
-WHERE id=$1
+SELECT
+
+si.*,
+
+cv.registration_number,
+cv.make      AS vehicle_make,
+cv.model     AS vehicle_model,
+cv.year      AS vehicle_year,
+cv.mileage,
+cv.color     AS vehicle_color,
+cv.vin_no,
+cv.engine_number,
+
+c.kra_pin  AS customer_kra_pin,
+c.address  AS customer_address,
+c.email    AS customer_email
+
+FROM service_invoices si
+
+LEFT JOIN service_jobs sj
+ON si.job_id = sj.id
+
+LEFT JOIN customer_vehicles cv
+ON sj.vehicle_id = cv.id
+
+LEFT JOIN customers c
+ON sj.customer_id = c.id
+
+WHERE si.id=$1
 
 `,
 [id]
 
 );
+
+
+
+if(invoice.rows.length===0){
+
+return null;
+
+}
 
 
 
@@ -540,4 +534,3 @@ items:items.rows
 
 
 }
-

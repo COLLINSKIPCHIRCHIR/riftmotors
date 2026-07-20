@@ -12,7 +12,9 @@ year,
 mileage,
 color,
 fuel_type,
-transmission
+transmission,
+vin_no,
+engine_number
 
 }=data;
 
@@ -30,10 +32,12 @@ year,
 mileage,
 color,
 fuel_type,
-transmission
+transmission,
+vin_no,
+engine_number
 )
 
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 
 RETURNING *
 `,
@@ -47,7 +51,9 @@ year,
 mileage,
 color,
 fuel_type,
-transmission
+transmission,
+vin_no || null,
+engine_number || null
 ]
 
 );
@@ -57,7 +63,8 @@ return result.rows[0];
 
 }
 
-
+// NOTE: SELECT * already picks up vin_no / engine_number automatically
+// now that the columns exist on customer_vehicles - no change needed here.
 export const getCustomerVehicles = async()=>{
 
 

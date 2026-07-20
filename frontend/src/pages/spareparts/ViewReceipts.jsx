@@ -1,685 +1,246 @@
-import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import React, { useEffect, useState, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import API from "../../api/api";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+
+// Shows a value, or "N/A" when it's missing. Spare-parts sales don't link
+// to a vehicle (walk-in customers may not have one on file), same as
+// InvoiceDetails.jsx for spare parts.
+const field = (value) => {
+  if (value === null || value === undefined || value === "") return "N/A";
+  return value;
+};
+
+const money = (value) => {
+  return Number(value || 0).toLocaleString("en-KE", { minimumFractionDigits: 2 });
+};
 
 export default function ViewReceipt() {
 
   const { id } = useParams();
+  const navigate = useNavigate();
+  const printRef = useRef();
 
   const [sale, setSale] = useState(null);
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-
   useEffect(() => {
-
     const loadReceipt = async () => {
-
       try {
-
         const res = await API.get(`/spare-sales/${id}/receipt`);
-
         setSale(res.data);
-
-      } catch(err){
-
+      } catch (err) {
         console.error(err);
-
       }
-
     };
-
-
     loadReceipt();
+  }, [id]);
 
+  if (!sale)
+    return <div className="p-6">Loading receipt...</div>;
 
-  },[id]);
+  // Renders the printable area into a PDF and returns it as a Blob.
+  const generatePdfBlob = async () => {
+    const canvas = await html2canvas(printRef.current, { scale: 2 });
+    const imgData = canvas.toDataURL("image/png");
 
+    const pdf = new jsPDF("p", "mm", "a4");
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = (canvas.height * pageWidth) / canvas.width;
 
-
-
-  if(!sale)
-
-  return (
-
-    <div className="p-6">
-      Loading receipt...
-    </div>
-
-  );
-
-
-
-
-
-  const money = (value)=>{
-
-    return Number(value || 0)
-    .toLocaleString(
-      "en-KE",
-      {
-        minimumFractionDigits:2
-      }
-    );
-
+    pdf.addImage(imgData, "PNG", 0, 0, pageWidth, pageHeight);
+    return pdf.output("blob");
   };
 
-
-
-
-return (
-
-<div className="
-p-6
-bg-gray-100
-min-h-screen
-print-container
-">
-
-
-<div className="
-max-w-5xl
-mx-auto
-bg-white
-shadow-xl
-rounded-xl
-p-10
-print-document
-">
-
-
-
-
-
-{/* ACTIONS */}
-
-<div className="
-flex
-justify-end
-gap-3
-mb-6
-print:hidden
-">
-
-
-<button
-
-onClick={()=>window.history.back()}
-
-className="
-bg-gray-600
-text-white
-px-5
-py-2
-rounded
-"
-
->
-
-Back
-
-</button>
-
-
-
-<button
-
-onClick={()=>window.print()}
-
-className="
-bg-blue-600
-text-white
-px-5
-py-2
-rounded
-"
-
->
-
-Print Receipt
-
-</button>
-
-
-
-</div>
-
-
-
-
-
-
-
-{/* HEADER */}
-
-
-<div className="
-flex
-justify-between
-border-b
-pb-6
-">
-
-
-
-<div>
-
-
-<img
-
-src="/rmotologo.jpg"
-
-className="
-w-44
-h-32
-object-contain
-"
-
-/>
-
-
-
-<p>
-Rift Motors
-</p>
-
-
-<p>
-Nakuru, Kenya
-</p>
-
-
-<p>
-Phone: +254712345678
-</p>
-
-
-
-</div>
-
-
-
-
-
-
-
-<div className="text-right">
-
-
-
-<h2
-
-className="
-text-3xl
-font-bold
-text-blue-700
-"
-
->
-
-RECEIPT
-
-</h2>
-
-
-
-<p className="mt-3">
-
-Receipt No:
-
-<b>
- {sale.receipt_number}
-</b>
-
-</p>
-
-
-
-
-<p>
-
-Date:
-
-{
-new Date(
-sale.sale_date
-)
-.toLocaleDateString()
-
-}
-
-</p>
-
-
-
-<p>
-
-Payment:
-
-<b className="capitalize">
-
- {sale.payment_method}
-
-</b>
-
-
-</p>
-
-
-
-</div>
-
-
-</div>
-
-
-
-
-
-
-
-
-
-{/* CUSTOMER */}
-
-
-<div className="
-grid
-grid-cols-2
-mt-8
-">
-
-
-<div>
-
-
-<h3 className="font-bold">
-
-Bill To
-
-</h3>
-
-
-<p>
-{sale.customer_name}
-</p>
-
-
-<p>
-{sale.customer_phone}
-</p>
-
-
-
-</div>
-
-
-
-
-
-<div className="text-right">
-
-
-<h3 className="font-bold">
-
-Served By
-
-</h3>
-
-
-<p>
-
-{user?.username || "Staff"}
-
-</p>
-
-
-<p>
-
-{user?.role || "cashier"}
-
-</p>
-
-
-</div>
-
-
-
-</div>
-
-
-
-
-
-
-
-
-
-{/* ITEMS */}
-
-
-<table className="
-w-full
-border
-mt-8
-">
-
-
-<thead className="bg-gray-100">
-
-
-<tr>
-
-
-<th className="p-3 text-left">
-
-Item
-
-</th>
-
-
-<th>
-
-Qty
-
-</th>
-
-
-<th>
-
-Price
-
-</th>
-
-
-<th>
-
-Total
-
-</th>
-
-
-</tr>
-
-
-</thead>
-
-
-
-<tbody>
-
-
-{
-sale.items.map(
-(item,index)=>(
-
-
-<tr
-key={index}
-className="border-t"
->
-
-
-
-<td className="p-3">
-
-{item.name}
-
-</td>
-
-
-
-
-<td className="text-center">
-
-{item.quantity}
-
-</td>
-
-
-
-
-<td className="text-right">
-
-Ksh {money(item.unit_price)}
-
-</td>
-
-
-
-
-
-<td className="text-right font-bold">
-
-Ksh {money(item.total_price)}
-
-</td>
-
-
-
-
-</tr>
-
-
-)
-
-)
-
-}
-
-
-
-</tbody>
-
-
-
-</table>
-
-
-
-
-
-
-
-
-
-{/* TOTALS */}
-
-
-
-<div className="
-flex
-justify-end
-mt-8
-">
-
-
-
-<div className="w-72">
-
-
-
-<div className="flex justify-between">
-
-<span>
-
-Subtotal
-
-</span>
-
-
-<span>
-
-Ksh {money(sale.subtotal)}
-
-</span>
-
-
-</div>
-
-
-
-
-
-<div className="flex justify-between">
-
-
-<span>
-
-Discount
-
-</span>
-
-
-<span>
-
-Ksh {money(sale.discount)}
-
-</span>
-
-
-</div>
-
-
-
-
-
-
-
-<div className="flex justify-between">
-
-
-<span>
-
-VAT ({sale.tax_rate || 0}%)
-
-</span>
-
-
-<span>
-
-Ksh {money(sale.tax_amount)}
-
-</span>
-
-
-
-</div>
-
-
-
-
-
-
-<hr className="my-3"/>
-
-
-
-
-
-
-<div className="
-flex
-justify-between
-text-xl
-font-bold
-">
-
-
-<span>
-
-TOTAL
-
-</span>
-
-
-
-<span>
-
-Ksh {money(sale.total)}
-
-</span>
-
-
-
-</div>
-
-
-
-</div>
-
-
-
-</div>
-
-
-
-
-
-
-
-
-
-{/* FOOTER */}
-
-
-
-<div className="
-mt-10
-text-center
-border-t
-pt-4
-text-sm
-text-gray-500
-">
-
-
-Thank you for choosing Rift Motors.
-
-
-</div>
-
-
-
-
-
-</div>
-
-
-<style>
-
-{`
-
-@media print {
-
-body{
-
-background:white;
-
-}
-
-
-.print:hidden{
-
-display:none;
-
-}
-
-
-}
-
-`}
-
-
-</style>
-
-
-
-</div>
-
-
-
-);
-
-
+  const handleDownloadPdf = async () => {
+    try {
+      const blob = await generatePdfBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Receipt-${sale.receipt_number}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert("Could not generate PDF");
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      const blob = await generatePdfBlob();
+      const file = new File([blob], `Receipt-${sale.receipt_number}.pdf`, { type: "application/pdf" });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Receipt ${sale.receipt_number}`,
+          text: `Receipt ${sale.receipt_number} from Rift Motors`,
+        });
+      } else {
+        const text = encodeURIComponent(
+          `Receipt ${sale.receipt_number} from Rift Motors - total KES ${money(sale.total)}. PDF attached separately.`
+        );
+        if (window.confirm("Your browser can't attach the PDF directly. Download it now, then open WhatsApp to send it manually?")) {
+          await handleDownloadPdf();
+          window.open(`https://wa.me/?text=${text}`, "_blank");
+        }
+      }
+    } catch (err) {
+      alert("Sharing failed");
+    }
+  };
+
+  return (
+    <div className="p-6 bg-gray-100 min-h-screen print-container">
+      <div ref={printRef} className="max-w-5xl mx-auto bg-white shadow-xl rounded-xl p-10 print-document border">
+
+        {/* HEADER */}
+        <div className="flex justify-between items-start border-b-2 border-gray-800 pb-6">
+
+          <div className="flex items-center">
+            <img
+              src="/rmotologo.jpg"
+              className="w-56 h-40 object-contain"
+              alt="Rift Motors Limited"
+            />
+          </div>
+
+          <div className="text-right text-sm text-gray-600 leading-6">
+            <p>P.O. Box 18952 - 20100</p>
+            <p>KFA - Show Ground Road, Nakuru</p>
+            <p>+254 712 345 678</p>
+            <p>info@riftmotors.com</p>
+          </div>
+
+        </div>
+
+        {/* TITLE */}
+        <div className="text-center border-b py-3 mt-4">
+          <h2 className="text-2xl font-bold tracking-widest text-gray-800">SALES RECEIPT</h2>
+        </div>
+
+        {/* REF / CUSTOMER / DATE / KRA */}
+        <div className="grid grid-cols-2 gap-6 mt-6 text-sm">
+
+          <div className="space-y-1">
+            <p><span className="font-bold">REF:</span> {field(sale.receipt_number)}</p>
+            <p><span className="font-bold">Bill To:</span> {field(sale.customer_name)}</p>
+            <p><span className="font-bold">Address:</span> {field(sale.customer_address)}</p>
+            <p><span className="font-bold">Mobile:</span> {field(sale.customer_phone)}</p>
+            <p><span className="font-bold">KRA Pin:</span> {field(sale.customer_kra_pin)}</p>
+          </div>
+
+          <div className="space-y-1 text-right">
+            <p><span className="font-bold">Date:</span> {new Date(sale.sale_date).toLocaleDateString()}</p>
+            <p>
+              <span className="font-bold">Payment:</span>{" "}
+              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full capitalize">
+                {sale.payment_method}
+              </span>
+            </p>
+            <p><span className="font-bold">Served By:</span> {user?.username || "Staff"}</p>
+          </div>
+
+        </div>
+
+        {/* ACTIONS */}
+        <div className="flex justify-end gap-3 my-6 print:hidden flex-wrap">
+          <button
+            onClick={() => navigate(-1)}
+            className="bg-gray-600 text-white px-5 py-2 rounded"
+          >Back</button>
+          <button
+            onClick={() => window.print()}
+            className="bg-gray-800 text-white px-5 py-2 rounded"
+          >Print</button>
+          <button
+            onClick={handleDownloadPdf}
+            className="bg-blue-800 text-white px-5 py-2 rounded"
+          >Download PDF</button>
+          <button
+            onClick={handleShare}
+            className="bg-emerald-700 text-white px-5 py-2 rounded"
+          >Share</button>
+        </div>
+
+        {/* ITEMS */}
+        <table className="w-full border text-sm">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="p-3 text-left border">Code</th>
+              <th className="p-3 text-left border">Description</th>
+              <th className="p-2 border">Qty</th>
+              <th className="p-2 border">Unit Price</th>
+              <th className="p-2 border">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sale.items.map((item, index) => (
+              <tr key={item.id || index} className="border-t">
+                <td className="p-3 border">{field(item.part_number)}</td>
+                <td className="p-3 border">{item.name}</td>
+                <td className="p-2 border text-center">{item.quantity}</td>
+                <td className="p-2 border text-right">KES {money(item.unit_price)}</td>
+                <td className="p-2 border text-right font-bold">KES {money(item.total_price)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* PAYMENT DETAILS + TOTALS */}
+        <div className="flex justify-between mt-8 gap-8">
+
+          <div className="text-sm text-gray-700 leading-6 border rounded p-4 w-80">
+            <p className="font-bold mb-1">Payment To:</p>
+            <p>NCBA Bank, Nakuru Branch</p>
+            <p>A/C Name: Rift Motors Ltd</p>
+            <p>A/C No: 3364820034, or through</p>
+            <p>Mpesa Paybill No: 532602</p>
+            <p>A/C No: RIFT MOTORS</p>
+          </div>
+
+          <div className="w-72">
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <b>KES {money(sale.subtotal)}</b>
+            </div>
+            <div className="flex justify-between">
+              <span>Discount</span>
+              <b>KES {money(sale.discount)}</b>
+            </div>
+            <div className="flex justify-between">
+              <span>VAT ({sale.tax_rate || 0}%)</span>
+              <b>KES {money(sale.tax_amount)}</b>
+            </div>
+            <hr className="my-3" />
+            <div className="flex justify-between text-xl font-bold">
+              <span>TOTAL</span>
+              <span>KES {money(sale.total)}</span>
+            </div>
+          </div>
+
+        </div>
+
+        {/* FOOTER */}
+        <div className="mt-10 text-center border-t pt-4 text-sm text-gray-600">
+          <p className="font-semibold">THANK YOU FOR CHOOSING RIFT MOTORS!</p>
+          <p className="mt-1">Payment received successfully.</p>
+        </div>
+
+        {/* PRINTED BY */}
+        <p className="mt-4 text-xs text-gray-500">Printed By: {user?.username || "N/A"}</p>
+
+        {/* BRAND LOGOS - replace src with your own local assets */}
+        <div className="flex justify-center items-center gap-10 mt-6 opacity-80">
+          <img src="/brands/nissan.png" alt="Nissan" className="h-10 object-contain" />
+          <img src="/brands/ford.jpg" alt="Ford" className="h-10 object-contain" />
+          <img src="/brands/subaru.jpg" alt="Subaru" className="h-10 object-contain" />
+        </div>
+
+      </div>
+    </div>
+  );
 }

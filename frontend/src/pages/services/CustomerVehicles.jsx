@@ -46,7 +46,9 @@ year:"",
 mileage:"",
 color:"",
 fuel_type:"",
-transmission:""
+transmission:"",
+vin_no:"",
+engine_number:""
 
 });
 
@@ -186,7 +188,9 @@ year:"",
 mileage:"",
 color:"",
 fuel_type:"",
-transmission:""
+transmission:"",
+vin_no:"",
+engine_number:""
 
 });
 
@@ -779,7 +783,9 @@ value={c.id}
 "mileage",
 "color",
 "fuel_type",
-"transmission"
+"transmission",
+"vin_no",
+"engine_number"
 
 ].map(field=>(
 
