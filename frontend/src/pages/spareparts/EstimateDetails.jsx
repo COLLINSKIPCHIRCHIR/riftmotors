@@ -102,63 +102,56 @@ export default function EstimateDetails(){
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen print-container">
-      <div ref={printRef} className="max-w-5xl mx-auto bg-white shadow-xl rounded-xl p-5 print-document border">
+      <div ref={printRef} className="max-w-5xl mx-auto bg-white shadow-xl rounded-xl p-4 print-document border">
 
-        {/* HEADER */}
-      {/* HEADER */}
-<div className="doc-header">
+        {/* HEADER — logo shrunk so it stops dictating the row height;
+            title now sits directly above the divider instead of floating
+            in the tall space a big logo used to leave beside it. */}
+        <div className="doc-header">
 
-  <div className="flex justify-between">
+          <div className="flex justify-between items-start">
 
-    {/* Logo */}
-    <div>
-      <img
-        src="/rmotologo.jpg"
-        className="w-56 h-40 object-contain"
-        alt="Rift Motors Limited"
-      />
-    </div>
+            <img
+              src="/rmotologo.jpg"
+              className="h-16 w-auto object-contain"
+              alt="Rift Motors Limited"
+            />
 
-    {/* Right side */}
-    <div className="flex flex-col items-end">
+            <div className="text-right text-[10px] leading-[13px] text-gray-700">
+              <p>P.O. Box 18952 - 20100</p>
+              <p>KFA - Show Ground Road, Nakuru</p>
+              <p>+254 712 345 678</p>
+              <p>info@riftmotors.com</p>
+            </div>
 
-      <div className="text-right text-sm leading-5">
-        <p>P.O. Box 18952 - 20100</p>
-        <p>KFA - Show Ground Road, Nakuru</p>
-        <p>+254 712 345 678</p>
-        <p>info@riftmotors.com</p>
-      </div>
+          </div>
 
-      <div className="w-full text-center mt-2">
-        <h2 className="text-xl font-black tracking-[5px] uppercase">
-          ESTIMATE
-        </h2>
-      </div>
+          <div className="doc-title text-center mt-1 mb-1">
+            <h2 className="text-base font-extrabold tracking-[4px] uppercase text-gray-900">
+              ESTIMATE
+            </h2>
+          </div>
 
-    </div>
+          <hr className="border-black border-t-2" />
 
-  </div>
-
-  <hr className="mt-2 border-black border-t-2" />
-
-</div>
+        </div>
 
         {/* REF / CUSTOMER / DATE / KRA */}
-        <div className="doc-meta grid grid-cols-2 gap-4 mt-3 text-sm">
+        <div className="doc-meta grid grid-cols-2 gap-4 mt-2 text-[11px] leading-[15px]">
 
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             <p><span className="font-bold">REF:</span> EST-{estimate.id}</p>
             <p><span className="font-bold">Bill To:</span> {field(estimate.customer_name)}</p>
             <p><span className="font-bold">Address:</span> {field(estimate.customer_address)}</p>
             <p><span className="font-bold">Mobile:</span> {field(estimate.customer_phone)}</p>
           </div>
 
-          <div className="space-y-1 text-right">
+          <div className="space-y-0.5 text-right">
             <p><span className="font-bold">Date:</span> {new Date(estimate.created_at).toLocaleDateString()}</p>
             <p><span className="font-bold">KRA Pin:</span> {field(estimate.customer_kra_pin)}</p>
             <p>
               <span className="font-bold">Status:</span>{" "}
-              <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full">
+              <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full text-[10px]">
                 {estimate.status}
               </span>
             </p>
@@ -167,7 +160,7 @@ export default function EstimateDetails(){
         </div>
 
         {/* ACTIONS */}
-        <div className="flex justify-end gap-3 my-6 print:hidden">
+        <div className="flex justify-end gap-3 my-3 print:hidden">
           {estimate.status==="pending" &&
             <button
               onClick={()=>navigate(`/admin/spare-parts/estimates/${estimate.id}/edit`)}
@@ -194,35 +187,37 @@ export default function EstimateDetails(){
           >Share</button>
         </div>
 
-        {/* ITEMS */}
-        <table className="w-full border border-black text-sm">
+        {/* ITEMS — thin borders + tight padding + small font so 10+ rows
+            still fit on one page. Nothing caps the row count; it just
+            grows compactly instead of ballooning. */}
+        <table className="w-full border border-black text-[10px]">
           <thead className="bg-gray-100">
             <tr>
-              <th className="p-3 text-left border border-black">Code</th>
-              <th className="p-3 text-left border border-black">Description</th>
-              <th className="p-2 border border-black">Qty</th>
-              <th className="p-2 border border-black">Unit Price</th>
-              <th className="p-2 border border-black">Total</th>
+              <th className="p-1 text-left border border-black">Code</th>
+              <th className="p-1 text-left border border-black">Description</th>
+              <th className="p-1 border border-black">Qty</th>
+              <th className="p-1 border border-black">Unit Price</th>
+              <th className="p-1 border border-black">Total</th>
             </tr>
           </thead>
           <tbody>
             {estimate.items?.map(item=>(
-              <tr key={item.id} className="border-t">
-                <td className="p-3 border border-black">{field(item.part_number)}</td>
-                <td className="p-3 border border-black">{item.name}</td>
-                <td className="p-2 border border-black text-center">{item.quantity}</td>
-                <td className="p-2 border border-black text-right">KES {Number(item.unit_price).toFixed(2)}</td>
-                <td className="p-2 border border-black text-right font-bold">KES {Number(item.total).toFixed(2)}</td>
+              <tr key={item.id}>
+                <td className="p-1 border border-black">{field(item.part_number)}</td>
+                <td className="p-1 border border-black">{item.name}</td>
+                <td className="p-1 border border-black text-center">{item.quantity}</td>
+                <td className="p-1 border border-black text-right">KES {Number(item.unit_price).toFixed(2)}</td>
+                <td className="p-1 border border-black text-right font-bold">KES {Number(item.total).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
         </table>
 
         {/* PAYMENT DETAILS + TOTALS */}
-        <div className="flex justify-between mt-8 gap-8">
+        <div className="flex justify-between mt-3 gap-6 text-[11px]">
 
-          <div className="text-sm text-gray-700 leading-6 border border-black rounded p-4 w-80">
-            <p className="font-bold mb-1">Payment To:</p>
+          <div className="leading-[15px] border border-black rounded p-2 w-72">
+            <p className="font-bold mb-0.5">Payment To:</p>
             <p>NCBA Bank, Nakuru Branch</p>
             <p>A/C Name: Rift Motors Ltd</p>
             <p>A/C No: 3364820034, or through</p>
@@ -230,7 +225,7 @@ export default function EstimateDetails(){
             <p>A/C No: RIFT MOTORS</p>
           </div>
 
-          <div className="w-72">
+          <div className="w-56">
             <div className="flex justify-between">
               <span>Subtotal</span>
               <b>KES {Number(estimate.subtotal).toFixed(2)}</b>
@@ -243,8 +238,8 @@ export default function EstimateDetails(){
               <span>VAT ({estimate.tax_rate}%)</span>
               <b>KES {Number(estimate.tax_amount).toFixed(2)}</b>
             </div>
-            <hr className="my-3"/>
-            <div className="flex justify-between text-xl font-bold">
+            <hr className="my-1"/>
+            <div className="flex justify-between text-sm font-bold">
               <span>TOTAL</span>
               <span>KES {Number(estimate.total).toFixed(2)}</span>
             </div>
@@ -253,20 +248,21 @@ export default function EstimateDetails(){
         </div>
 
         {/* FOOTER */}
-        <div className="mt-10 text-center border-t pt-4 text-sm text-gray-600">
+        <div className="doc-footer mt-3 text-center border-t pt-2 text-[10px] text-gray-600">
           <p className="font-semibold">THANK YOU FOR YOUR BUSINESS!</p>
-          <p className="mt-2">Goods remain property of the company unless fully paid for.</p>
+          <p className="mt-0.5">Goods remain property of the company unless fully paid for.</p>
           <p>Estimate applies one month from the date issued.</p>
         </div>
 
         {/* PRINTED BY - same localStorage pattern as "Served By" in InvoiceDetails.jsx */}
-        <p className="mt-4 text-xs text-gray-500">Printed By: {user?.username || "N/A"}</p>
+        <p className="mt-1 text-[9px] text-gray-500">Printed By: {user?.username || "N/A"}</p>
 
-        {/* BRAND LOGOS - replace src with your own local assets */}
-        <div className="flex justify-center items-center gap-10 mt-6 opacity-80">
-          <img src="/brands/nissan.png" alt="Nissan" className="h-10 object-contain" />
-          <img src="/brands/ford.jpg" alt="Ford" className="h-10 object-contain" />
-          <img src="/brands/subaru.jpg" alt="Subaru" className="h-10 object-contain" />
+        {/* BRAND LOGOS - bigger and more spaced out than the rest of the
+            compact layout, since these should stay clearly visible. */}
+        <div className="doc-logos flex justify-center items-center gap-14 mt-2 opacity-90">
+          <img src="/brands/nissan.png" alt="Nissan" className="h-12 object-contain" />
+          <img src="/brands/ford.jpg" alt="Ford" className="h-12 object-contain" />
+          <img src="/brands/subaru.jpg" alt="Subaru" className="h-12 object-contain" />
         </div>
 
       </div>
