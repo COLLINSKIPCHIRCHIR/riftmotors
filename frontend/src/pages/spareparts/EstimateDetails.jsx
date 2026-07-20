@@ -102,40 +102,53 @@ export default function EstimateDetails(){
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen print-container">
-      <div ref={printRef} className="max-w-5xl mx-auto bg-white shadow-xl rounded-xl p-10 print-document border">
+      <div ref={printRef} className="max-w-5xl mx-auto bg-white shadow-xl rounded-xl p-5 print-document border">
 
         {/* HEADER */}
-        <div className="flex justify-between items-start border-b-2 border-gray-800 pb-6">
+      {/* HEADER */}
+<div className="doc-header">
 
-          <div className="flex items-center">
-            <img
-              src="/rmotologo.jpg"
-              className="w-56 h-40 object-contain"
-              alt="Rift Motors Limited"
-            />
-          </div>
+  <div className="flex justify-between">
 
-          <div className="text-right text-sm text-gray-600 leading-6">
-            <p>P.O. Box 18952 - 20100</p>
-            <p>KFA - Show Ground Road, Nakuru</p>
-            <p>+254 712 345 678</p>
-            <p>info@riftmotors.com</p>
-          </div>
+    {/* Logo */}
+    <div>
+      <img
+        src="/rmotologo.jpg"
+        className="w-56 h-40 object-contain"
+        alt="Rift Motors Limited"
+      />
+    </div>
 
-        </div>
+    {/* Right side */}
+    <div className="flex flex-col items-end">
 
-        {/* TITLE */}
-        <div className="text-center border-b py-3 mt-4">
-          <h2 className="text-2xl font-bold tracking-widest text-gray-800">ESTIMATE</h2>
-        </div>
+      <div className="text-right text-sm leading-5">
+        <p>P.O. Box 18952 - 20100</p>
+        <p>KFA - Show Ground Road, Nakuru</p>
+        <p>+254 712 345 678</p>
+        <p>info@riftmotors.com</p>
+      </div>
+
+      <div className="w-full text-center mt-2">
+        <h2 className="text-xl font-black tracking-[5px] uppercase">
+          ESTIMATE
+        </h2>
+      </div>
+
+    </div>
+
+  </div>
+
+  <hr className="mt-2 border-black border-t-2" />
+
+</div>
 
         {/* REF / CUSTOMER / DATE / KRA */}
-        <div className="grid grid-cols-2 gap-6 mt-6 text-sm">
+        <div className="doc-meta grid grid-cols-2 gap-4 mt-3 text-sm">
 
           <div className="space-y-1">
             <p><span className="font-bold">REF:</span> EST-{estimate.id}</p>
             <p><span className="font-bold">Bill To:</span> {field(estimate.customer_name)}</p>
-            <p><span className="font-bold">Customer:</span> {field(estimate.customer_name)}</p>
             <p><span className="font-bold">Address:</span> {field(estimate.customer_address)}</p>
             <p><span className="font-bold">Mobile:</span> {field(estimate.customer_phone)}</p>
           </div>
@@ -182,24 +195,24 @@ export default function EstimateDetails(){
         </div>
 
         {/* ITEMS */}
-        <table className="w-full border text-sm">
+        <table className="w-full border border-black text-sm">
           <thead className="bg-gray-100">
             <tr>
-              <th className="p-3 text-left border">Code</th>
-              <th className="p-3 text-left border">Description</th>
-              <th className="p-2 border">Qty</th>
-              <th className="p-2 border">Unit Price</th>
-              <th className="p-2 border">Total</th>
+              <th className="p-3 text-left border border-black">Code</th>
+              <th className="p-3 text-left border border-black">Description</th>
+              <th className="p-2 border border-black">Qty</th>
+              <th className="p-2 border border-black">Unit Price</th>
+              <th className="p-2 border border-black">Total</th>
             </tr>
           </thead>
           <tbody>
             {estimate.items?.map(item=>(
               <tr key={item.id} className="border-t">
-                <td className="p-3 border">{field(item.part_number)}</td>
-                <td className="p-3 border">{item.name}</td>
-                <td className="p-2 border text-center">{item.quantity}</td>
-                <td className="p-2 border text-right">KES {Number(item.unit_price).toFixed(2)}</td>
-                <td className="p-2 border text-right font-bold">KES {Number(item.total).toFixed(2)}</td>
+                <td className="p-3 border border-black">{field(item.part_number)}</td>
+                <td className="p-3 border border-black">{item.name}</td>
+                <td className="p-2 border border-black text-center">{item.quantity}</td>
+                <td className="p-2 border border-black text-right">KES {Number(item.unit_price).toFixed(2)}</td>
+                <td className="p-2 border border-black text-right font-bold">KES {Number(item.total).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
@@ -208,7 +221,7 @@ export default function EstimateDetails(){
         {/* PAYMENT DETAILS + TOTALS */}
         <div className="flex justify-between mt-8 gap-8">
 
-          <div className="text-sm text-gray-700 leading-6 border rounded p-4 w-80">
+          <div className="text-sm text-gray-700 leading-6 border border-black rounded p-4 w-80">
             <p className="font-bold mb-1">Payment To:</p>
             <p>NCBA Bank, Nakuru Branch</p>
             <p>A/C Name: Rift Motors Ltd</p>

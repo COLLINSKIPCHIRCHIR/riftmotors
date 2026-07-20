@@ -2,87 +2,129 @@
 @tailwind components;
 @tailwind utilities;
 
-
-
 @media print {
 
   @page {
     size: A4;
-    margin: 10mm;
+    margin: 5mm;
   }
 
-  body{
-
-  background:white;
-
+  html,
+  body {
+    background: #fff !important;
+    margin: 0;
+    padding: 0;
   }
 
-
-
-  .print\:hidden{
-
-  display:none !important;
-
+  .print\:hidden {
+    display: none !important;
   }
 
-
-
-  .print-container{
-
-  background:white !important;
-
-  padding:0 !important;
-
+  .print-container {
+    background: #fff !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
+  .print-document {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 4mm !important;
 
+    background: #fff !important;
 
-  /*
-    Was previously constrained to max-width:80mm (a thermal receipt
-    width), which squeezed every A4 document - invoices, estimates -
-    into a tiny centered column, leaving large blank margins on all
-    sides. Now spans the full printable A4 area instead.
-  */
-  .print-document{
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
 
-  max-width:none;
-
-  width:100%;
-
-  margin:0;
-
-  padding:10mm;
-
-
-  box-shadow:none !important;
-
-  border:none !important;
-
-  border-radius:0 !important;
-
+    color: #000;
+    font-size: 11px;
   }
 
-
-
-  table{
-
-  width:100%;
-
-  border-collapse:collapse;
-
-  font-size:12px;
-
-
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-
-
-  th,td{
-
-  padding:4px;
-
+  table {
+    width: 100%;
+    border-collapse: collapse;
   }
 
+  table,
+  th,
+  td {
+    border: 1.2px solid #000 !important;
+  }
 
+  th {
+    padding: 5px 6px !important;
+    font-size: 11px;
+    font-weight: 700;
+  }
 
+  td {
+    padding: 4px 6px !important;
+    font-size: 10px;
+  }
+
+  .border {
+    border-color: #000 !important;
+  }
+
+  .doc-header{
+    padding-bottom:0 !important;
+}
+
+.doc-title{
+    text-align:center;
+    margin-top:-12px !important;
+    margin-bottom:4px !important;
+    line-height:1;
+}
+
+.doc-title h2{
+    font-size:18px;
+    font-weight:800;
+    letter-spacing:4px;
+    color:#000;
+}
+
+  .doc-meta {
+    margin-top: 6px !important;
+    margin-bottom: 8px !important;
+    font-size: 10px;
+  }
+
+  .doc-totals {
+    margin-top: 10px !important;
+  }
+
+  .doc-footer {
+    margin-top: 8px !important;
+    padding-top: 6px !important;
+    page-break-inside: avoid;
+  }
+
+  .doc-logos {
+    margin-top: 6px !important;
+    display: flex;
+    justify-content: center;
+    gap: 45px !important;
+    page-break-inside: avoid;
+  }
+
+  .doc-logos img {
+    height: 42px !important;
+    object-fit: contain;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    page-break-inside: avoid;
+  }
 }

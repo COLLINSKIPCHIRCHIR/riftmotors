@@ -115,10 +115,10 @@ const ServiceEstimateDetails =()=>{
 
   return (
     <div className="print-container p-6 bg-gray-100 min-h-screen">
-      <div ref={printRef} className="print-document max-w-5xl mx-auto bg-white shadow-lg rounded-xl p-10 border">
+      <div ref={printRef} className="print-document max-w-5xl mx-auto bg-white shadow-lg rounded-xl p-6 border">
 
         {/* HEADER */}
-        <div className="flex justify-between items-start border-b-2 border-gray-800 pb-6">
+        <div className="doc-header flex justify-between items-start border-b-2 border-black pb-2">
 
           <div className="flex items-center">
             <img
