@@ -77,19 +77,27 @@
     padding-bottom:0 !important;
 }
 
-.doc-title{
-    text-align:center;
-    margin-top:-12px !important;
-    margin-bottom:4px !important;
-    line-height:1;
+.doc-title {
+  text-align: center;
+  margin: 0 !important;      /* was margin-top: -12px !important; */
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+  line-height: 1;
 }
 
-.doc-title h2{
-    font-size:18px;
-    font-weight:800;
-    letter-spacing:4px;
-    color:#000;
+.doc-title h2 {
+  margin: 0 !important;      /* <-- this is the missing piece */
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: #000;
 }
+
+.print-document hr {
+  margin: 0 !important;
+  border-top: 2px solid #000 !important;
+}
+
 
   .doc-meta {
     margin-top: 6px !important;
