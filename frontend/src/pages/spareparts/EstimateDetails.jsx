@@ -257,12 +257,13 @@ export default function EstimateDetails(){
         {/* PRINTED BY - same localStorage pattern as "Served By" in InvoiceDetails.jsx */}
         <p className="mt-1 text-[9px] text-gray-500">Printed By: {user?.username || "N/A"}</p>
 
-        {/* BRAND LOGOS - bigger and more spaced out than the rest of the
-            compact layout, since these should stay clearly visible. */}
-        <div className="doc-logos flex justify-center items-center gap-14 mt-2 opacity-90">
-          <img src="/brands/nissan.png" alt="Nissan" className="h-12 object-contain" />
-          <img src="/brands/ford.jpg" alt="Ford" className="h-12 object-contain" />
-          <img src="/brands/subaru.jpg" alt="Subaru" className="h-12 object-contain" />
+        {/* BRAND LOGOS - larger and spread across the width, like a
+            printed dealer strip, rather than small and clustered tight
+            in the center. */}
+        <div className="doc-logos flex justify-between items-center px-2 mt-3">
+          <img src="/brands/nissan.png" alt="Nissan" className="h-20 object-contain" />
+          <img src="/brands/ford.jpg" alt="Ford" className="h-20 object-contain" />
+          <img src="/brands/subaru.jpg" alt="Subaru" className="h-20 object-contain" />
         </div>
 
       </div>

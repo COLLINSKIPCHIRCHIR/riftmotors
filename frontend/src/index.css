@@ -110,13 +110,13 @@
   .doc-logos {
     margin-top: 6px !important;
     display: flex;
-    justify-content: center;
-    gap: 45px !important;
+    justify-content: space-between !important;
+    gap: 0 !important;
     page-break-inside: avoid;
   }
 
   .doc-logos img {
-    height: 42px !important;
+    height: 76px !important;
     object-fit: contain;
   }
 
