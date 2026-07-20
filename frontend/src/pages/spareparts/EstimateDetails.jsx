@@ -102,62 +102,78 @@ export default function EstimateDetails(){
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen print-container">
-      <div ref={printRef} className="max-w-5xl mx-auto bg-white shadow-xl rounded-xl p-4 print-document border">
+      <div ref={printRef} className="max-w-5xl mx-auto bg-white print-document border border-black p-3 text-[10px] leading-[13px]">
 
-        {/* HEADER — logo shrunk so it stops dictating the row height;
-            title now sits directly above the divider instead of floating
-            in the tall space a big logo used to leave beside it. */}
-        <div className="doc-header">
-
-          <div className="flex justify-between items-start">
-
-            <img
-              src="/rmotologo.jpg"
-              className="h-16 w-auto object-contain"
-              alt="Rift Motors Limited"
-            />
-
-            <div className="text-right text-[10px] leading-[13px] text-gray-700">
-              <p>P.O. Box 18952 - 20100</p>
-              <p>KFA - Show Ground Road, Nakuru</p>
-              <p>+254 712 345 678</p>
-              <p>info@riftmotors.com</p>
-            </div>
-
+        {/* HEADER */}
+        <div className="doc-header flex justify-between items-start pb-2">
+          <img
+            src="/rmotologo.jpg"
+            className="h-14 w-auto object-contain"
+            alt="Rift Motors Limited"
+          />
+          <div className="text-right text-[9px] leading-[12px] text-gray-700 pt-1">
+            <p>P.O. Box 18952 - 20100</p>
+            <p>KFA - Show Ground Road, Nakuru</p>
+            <p>+254 712 345 678</p>
+            <p>info@riftmotors.com</p>
           </div>
-
-          <div className="doc-title text-center mt-1 mb-1">
-            <h2 className="text-base font-extrabold tracking-[4px] uppercase text-gray-900">
-              ESTIMATE
-            </h2>
-          </div>
-
-          <hr className="border-black border-t-2" />
-
         </div>
 
-        {/* REF / CUSTOMER / DATE / KRA */}
-        <div className="doc-meta grid grid-cols-2 gap-4 mt-2 text-[11px] leading-[15px]">
+        <hr className="border-black border-t-2" />
 
-          <div className="space-y-0.5">
-            <p><span className="font-bold">REF:</span> EST-{estimate.id}</p>
-            <p><span className="font-bold">Bill To:</span> {field(estimate.customer_name)}</p>
-            <p><span className="font-bold">Address:</span> {field(estimate.customer_address)}</p>
-            <p><span className="font-bold">Mobile:</span> {field(estimate.customer_phone)}</p>
-          </div>
-
-          <div className="space-y-0.5 text-right">
-            <p><span className="font-bold">Date:</span> {new Date(estimate.created_at).toLocaleDateString()}</p>
-            <p><span className="font-bold">KRA Pin:</span> {field(estimate.customer_kra_pin)}</p>
-            <p>
-              <span className="font-bold">Status:</span>{" "}
-              <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full text-[10px]">
-                {estimate.status}
-              </span>
-            </p>
-          </div>
-
+        {/* TITLE */}
+        <div className="doc-title text-center py-1">
+          <h2 className="text-sm font-extrabold tracking-[4px] uppercase text-gray-900">
+            ESTIMATE
+          </h2>
         </div>
+
+        {/* REF / CUSTOMER / VEHICLE GRID — bordered form fields like the paper estimate */}
+        <table className="w-full border border-black text-[10px] leading-[13px]">
+          <tbody>
+            <tr>
+              <td className="border border-black px-1 py-0.5 font-bold w-[10%]">REF:</td>
+              <td className="border border-black px-1 py-0.5" colSpan={2}>EST-{estimate.id}</td>
+              <td className="border border-black px-1 py-0.5 font-bold w-[10%]">Date:</td>
+              <td className="border border-black px-1 py-0.5">{new Date(estimate.created_at).toLocaleDateString()}</td>
+            </tr>
+            <tr>
+              <td className="border border-black px-1 py-0.5 font-bold">Bill To:</td>
+              <td className="border border-black px-1 py-0.5" colSpan={2}></td>
+              <td className="border border-black px-1 py-0.5 font-bold">KRA Pin:</td>
+              <td className="border border-black px-1 py-0.5">{field(estimate.customer_kra_pin)}</td>
+            </tr>
+            <tr>
+              <td className="border border-black px-1 py-0.5 font-bold">Customer:</td>
+              <td className="border border-black px-1 py-0.5" colSpan={2}>{field(estimate.customer_name)}</td>
+              <td className="border border-black px-1 py-0.5 font-bold">Reg No:</td>
+              <td className="border border-black px-1 py-0.5">{field(estimate.reg_no)}</td>
+            </tr>
+            <tr>
+              <td className="border border-black px-1 py-0.5 font-bold">Address:</td>
+              <td className="border border-black px-1 py-0.5" colSpan={2}>{field(estimate.customer_address)}</td>
+              <td className="border border-black px-1 py-0.5 font-bold">Model:</td>
+              <td className="border border-black px-1 py-0.5">{field(estimate.model)}</td>
+            </tr>
+            <tr>
+              <td className="border border-black px-1 py-0.5 font-bold">Contact Person:</td>
+              <td className="border border-black px-1 py-0.5" colSpan={2}>{field(estimate.contact_person)}</td>
+              <td className="border border-black px-1 py-0.5 font-bold">Vin No:</td>
+              <td className="border border-black px-1 py-0.5">{field(estimate.vin_no)}</td>
+            </tr>
+            <tr>
+              <td className="border border-black px-1 py-0.5 font-bold">Mobile:</td>
+              <td className="border border-black px-1 py-0.5" colSpan={2}>{field(estimate.customer_phone)}</td>
+              <td className="border border-black px-1 py-0.5 font-bold">Engine:</td>
+              <td className="border border-black px-1 py-0.5">{field(estimate.engine)}</td>
+            </tr>
+            <tr>
+              <td className="border border-black px-1 py-0.5" colSpan={3}></td>
+              <td className="border border-black px-1 py-0.5 font-bold">Mileage:</td>
+              <td className="border border-black px-1 py-0.5">{field(estimate.mileage)}</td>
+            </tr>
+          </tbody>
+        </table>
 
         {/* ACTIONS */}
         <div className="flex justify-end gap-3 my-3 print:hidden">
@@ -190,65 +206,72 @@ export default function EstimateDetails(){
         {/* ITEMS — thin borders + tight padding + small font so 10+ rows
             still fit on one page. Nothing caps the row count; it just
             grows compactly instead of ballooning. */}
-        <table className="w-full border border-black text-[10px]">
+        <table className="w-full border border-black text-[9px] leading-tight mt-2">
           <thead className="bg-gray-100">
             <tr>
-              <th className="p-1 text-left border border-black">Code</th>
-              <th className="p-1 text-left border border-black">Description</th>
-              <th className="p-1 border border-black">Qty</th>
-              <th className="p-1 border border-black">Unit Price</th>
-              <th className="p-1 border border-black">Total</th>
+              <th className="p-0.5 text-left border border-black">Code</th>
+              <th className="p-0.5 text-left border border-black">Description</th>
+              <th className="p-0.5 border border-black">Qty</th>
+              <th className="p-0.5 border border-black">Unit Price</th>
+              <th className="p-0.5 border border-black">Total</th>
             </tr>
           </thead>
           <tbody>
             {estimate.items?.map(item=>(
               <tr key={item.id}>
-                <td className="p-1 border border-black">{field(item.part_number)}</td>
-                <td className="p-1 border border-black">{item.name}</td>
-                <td className="p-1 border border-black text-center">{item.quantity}</td>
-                <td className="p-1 border border-black text-right">KES {Number(item.unit_price).toFixed(2)}</td>
-                <td className="p-1 border border-black text-right font-bold">KES {Number(item.total).toFixed(2)}</td>
+                <td className="p-0.5 border border-black">{field(item.part_number)}</td>
+                <td className="p-0.5 border border-black">{item.name}</td>
+                <td className="p-0.5 border border-black text-center">{item.quantity}</td>
+                <td className="p-0.5 border border-black text-right">{Number(item.unit_price).toFixed(2)}</td>
+                <td className="p-0.5 border border-black text-right font-bold">{Number(item.total).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
         </table>
 
-        {/* PAYMENT DETAILS + TOTALS */}
-        <div className="flex justify-between mt-3 gap-6 text-[11px]">
+        {/* PAYMENT DETAILS + TOTALS — both boxed tables, sitting side by
+            side like the "Payment To" / "Sub Total, Vat, Total" pair on
+            the paper estimate. */}
+        <div className="flex justify-between mt-2 gap-4 text-[10px] leading-[13px]">
 
-          <div className="leading-[15px] border border-black rounded p-2 w-72">
-            <p className="font-bold mb-0.5">Payment To:</p>
-            <p>NCBA Bank, Nakuru Branch</p>
-            <p>A/C Name: Rift Motors Ltd</p>
-            <p>A/C No: 3364820034, or through</p>
-            <p>Mpesa Paybill No: 532602</p>
-            <p>A/C No: RIFT MOTORS</p>
-          </div>
+          <table className="border border-black w-[55%]">
+            <tbody>
+              <tr>
+                <td className="border border-black px-1 py-0.5 font-bold" colSpan={2}>Payment To:</td>
+              </tr>
+              <tr><td className="border border-black px-1 py-0.5" colSpan={2}>NCBA Bank, Nakuru Branch</td></tr>
+              <tr><td className="border border-black px-1 py-0.5" colSpan={2}>A/C Name: Rift Motors Ltd</td></tr>
+              <tr><td className="border border-black px-1 py-0.5" colSpan={2}>A/C No: 3364820034, or through</td></tr>
+              <tr><td className="border border-black px-1 py-0.5" colSpan={2}>Mpesa Paybill No: 532602</td></tr>
+              <tr><td className="border border-black px-1 py-0.5" colSpan={2}>A/C No: RIFT MOTORS</td></tr>
+            </tbody>
+          </table>
 
-          <div className="w-56">
-            <div className="flex justify-between">
-              <span>Subtotal</span>
-              <b>KES {Number(estimate.subtotal).toFixed(2)}</b>
-            </div>
-            <div className="flex justify-between">
-              <span>Discount</span>
-              <b>KES {Number(estimate.discount).toFixed(2)}</b>
-            </div>
-            <div className="flex justify-between">
-              <span>VAT ({estimate.tax_rate}%)</span>
-              <b>KES {Number(estimate.tax_amount).toFixed(2)}</b>
-            </div>
-            <hr className="my-1"/>
-            <div className="flex justify-between text-sm font-bold">
-              <span>TOTAL</span>
-              <span>KES {Number(estimate.total).toFixed(2)}</span>
-            </div>
-          </div>
+          <table className="border border-black w-[40%] h-fit">
+            <tbody>
+              <tr>
+                <td className="border border-black px-1 py-0.5">Sub Total</td>
+                <td className="border border-black px-1 py-0.5 text-right">{Number(estimate.subtotal).toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td className="border border-black px-1 py-0.5">Discount</td>
+                <td className="border border-black px-1 py-0.5 text-right">{Number(estimate.discount).toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td className="border border-black px-1 py-0.5">Vat ({estimate.tax_rate}%)</td>
+                <td className="border border-black px-1 py-0.5 text-right">{Number(estimate.tax_amount).toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td className="border border-black px-1 py-0.5 font-bold">Total Amount</td>
+                <td className="border border-black px-1 py-0.5 text-right font-bold">{Number(estimate.total).toFixed(2)}</td>
+              </tr>
+            </tbody>
+          </table>
 
         </div>
 
         {/* FOOTER */}
-        <div className="doc-footer mt-3 text-center border-t pt-2 text-[10px] text-gray-600">
+        <div className="doc-footer mt-3 text-center border-t pt-2 text-[9px] text-gray-600">
           <p className="font-semibold">THANK YOU FOR YOUR BUSINESS!</p>
           <p className="mt-0.5">Goods remain property of the company unless fully paid for.</p>
           <p>Estimate applies one month from the date issued.</p>
@@ -257,13 +280,11 @@ export default function EstimateDetails(){
         {/* PRINTED BY - same localStorage pattern as "Served By" in InvoiceDetails.jsx */}
         <p className="mt-1 text-[9px] text-gray-500">Printed By: {user?.username || "N/A"}</p>
 
-        {/* BRAND LOGOS - larger and spread across the width, like a
-            printed dealer strip, rather than small and clustered tight
-            in the center. */}
+        {/* BRAND LOGOS */}
         <div className="doc-logos flex justify-between items-center px-2 mt-3">
-          <img src="/brands/nissan.png" alt="Nissan" className="h-20 object-contain" />
-          <img src="/brands/ford.jpg" alt="Ford" className="h-20 object-contain" />
-          <img src="/brands/subaru.jpg" alt="Subaru" className="h-20 object-contain" />
+          <img src="/brands/nissan.png" alt="Nissan" className="h-16 object-contain" />
+          <img src="/brands/ford.jpg" alt="Ford" className="h-16 object-contain" />
+          <img src="/brands/subaru.jpg" alt="Subaru" className="h-16 object-contain" />
         </div>
 
       </div>
