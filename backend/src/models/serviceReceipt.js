@@ -10,22 +10,31 @@ const generateReceiptNumber = async (client) => {
   return `RFT-SRV-${year}-${String(result.rows[0].next).padStart(5, "0")}`;
 };
 
-export const convertServiceInvoiceToReceipt = async (invoiceId, payment_method) => {
+export const convertServiceInvoiceToReceipt = async (invoiceId, payment_method, amount_paid) => {
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
 
     const invoiceRes = await client.query(
-      `SELECT * FROM service_invoices WHERE id=$1 AND status='unpaid'`,
+      `SELECT * FROM service_invoices WHERE id=$1 AND status IN ('unpaid','partial')`,
       [invoiceId]
     );
 
     if (invoiceRes.rows.length === 0) {
-      throw new Error("Invoice not found or already paid");
+      throw new Error("Invoice not found or already fully paid");
     }
 
     const invoice = invoiceRes.rows[0];
+
+    const balanceBefore = Number(invoice.total) - Number(invoice.amount_paid || 0);
+    const payment = Math.min(Number(amount_paid), balanceBefore);
+
+    if (!(payment > 0)) {
+      throw new Error("Payment amount must be greater than zero");
+    }
+
+    const balanceAfter = balanceBefore - payment;
 
     const itemsRes = await client.query(
       `SELECT * FROM service_invoice_items WHERE invoice_id=$1`,
@@ -35,15 +44,6 @@ export const convertServiceInvoiceToReceipt = async (invoiceId, payment_method) 
 
     const receiptNumber = await generateReceiptNumber(client);
 
-    // discount_type / discount_value are carried over from the invoice
-    // (same fields that already live on service_invoices) so the receipt
-    // can show the same discount breakdown the invoice showed.
-    //
-    // NOTE: this requires service_receipts to have discount_type
-    // VARCHAR(20) DEFAULT 'amount' and discount_value NUMERIC DEFAULT 0
-    // columns. Add them via migration if they aren't there yet - e.g.:
-    //   ALTER TABLE service_receipts ADD COLUMN IF NOT EXISTS discount_type VARCHAR(20) DEFAULT 'amount';
-    //   ALTER TABLE service_receipts ADD COLUMN IF NOT EXISTS discount_value NUMERIC DEFAULT 0;
     const receiptRes = await client.query(
       `INSERT INTO service_receipts
         (
@@ -59,10 +59,12 @@ export const convertServiceInvoiceToReceipt = async (invoiceId, payment_method) 
         tax_rate,
         tax_amount,
         total,
-        payment_method
+        payment_method,
+        account_balance_before,
+        account_balance_after
         )
 
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
 
         RETURNING *`,
       [
@@ -77,8 +79,10 @@ export const convertServiceInvoiceToReceipt = async (invoiceId, payment_method) 
         invoice.discount,
         invoice.tax_rate,
         invoice.tax_amount,
-        invoice.total,
-        payment_method
+        payment,
+        payment_method,
+        balanceBefore,
+        balanceAfter
       ]
     );
 
@@ -119,20 +123,24 @@ export const convertServiceInvoiceToReceipt = async (invoiceId, payment_method) 
       );
     }
 
-    await client.query(
-      `UPDATE service_invoices SET status='paid' WHERE id=$1`,
-      [invoiceId]
-    );
+    const newAmountPaid = Number(invoice.amount_paid || 0) + payment;
+    const newStatus = balanceAfter <= 0 ? "paid" : "partial";
 
     await client.query(
-      `UPDATE service_estimates SET status='sold' WHERE id=$1`,
-      [invoice.estimate_id]
+      `UPDATE service_invoices SET amount_paid=$1, status=$2 WHERE id=$3`,
+      [newAmountPaid, newStatus, invoiceId]
     );
 
-    await client.query(
-      `UPDATE service_jobs SET status='completed' WHERE id=$1`,
-      [invoice.job_id]
-    );
+    if (newStatus === "paid") {
+      await client.query(
+        `UPDATE service_estimates SET status='sold' WHERE id=$1`,
+        [invoice.estimate_id]
+      );
+      await client.query(
+        `UPDATE service_jobs SET status='completed' WHERE id=$1`,
+        [invoice.job_id]
+      );
+    }
 
     await client.query("COMMIT");
     return receiptRes.rows[0];

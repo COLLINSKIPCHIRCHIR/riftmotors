@@ -11,66 +11,36 @@ from "../models/serviceReceipt.js";
 
 
 
-export const payServiceInvoice = async(req,res)=>{
+export const payServiceInvoice = async (req, res) => {
 
+  try {
 
-try{
+    const { payment_method, amount_paid } = req.body;
 
+    if (!payment_method) {
+      return res.status(400).json({ message: "Payment method required" });
+    }
 
-const {
-payment_method
-}=req.body;
+    if (!amount_paid || Number(amount_paid) <= 0) {
+      return res.status(400).json({ message: "amount_paid must be greater than zero" });
+    }
 
+    const receipt = await convertServiceInvoiceToReceipt(
+      req.params.id,
+      payment_method,
+      amount_paid
+    );
 
+    res.json({
+      message: "Payment recorded successfully",
+      receipt
+    });
 
-if(!payment_method){
+  } catch (err) {
 
-return res.status(400).json({
+    res.status(400).json({ error: err.message });
 
-message:"Payment method required"
-
-});
-
-}
-
-
-
-
-const receipt =
-await convertServiceInvoiceToReceipt(
-
-req.params.id,
-
-payment_method
-
-);
-
-
-
-
-res.json({
-
-message:"Invoice paid successfully",
-
-receipt
-
-});
-
-
-
-}catch(err){
-
-
-res.status(400).json({
-
-error:err.message
-
-});
-
-
-}
-
-
+  }
 
 };
 

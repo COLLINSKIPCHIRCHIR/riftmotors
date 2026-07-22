@@ -337,7 +337,7 @@ const AdminLayout = () => {
               <p className="text-xs text-slate-400 capitalize">{user?.role || "admin"}</p>
             </div>
           </div>
-          {
+          {/*{
             hasPermission("settings.view") && (
 
             <button
@@ -351,7 +351,7 @@ const AdminLayout = () => {
             </button>
 
             )
-            }
+            }*/}
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-red-400 hover:text-white hover:bg-red-600/20"

@@ -115,225 +115,292 @@ const ServiceEstimateDetails =()=>{
 
   return (
     <div className="print-container p-6 bg-gray-100 min-h-screen">
-      <div ref={printRef} className="print-document max-w-5xl mx-auto bg-white shadow-lg rounded-xl p-6 border">
+      <div ref={printRef} className="max-w-5xl mx-auto bg-white print-document border border-black p-3 text-[10px] leading-[13px]">
 
-        {/* HEADER */}
-        <div className="doc-header flex justify-between items-start border-b-2 border-black pb-2">
+        {/* OUTER FRAME — wraps everything except the brand logos */}
+        <div className="border-2 border-black p-3">
 
-          <div className="flex items-center">
-            <img
-              src="/rmotologo.jpg"
-              className="w-56 h-40 object-contain"
-              alt="Rift Motors Limited"
-            />
+          {/* HEADER */}
+          <div className="doc-header flex justify-center items-center gap-4 pb-2">
+
+            {/* LOGO */}
+            <div className="flex items-center justify-end">
+              <img
+                src="/rmotologo.jpg"
+                className="h-16 w-auto object-contain"
+                alt="Rift Motors Limited"
+              />
+            </div>
+
+            {/* VERTICAL DIVIDER */}
+            <div className="border-l-2 border-black self-stretch"></div>
+
+            {/* CONTACT INFO */}
+            <div className="flex flex-col justify-center text-left text-[9px] leading-[14px] text-gray-700 space-y-0.5">
+              <p>P.O. Box 18952 - 20100</p>
+              <p>KFA - Show Ground Road, Nakuru</p>
+              <p className="flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h2.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-1.71.855a11.042 11.042 0 005.516 5.516l.854-1.71a1 1 0 011.211-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                +254 790 406 996
+              </p>
+              <p className="flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                info@riftmotors.com
+              </p>
+              <p className="flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                riftmotorsltd@gmail.com
+              </p>
+            </div>
+
           </div>
 
-          <div className="text-right text-sm text-gray-600 leading-6">
-            <p>P.O. Box 18952 - 20100</p>
-            <p>KFA - Show Ground Road, Nakuru</p>
-            <p>+254 712 345 678</p>
-            <p>info@riftmotors.com</p>
+          <hr className="border-black border-t-2" />
+
+          {/* TITLE */}
+          <div className="doc-title text-center py-1">
+            <h2 className="text-sm font-extrabold tracking-[4px] uppercase text-gray-900">
+              SERVICE ESTIMATE
+            </h2>
           </div>
 
-        </div>
-
-        {/* TITLE */}
-        <div className="text-center border-b py-3 mt-4">
-          <h2 className="text-2xl font-bold tracking-widest text-gray-800">SERVICE ESTIMATE</h2>
-        </div>
-
-        {/* CUSTOMER / VEHICLE / DATE */}
-        <div className="grid grid-cols-2 gap-6 mt-6 text-sm">
-
-          <div className="space-y-1">
-            <p><span className="font-bold">REF:</span> EST-{estimate.id}</p>
-            <p><span className="font-bold">Bill To:</span> {field(estimate.customer_name)}</p>
-            <p><span className="font-bold">Address:</span> {field(estimate.customer_address)}</p>
-            <p><span className="font-bold">Mobile:</span> {field(estimate.customer_phone)}</p>
-            <p><span className="font-bold">KRA Pin:</span> {field(estimate.customer_kra_pin)}</p>
-          </div>
-
-          <div className="space-y-1 text-right">
-            <p><span className="font-bold">Date:</span> {new Date(estimate.created_at).toLocaleDateString()}</p>
-            <p><span className="font-bold">Reg No:</span> {field(estimate.registration_number)}</p>
-            <p><span className="font-bold">Model:</span> {field(estimate.vehicle_make)} {field(estimate.vehicle_model)}</p>
-            <p><span className="font-bold">VIN No:</span> {field(estimate.vin_no)}</p>
-            <p><span className="font-bold">Engine:</span> {field(estimate.engine_number)}</p>
-            <p><span className="font-bold">Mileage:</span> {field(estimate.mileage)}</p>
-            <p>
-              <span className="font-bold">Status:</span>{" "}
-              <span className="px-3 py-1 rounded-full bg-yellow-100 text-yellow-700">
-                {estimate.status}
-              </span>
-            </p>
-          </div>
-
-        </div>
-
-        {/* ACTIONS */}
-        <div className="flex justify-end gap-3 my-6 print:hidden">
-          <button
-            onClick={handleConvertInvoice}
-            disabled={estimate.status !== "pending"}
-            className="bg-green-600 text-white px-5 py-2 rounded-lg disabled:bg-gray-400"
-          >Convert To Invoice</button>
-          <button
-            onClick={()=>window.print()}
-            className="bg-gray-800 text-white px-5 py-2 rounded-lg"
-          >Print</button>
-          <button
-            onClick={handleDownloadPdf}
-            className="bg-blue-800 text-white px-5 py-2 rounded-lg"
-          >Download PDF</button>
-          <button
-            onClick={handleShare}
-            className="bg-emerald-700 text-white px-5 py-2 rounded-lg"
-          >Share</button>
-        </div>
-
-        {estimate.status==="invoiced" && (
-          <div className="bg-blue-100 text-blue-700 p-3 rounded mb-5">
-            This estimate has been converted to invoice and can no longer be edited.
-          </div>
-        )}
-
-        {/* ITEMS */}
-        <table className="w-full border text-sm">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-3 text-left border">Description</th>
-              <th className="p-3 text-left border">Type</th>
-              <th className="p-2 border">Qty</th>
-              <th className="p-2 border">Price</th>
-              <th className="p-2 border">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {estimate.items?.map(item=>(
-              <tr key={item.id} className="border-t">
-                <td className="p-3 border">{item.description}</td>
-                <td className="p-2 border">{item.item_type}</td>
-                <td className="p-2 border text-center">{item.quantity}</td>
-                <td className="p-2 border text-right">KES {item.unit_price}</td>
-                <td className="p-3 border">
-
-                  <div className="text-sm text-gray-500">
-                    Original: KES {item.original_price}
-                  </div>
-
-                  {item.item_type==="service" && estimate.status==="pending" && (
-                    <div className="mt-2">
-                      <label className="text-xs text-gray-500">Discount / Reduction</label>
-                      <div className="flex gap-2">
-                        <input
-                          type="number"
-                          value={adjustments[item.id]?.adjustment ?? item.adjustment ?? ""}
-                          onChange={(e)=>
-                            setAdjustments({
-                              ...adjustments,
-                              [item.id]:{
-                                ...adjustments[item.id],
-                                adjustment:Number(e.target.value)
-                              }
-                            })
-                          }
-                          className="border rounded p-2 w-24"
-                        />
-                        <button
-                          onClick={()=>handleAdjustmentUpdate(item.id)}
-                          className="bg-blue-600 text-white rounded px-3"
-                        >Apply</button>
-                      </div>
-                    </div>
-                  )}
-
-                  {item.item_type==="sparepart" && estimate.status==="pending" && (
-                    <div>
-                      <label>Discount</label>
-                      <select
-                        onChange={(e)=>
-                          setAdjustments({
-                            ...adjustments,
-                            [item.id]:{
-                              ...adjustments[item.id],
-                              discount_type:e.target.value
-                            }
-                          })
-                        }
-                      >
-                        <option value="amount">KES</option>
-                        <option value="percentage">%</option>
-                      </select>
-                      <input
-                        type="number"
-                        value={adjustments[item.id]?.discount_value ?? ""}
-                        onChange={(e)=>
-                          setAdjustments({
-                            ...adjustments,
-                            [item.id]:{
-                              ...adjustments[item.id],
-                              discount_value:Number(e.target.value)
-                            }
-                          })
-                        }
-                      />
-                      <button onClick={()=>handleAdjustmentUpdate(item.id)}>Apply</button>
-                    </div>
-                  )}
-
-                  <p className="mt-2">Adjustment: KES {item.adjustment}</p>
-                  <p className="font-bold">Final: KES {item.total_price}</p>
-
-                </td>
+          {/* REF / CUSTOMER / VEHICLE GRID — bordered form fields like the paper estimate */}
+          <table className="w-full border border-black text-[10px] leading-[13px]">
+            <tbody>
+              <tr>
+                <td className="border border-black px-1 py-0.5 font-bold w-[10%]">REF:</td>
+                <td className="border border-black px-1 py-0.5" colSpan={2}>EST-{estimate.id}</td>
+                <td className="border border-black px-1 py-0.5 font-bold w-[10%]">Date:</td>
+                <td className="border border-black px-1 py-0.5">{new Date(estimate.created_at).toLocaleDateString()}</td>
               </tr>
-            ))}
-          </tbody>
-        </table>
+              <tr>
+                <td className="border border-black px-1 py-0.5 font-bold">Bill To:</td>
+                <td className="border border-black px-1 py-0.5" colSpan={2}>{field(estimate.customer_name)}</td>
+                <td className="border border-black px-1 py-0.5 font-bold">KRA Pin:</td>
+                <td className="border border-black px-1 py-0.5">{field(estimate.customer_kra_pin)}</td>
+              </tr>
+              <tr>
+                <td className="border border-black px-1 py-0.5 font-bold">Address:</td>
+                <td className="border border-black px-1 py-0.5" colSpan={2}>{field(estimate.customer_address)}</td>
+                <td className="border border-black px-1 py-0.5 font-bold">Reg No:</td>
+                <td className="border border-black px-1 py-0.5">{field(estimate.registration_number)}</td>
+              </tr>
+              <tr>
+                <td className="border border-black px-1 py-0.5 font-bold">Mobile:</td>
+                <td className="border border-black px-1 py-0.5" colSpan={2}>{field(estimate.customer_phone)}</td>
+                <td className="border border-black px-1 py-0.5 font-bold">Model:</td>
+                <td className="border border-black px-1 py-0.5">{field(estimate.vehicle_make)} {field(estimate.vehicle_model)}</td>
+              </tr>
+              <tr>
+                <td className="border border-black px-1 py-0.5 font-bold">Status:</td>
+                <td className="border border-black px-1 py-0.5" colSpan={2}>{estimate.status}</td>
+                <td className="border border-black px-1 py-0.5 font-bold">Vin No:</td>
+                <td className="border border-black px-1 py-0.5">{field(estimate.vin_no)}</td>
+              </tr>
+              <tr>
+                <td className="border border-black px-1 py-0.5" colSpan={3}></td>
+                <td className="border border-black px-1 py-0.5 font-bold">Engine:</td>
+                <td className="border border-black px-1 py-0.5">{field(estimate.engine_number)}</td>
+              </tr>
+              <tr>
+                <td className="border border-black px-1 py-0.5" colSpan={3}></td>
+                <td className="border border-black px-1 py-0.5 font-bold">Mileage:</td>
+                <td className="border border-black px-1 py-0.5">{field(estimate.mileage)}</td>
+              </tr>
+            </tbody>
+          </table>
 
-        {/* PAYMENT DETAILS + TOTALS */}
-        <div className="flex justify-between mt-8 gap-8">
-
-          <div className="text-sm text-gray-700 leading-6 border rounded p-4 w-80">
-            <p className="font-bold mb-1">Payment To:</p>
-            <p>NCBA Bank, Nakuru Branch</p>
-            <p>A/C Name: Rift Motors Ltd</p>
-            <p>A/C No: 3364820034, or through</p>
-            <p>Mpesa Paybill No: 532602</p>
-            <p>A/C No: RIFT MOTORS</p>
+          {/* ACTIONS */}
+          <div className="flex justify-end gap-3 my-3 print:hidden">
+            <button
+              onClick={handleConvertInvoice}
+              disabled={estimate.status !== "pending"}
+              className="bg-green-600 text-white px-5 py-2 rounded disabled:bg-gray-400"
+            >Convert To Invoice</button>
+            <button
+              onClick={()=>window.print()}
+              className="bg-gray-800 text-white px-5 py-2 rounded"
+            >Print</button>
+            <button
+              onClick={handleDownloadPdf}
+              className="bg-blue-800 text-white px-5 py-2 rounded"
+            >Download PDF</button>
+            <button
+              onClick={handleShare}
+              className="bg-emerald-700 text-white px-5 py-2 rounded"
+            >Share</button>
           </div>
 
-          <div className="w-64">
-            <div className="flex justify-between">
-              <span>Subtotal</span>
-              <b>KES {estimate.subtotal}</b>
+          {estimate.status==="invoiced" && (
+            <div className="bg-blue-100 text-blue-700 p-2 rounded mb-2 text-[10px] print:hidden">
+              This estimate has been converted to invoice and can no longer be edited.
             </div>
-            <div className="flex justify-between">
-              <span>Tax ({estimate.tax_rate}%)</span>
-              <b>KES {estimate.tax_amount}</b>
-            </div>
-            <hr className="my-3"/>
-            <div className="flex justify-between text-xl">
-              <span>TOTAL</span>
-              <b>KES {estimate.total}</b>
-            </div>
+          )}
+
+          {/* ITEMS — same bordered/compact styling as the items table on the
+              paper estimate; the per-item adjustment controls (logic unchanged)
+              live inside the Total cell so the table still fits densely. */}
+          <table className="w-full border border-black text-[9px] leading-tight mt-2">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-0.5 text-left border border-black">Description</th>
+                <th className="p-0.5 text-left border border-black">Type</th>
+                <th className="p-0.5 border border-black">Qty</th>
+                <th className="p-0.5 border border-black">Price</th>
+                <th className="p-0.5 border border-black">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {estimate.items?.map(item=>(
+                <tr key={item.id}>
+                  <td className="p-0.5 border border-black align-top">{item.description}</td>
+                  <td className="p-0.5 border border-black align-top">{item.item_type}</td>
+                  <td className="p-0.5 border border-black text-center align-top">{item.quantity}</td>
+                  <td className="p-0.5 border border-black text-right align-top">{Number(item.unit_price).toFixed(2)}</td>
+                  <td className="p-0.5 border border-black align-top">
+
+                    <div className="text-gray-500">
+                      Original: KES {Number(item.original_price).toFixed(2)}
+                    </div>
+
+                    {item.item_type==="service" && estimate.status==="pending" && (
+                      <div className="mt-1 print:hidden">
+                        <label className="text-gray-500">Discount / Reduction</label>
+                        <div className="flex gap-1 mt-0.5">
+                          <input
+                            type="number"
+                            value={adjustments[item.id]?.adjustment ?? item.adjustment ?? ""}
+                            onChange={(e)=>
+                              setAdjustments({
+                                ...adjustments,
+                                [item.id]:{
+                                  ...adjustments[item.id],
+                                  adjustment:Number(e.target.value)
+                                }
+                              })
+                            }
+                            className="border border-black rounded px-1 py-0.5 w-16 text-[9px]"
+                          />
+                          <button
+                            onClick={()=>handleAdjustmentUpdate(item.id)}
+                            className="bg-blue-600 text-white rounded px-2 text-[9px]"
+                          >Apply</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {item.item_type==="sparepart" && estimate.status==="pending" && (
+                      <div className="mt-1 print:hidden">
+                        <label className="text-gray-500">Discount</label>
+                        <div className="flex gap-1 mt-0.5 items-center">
+                          <select
+                            onChange={(e)=>
+                              setAdjustments({
+                                ...adjustments,
+                                [item.id]:{
+                                  ...adjustments[item.id],
+                                  discount_type:e.target.value
+                                }
+                              })
+                            }
+                            className="border border-black rounded text-[9px]"
+                          >
+                            <option value="amount">KES</option>
+                            <option value="percentage">%</option>
+                          </select>
+                          <input
+                            type="number"
+                            value={adjustments[item.id]?.discount_value ?? ""}
+                            onChange={(e)=>
+                              setAdjustments({
+                                ...adjustments,
+                                [item.id]:{
+                                  ...adjustments[item.id],
+                                  discount_value:Number(e.target.value)
+                                }
+                              })
+                            }
+                            className="border border-black rounded px-1 py-0.5 w-14 text-[9px]"
+                          />
+                          <button
+                            onClick={()=>handleAdjustmentUpdate(item.id)}
+                            className="bg-blue-600 text-white rounded px-2 text-[9px]"
+                          >Apply</button>
+                        </div>
+                      </div>
+                    )}
+
+                    <p className="mt-1">Adjustment: KES {Number(item.adjustment).toFixed(2)}</p>
+                    <p className="font-bold">Final: KES {Number(item.total_price).toFixed(2)}</p>
+
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* PAYMENT DETAILS + TOTALS — both boxed tables, sitting side by
+              side like the "Payment To" / "Sub Total, Vat, Total" pair on
+              the paper estimate. */}
+          <div className="flex justify-between mt-2 gap-4 text-[10px] leading-[13px]">
+
+            <table className="border border-black w-[55%]">
+              <tbody>
+                <tr>
+                  <td className="border border-black px-1 py-0.5 font-bold" colSpan={2}>Payment To:</td>
+                </tr>
+                <tr><td className="border border-black px-1 py-0.5" colSpan={2}>NCBA Bank, Nakuru Branch</td></tr>
+                <tr><td className="border border-black px-1 py-0.5" colSpan={2}>A/C Name: Rift Motors Ltd</td></tr>
+                <tr><td className="border border-black px-1 py-0.5" colSpan={2}>A/C No: 3364820034, or through</td></tr>
+                <tr><td className="border border-black px-1 py-0.5" colSpan={2}>Mpesa Paybill No: 532602</td></tr>
+                <tr><td className="border border-black px-1 py-0.5" colSpan={2}>A/C No: RIFT MOTORS</td></tr>
+              </tbody>
+            </table>
+
+            <table className="border border-black w-[40%] h-fit">
+              <tbody>
+                <tr>
+                  <td className="border border-black px-1 py-0.5">Sub Total</td>
+                  <td className="border border-black px-1 py-0.5 text-right">{Number(estimate.subtotal).toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td className="border border-black px-1 py-0.5">Vat ({estimate.tax_rate}%)</td>
+                  <td className="border border-black px-1 py-0.5 text-right">{Number(estimate.tax_amount).toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td className="border border-black px-1 py-0.5 font-bold">Total Amount</td>
+                  <td className="border border-black px-1 py-0.5 text-right font-bold">{Number(estimate.total).toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
+
           </div>
 
+          {/* FOOTER */}
+          <div className="doc-footer mt-3 text-center border-t pt-2 text-[9px] text-gray-600">
+        <p className="font-semibold">THANK YOU FOR YOUR BUSINESS!</p>
+        <p className="mt-0.5">Goods remain property of the company unless fully paid for.</p>
+        <p>Estimate applies one month from the date issued.</p>
         </div>
 
-        {/* FOOTER */}
-        <div className="mt-10 text-center text-sm text-gray-600 border-t pt-4">
-          <p className="font-semibold">THANK YOU FOR YOUR BUSINESS!</p>
-          <p className="mt-2">This estimate is valid before confirmation and invoice generation.</p>
+          {/* PRINTED BY / PRINTED ON */}
+            <p className="mt-1 text-[9px] text-gray-500">
+            Printed By: {user?.username || "N/A"} &nbsp;|&nbsp; Printed On: {new Date().toLocaleString()}
+            </p>
         </div>
+        {/* END OUTER FRAME */}
 
-        {/* PRINTED BY - same localStorage pattern as "Served By" in InvoiceDetails.jsx */}
-        <p className="mt-4 text-xs text-gray-500">Printed By: {user?.username || "N/A"}</p>
-
-        {/* BRAND LOGOS - replace src with your own local assets */}
-        <div className="flex justify-center items-center gap-10 mt-6 opacity-80">
-          <img src="/brands/nissan.png" alt="Nissan" className="h-10 object-contain" />
-          <img src="/brands/ford.jpg" alt="Ford" className="h-10 object-contain" />
-          <img src="/brands/subaru.jpg" alt="Subaru" className="h-10 object-contain" />
+        {/* BRAND LOGOS — outside the frame */}
+        <div className="doc-logos flex justify-between items-center px-2 mt-3">
+          <img src="/brands/nissan.png" alt="Nissan" className="h-16 object-contain" />
+          <img src="/brands/ford.jpg" alt="Ford" className="h-16 object-contain" />
+          <img src="/brands/subaru.jpg" alt="Subaru" className="h-16 object-contain" />
         </div>
 
       </div>

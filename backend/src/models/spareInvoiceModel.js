@@ -174,22 +174,31 @@ export const convertEstimateToInvoice = async (estimateId) => {
   }
 };
 
-export const convertInvoiceToSale = async (invoiceId, payment_method) => {
+export const convertInvoiceToSale = async (invoiceId, payment_method, amount_paid) => {
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
 
     const invoiceRes = await client.query(
-      `SELECT * FROM spare_invoices WHERE id=$1 AND status='unpaid'`,
+      `SELECT * FROM spare_invoices WHERE id=$1 AND status IN ('unpaid','partial')`,
       [invoiceId]
     );
 
     if (invoiceRes.rows.length === 0) {
-      throw new Error("Invoice not found or already paid");
+      throw new Error("Invoice not found or already fully paid");
     }
 
     const invoice = invoiceRes.rows[0];
+
+    const balanceBefore = Number(invoice.total) - Number(invoice.amount_paid || 0);
+    const payment = Math.min(Number(amount_paid), balanceBefore);
+
+    if (!(payment > 0)) {
+      throw new Error("Payment amount must be greater than zero");
+    }
+
+    const balanceAfter = balanceBefore - payment;
 
     const itemsRes = await client.query(
       `SELECT * FROM spare_invoice_items WHERE invoice_id=$1`,
@@ -197,7 +206,6 @@ export const convertInvoiceToSale = async (invoiceId, payment_method) => {
     );
     const items = itemsRes.rows;
 
-    // Generate receipt number
     const year = new Date().getFullYear();
     const countRes = await client.query(
       `SELECT COUNT(*) FROM spare_sales WHERE receipt_number IS NOT NULL`
@@ -205,13 +213,11 @@ export const convertInvoiceToSale = async (invoiceId, payment_method) => {
     const nextNumber = Number(countRes.rows[0].count) + 1;
     const receiptNumber = `RFT-${year}-${String(nextNumber).padStart(5, "0")}`;
 
-    // Calculate subtotal from items
     let subtotal = 0;
     items.forEach(item => {
       subtotal += Number(item.quantity) * Number(item.unit_price);
     });
 
-    // 1️⃣ Insert sale record directly — NO stock deduction here, already done at invoice creation
     const saleRes = await client.query(
       `INSERT INTO spare_sales
         (
@@ -224,10 +230,12 @@ export const convertInvoiceToSale = async (invoiceId, payment_method) => {
         tax_amount,
         total,
         payment_method,
-        receipt_number
+        receipt_number,
+        account_balance_before,
+        account_balance_after
         )
 
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
 
         RETURNING *`,
       [
@@ -238,15 +246,16 @@ export const convertInvoiceToSale = async (invoiceId, payment_method) => {
         invoice.discount,
         invoice.tax_rate,
         invoice.tax_amount,
-        invoice.total,
+        payment,
         payment_method,
-        receiptNumber
+        receiptNumber,
+        balanceBefore,
+        balanceAfter
       ]
     );
 
     const saleId = saleRes.rows[0].id;
 
-    // 2️⃣ Insert sale items (no stock touch)
     for (const item of items) {
       await client.query(
         `INSERT INTO spare_sale_items
@@ -256,17 +265,20 @@ export const convertInvoiceToSale = async (invoiceId, payment_method) => {
       );
     }
 
-    // 3️⃣ Mark invoice paid
+    const newAmountPaid = Number(invoice.amount_paid || 0) + payment;
+    const newStatus = balanceAfter <= 0 ? "paid" : "partial";
+
     await client.query(
-      `UPDATE spare_invoices SET status='paid' WHERE id=$1`,
-      [invoiceId]
+      `UPDATE spare_invoices SET amount_paid=$1, status=$2 WHERE id=$3`,
+      [newAmountPaid, newStatus, invoiceId]
     );
 
-    // 4️⃣ Mark estimate sold
-    await client.query(
-      `UPDATE spare_estimates SET status='sold' WHERE id=$1`,
-      [invoice.estimate_id]
-    );
+    if (newStatus === "paid") {
+      await client.query(
+        `UPDATE spare_estimates SET status='sold' WHERE id=$1`,
+        [invoice.estimate_id]
+      );
+    }
 
     await client.query("COMMIT");
     return saleRes.rows[0];

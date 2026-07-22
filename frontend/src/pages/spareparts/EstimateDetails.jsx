@@ -104,20 +104,48 @@ export default function EstimateDetails(){
     <div className="p-6 bg-gray-100 min-h-screen print-container">
       <div ref={printRef} className="max-w-5xl mx-auto bg-white print-document border border-black p-3 text-[10px] leading-[13px]">
 
-        {/* HEADER */}
-        <div className="doc-header flex justify-between items-start pb-2">
-          <img
-            src="/rmotologo.jpg"
-            className="h-14 w-auto object-contain"
-            alt="Rift Motors Limited"
-          />
-          <div className="text-right text-[9px] leading-[12px] text-gray-700 pt-1">
-            <p>P.O. Box 18952 - 20100</p>
-            <p>KFA - Show Ground Road, Nakuru</p>
-            <p>+254 712 345 678</p>
-            <p>info@riftmotors.com</p>
-          </div>
-        </div>
+ <div className="border-2 border-black p-3">
+
+{/* HEADER */}
+<div className="doc-header flex justify-center items-center gap-4 pb-2">
+
+  {/* LOGO */}
+  <div className="flex items-center justify-end">
+    <img
+      src="/rmotologo.jpg"
+      className="h-16 w-auto object-contain"
+      alt="Rift Motors Limited"
+    />
+  </div>
+
+  {/* VERTICAL DIVIDER — fixed height, centered with the logo/text */}
+  <div className="border-l-2 border-black self-stretch"></div>
+
+  {/* CONTACT INFO */}
+  <div className="flex flex-col justify-center text-left text-[9px] leading-[14px] text-gray-700 space-y-0.5">
+    <p>P.O. Box 18952 - 20100</p>
+    <p>KFA - Show Ground Road, Nakuru</p>
+    <p className="flex items-center gap-1">
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h2.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-1.71.855a11.042 11.042 0 005.516 5.516l.854-1.71a1 1 0 011.211-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+      </svg>
+      +254 790 406 996
+    </p>
+    <p className="flex items-center gap-1">
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      </svg>
+      info@riftmotors.com
+    </p>
+    <p className="flex items-center gap-1">
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    </svg>
+    riftmotorsltd@gmail.com
+    </p>
+  </div>
+
+</div>
 
         <hr className="border-black border-t-2" />
 
@@ -277,8 +305,12 @@ export default function EstimateDetails(){
           <p>Estimate applies one month from the date issued.</p>
         </div>
 
-        {/* PRINTED BY - same localStorage pattern as "Served By" in InvoiceDetails.jsx */}
-        <p className="mt-1 text-[9px] text-gray-500">Printed By: {user?.username || "N/A"}</p>
+       {/* PRINTED BY / PRINTED ON */}
+        <p className="mt-1 text-[9px] text-gray-500">
+        Printed By: {user?.username || "N/A"} &nbsp;|&nbsp; Printed On: {new Date().toLocaleString()}
+        </p>
+
+        </div>
 
         {/* BRAND LOGOS */}
         <div className="doc-logos flex justify-between items-center px-2 mt-3">
@@ -289,5 +321,5 @@ export default function EstimateDetails(){
 
       </div>
     </div>
-  )
+  );
 }

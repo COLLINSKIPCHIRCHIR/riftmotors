@@ -46,28 +46,15 @@ loadVehicle();
 
 
 
-const loadVehicle=async()=>{
-
-
-try{
-
-
-const res =
-await getVehicleDetails(vehicleId);
-
-
-setVehicle(res.data);
-
-
-
-}catch(err){
-
-console.log(err)
-
-}
-
-
-}
+const loadVehicle = async () => {
+  try {
+    const res = await getVehicleDetails(vehicleId);
+    console.log("vehicle response:", res.data); // check customer_id is present
+    setVehicle(res.data);
+  } catch (err) {
+    console.log(err);
+  }
+};
 
 
 

@@ -20,17 +20,21 @@ export const convertEstimate = async (req, res) => {
 };
 
 export const payInvoice = async (req, res) => {
-  const { payment_method } = req.body;
+  const { payment_method, amount_paid } = req.body;
 
   if (!payment_method) {
     return res.status(400).json({ error: "payment_method required" });
   }
 
+  if (!amount_paid || Number(amount_paid) <= 0) {
+    return res.status(400).json({ error: "amount_paid must be greater than zero" });
+  }
+
   try {
-    const sale = await convertInvoiceToSale(req.params.id, payment_method);
+    const sale = await convertInvoiceToSale(req.params.id, payment_method, amount_paid);
 
     res.json({
-      message: "Invoice paid successfully",
+      message: "Payment recorded successfully",
       sale
     });
   } catch (err) {

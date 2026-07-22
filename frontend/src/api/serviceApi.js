@@ -167,12 +167,13 @@ API.get(`/service-receipts/${id}`);
 
 
 
-export const payServiceInvoice = (id,payment_method)=>
+export const payServiceInvoice = (id, payment_method, amount_paid) =>
 
 API.post(
 `/service-receipts/${id}/pay`,
 {
-payment_method
+payment_method,
+amount_paid
 }
 );
 
