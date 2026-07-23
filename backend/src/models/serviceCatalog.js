@@ -1,45 +1,43 @@
 import pool from "../config/db.js";
 
 
+// Converts "" / undefined to null so numeric columns never choke
+const toNumericOrNull = (value) => {
+    if (value === "" || value === undefined || value === null) return null;
+    return value;
+};
+
 // Create service
 export const createService = async (data) => {
-
     const {
         name,
         description,
         price,
         min_price,
-        max_price
+        max_price,
+        pricing_type,
+        unit
     } = data;
-
 
     const result = await pool.query(
         `
         INSERT INTO service_catalog
-        (
-            name,
-            description,
-            price,
-            min_price,
-            max_price
-        )
-
-        VALUES($1,$2,$3,$4,$5)
-
+        (name, description, price, min_price, max_price, pricing_type, unit)
+        VALUES ($1,$2,$3,$4,$5,$6,$7)
         RETURNING *
         `,
         [
             name,
             description,
-            price,
-            min_price,
-            max_price
+            toNumericOrNull(price),
+            toNumericOrNull(min_price),
+            toNumericOrNull(max_price),
+            pricing_type || 'fixed',
+            unit || null
         ]
     );
 
-
     return result.rows[0];
-
 };
 
 
@@ -87,49 +85,45 @@ export const getServiceById = async(id)=>{
 
 
 // Update service
-export const updateService = async(id,data)=>{
-
-
+export const updateService = async (id, data) => {
     const {
         name,
         description,
         price,
         min_price,
-        max_price
+        max_price,
+        pricing_type,
+        unit
     } = data;
-
 
     const result = await pool.query(
         `
         UPDATE service_catalog
-
         SET
-        name=$1,
-        description=$2,
-        price=$3
-        min_price=$4,
-        max_price=$5
-
-        WHERE id=$6
-
+            name=$1,
+            description=$2,
+            price=$3,
+            min_price=$4,
+            max_price=$5,
+            pricing_type=$6,
+            unit=$7
+        WHERE id=$8
         RETURNING *
-
         `,
         [
             name,
             description,
-            price,
-            min_price,
-            max_price,
+            toNumericOrNull(price),
+            toNumericOrNull(min_price),
+            toNumericOrNull(max_price),
+            pricing_type,
+            unit,
             id
         ]
     );
 
-
     return result.rows[0];
-
 };
-
 
 
 

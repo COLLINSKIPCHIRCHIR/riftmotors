@@ -31,7 +31,9 @@ name:"",
 description:"",
 price:"",
 min_price:"",
-max_price:""
+max_price:"",
+pricing_type:"fixed",
+unit:""
 
 });
 
@@ -95,19 +97,32 @@ const saveService=async()=>{
 try{
 
 
+const payload={
+
+...form,
+
+// don't send a stray unit if the service isn't unit-based
+unit: form.pricing_type==="unit" ? form.unit : null,
+
+// variable services get their price set per-job, not in the catalog
+price: form.pricing_type==="variable" ? null : form.price
+
+};
+
+
 if(editing){
 
 
 await updateService(
 editing,
-form
+payload
 );
 
 
 }else{
 
 
-await createService(form);
+await createService(payload);
 
 
 }
@@ -126,7 +141,9 @@ name:"",
 description:"",
 price:"",
 min_price:"",
-max_price:""
+max_price:"",
+pricing_type:"fixed",
+unit:""
 
 });
 
@@ -167,7 +184,11 @@ price:service.price,
 
 min_price:service.min_price,
 
-max_price:service.max_price
+max_price:service.max_price,
+
+pricing_type:service.pricing_type || "fixed",
+
+unit:service.unit || ""
 
 
 });
@@ -222,7 +243,25 @@ Service Catalog
 
 <button
 
-onClick={()=>setShowModal(true)}
+onClick={()=>{
+
+setEditing(null);
+
+setForm({
+
+name:"",
+description:"",
+price:"",
+min_price:"",
+max_price:"",
+pricing_type:"fixed",
+unit:""
+
+});
+
+setShowModal(true);
+
+}}
 
 className="
 bg-blue-600
@@ -296,7 +335,88 @@ p-5
 
 <div className="mt-4 font-bold">
 
+{
+service.pricing_type==="variable" ? (
+
+<>
+
+{
+service.min_price && service.max_price ? (
+
+<span>
+
+KES {service.min_price} - {service.max_price}
+
+</span>
+
+) : (
+
+<span className="font-normal text-slate-500">
+
+Quote on inspection
+
+</span>
+
+)
+
+}
+
+</>
+
+) : (
+
+<>
+
 KES {service.price}
+
+{
+service.pricing_type==="unit" &&
+
+<span className="text-sm font-normal text-slate-500">
+
+{" "}per {service.unit}
+
+</span>
+
+}
+
+</>
+
+)
+
+}
+
+</div>
+
+
+<div className="mt-1 text-xs">
+
+<span
+
+className={`
+px-2
+py-1
+rounded-full
+${
+service.pricing_type==="unit"
+? "bg-purple-100 text-purple-700"
+: service.pricing_type==="variable"
+? "bg-orange-100 text-orange-700"
+: "bg-slate-100 text-slate-600"
+}
+`}
+
+>
+
+{
+service.pricing_type==="unit"
+? "Unit-based"
+: service.pricing_type==="variable"
+? "Variable"
+: "Fixed price"
+}
+
+</span>
 
 </div>
 
@@ -468,12 +588,129 @@ mb-3
 
 
 
+<label className="text-sm font-semibold text-slate-600">
+
+Pricing Type
+
+</label>
+
+
+<select
+
+name="pricing_type"
+
+value={form.pricing_type}
+
+onChange={handleChange}
+
+className="
+border
+p-3
+rounded
+w-full
+mb-3
+mt-1
+"
+
+>
+
+
+<option value="fixed">
+
+Fixed price
+
+</option>
+
+
+<option value="unit">
+
+Priced per unit
+
+</option>
+
+
+<option value="variable">
+
+Variable (quote on inspection)
+
+</option>
+
+
+</select>
+
+
+{
+
+form.pricing_type==="variable" &&
+
+<p className="text-xs text-slate-500 mb-3">
+
+The exact price will be entered by staff when this service is
+added to a job, based on the actual scope of work. Use the
+range below as a guide for quoting.
+
+</p>
+
+}
+
+
+
+
+{
+
+form.pricing_type==="unit" &&
+
+<input
+
+name="unit"
+
+placeholder="Unit (e.g. meter, point, hour)"
+
+value={form.unit}
+
+onChange={handleChange}
+
+className="
+border
+p-3
+rounded
+w-full
+mb-3
+"
+
+/>
+
+}
+
+
+
+
+{
+
+form.pricing_type!=="variable" &&
+
+<>
+
+<label className="text-sm font-semibold text-slate-600">
+
+{
+form.pricing_type==="unit"
+? "Price per unit"
+: "Price"
+}
+
+</label>
+
 
 <input
 
 name="price"
 
-placeholder="Price"
+placeholder={
+form.pricing_type==="unit"
+? "Price per unit"
+: "Price"
+}
 
 value={form.price}
 
@@ -484,9 +721,26 @@ border
 p-3
 rounded
 w-full
+mt-1
+mb-3
 "
 
 />
+
+</>
+
+}
+
+
+<label className="text-sm font-semibold text-slate-600">
+
+{
+form.pricing_type==="variable"
+? "Estimated minimum (guide only)"
+: "Minimum allowed price"
+}
+
+</label>
 
 
 <input
@@ -505,9 +759,21 @@ p-3
 rounded
 w-full
 mb-3
+mt-1
 "
 
 />
+
+
+<label className="text-sm font-semibold text-slate-600">
+
+{
+form.pricing_type==="variable"
+? "Estimated maximum (guide only)"
+: "Maximum allowed price"
+}
+
+</label>
 
 
 <input
@@ -525,6 +791,7 @@ border
 p-3
 rounded
 w-full
+mt-1
 "
 
 />

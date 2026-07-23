@@ -2,58 +2,39 @@ import pool from "../config/db.js";
 
 
 export const createServiceJob = async(data)=>{
-
-
 const {
-customer_id,
-vehicle_id,
-complaint,
-diagnosis,
-notes,
-created_by
+    customer_id,
+    vehicle_id,
+    complaint,
+    diagnosis,
+    notes,
+    created_by
+} = data;
 
-}=data;
-
-
-const job_number =
-"JOB-" + Date.now();
-
-
-const result = await pool.query(
-
-`
-INSERT INTO service_jobs
-(
-job_number,
-customer_id,
-vehicle_id,
-complaint,
-diagnosis,
-notes,
-created_by
-)
-
-VALUES($1,$2,$3,$4,$5,$6,$7)
-
-RETURNING *
-
-`,
-
-[
-job_number,
-customer_id,
-vehicle_id,
-complaint,
-diagnosis || null,
-notes || null,
-created_by || 1
-]
-
+const insertResult = await pool.query(
+    `
+    INSERT INTO service_jobs
+    (customer_id, vehicle_id, complaint, diagnosis, notes, created_by)
+    VALUES($1,$2,$3,$4,$5,$6)
+    RETURNING *
+    `,
+    [customer_id, vehicle_id, complaint, diagnosis || null, notes || null, created_by || 1]
 );
 
+const job = insertResult.rows[0];
+const job_number = "JOB-" + String(job.id).padStart(6, "0");
 
-return result.rows[0];
+const updateResult = await pool.query(
+    `
+    UPDATE service_jobs
+    SET job_number=$1
+    WHERE id=$2
+    RETURNING *
+    `,
+    [job_number, job.id]
+);
 
+return updateResult.rows[0];
 };
 
 

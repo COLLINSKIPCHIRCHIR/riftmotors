@@ -56,6 +56,8 @@ const [selectedService,setSelectedService]=useState("");
 
 const [serviceQuantity,setServiceQuantity]=useState(1);
 
+const [variablePrice,setVariablePrice]=useState("");
+
 const [error,setError]=useState("");
 
 const [spareParts,setSpareParts]=useState([]);
@@ -168,13 +170,12 @@ loadData();
 },[id]);
 
 
-
-
-
+const isCompleted = job?.status === "completed";
 
 
 const handleAssignMechanic = async()=>{
 
+if(isCompleted) return;
 
 try{
 
@@ -274,8 +275,43 @@ const grandTotal =
 serviceTotal + partsTotal;
 
 
+const selectedCatalogService =
+catalog.find(
+s=>s.id===Number(selectedService)
+);
+
+
+const isSelectedServiceUnitBased =
+selectedCatalogService?.pricing_type === "unit";
+
+
+const isSelectedServiceVariable =
+selectedCatalogService?.pricing_type === "variable";
+
+
+const handleServiceSelect = (value)=>{
+
+setSelectedService(value);
+
+const chosen = catalog.find(
+s=>s.id===Number(value)
+);
+
+// fixed and variable-priced services are always quantity 1
+if(chosen && chosen.pricing_type !== "unit"){
+
+setServiceQuantity(1);
+
+}
+
+setVariablePrice("");
+
+}
+
+
 const handleAddService = async()=>{
 
+if(isCompleted) return;
 
 const exists =
 services.find(
@@ -292,6 +328,15 @@ return;
 }
 
 
+if(isSelectedServiceVariable && !variablePrice){
+
+alert("Enter the assessed price for this service before adding it");
+
+return;
+
+}
+
+
 try{
 
 
@@ -301,15 +346,27 @@ s=>s.id===Number(selectedService)
 );
 
 
+const quantityToSend =
+service.pricing_type === "unit"
+? serviceQuantity
+: 1;
+
+
+const priceToSend =
+service.pricing_type === "variable"
+? variablePrice
+: service.price;
+
+
 await addJobService({
 
 job_id:id,
 
 service_id:selectedService,
 
-quantity:serviceQuantity,
+quantity:quantityToSend,
 
-price:service.price
+price:priceToSend
 
 });
 
@@ -326,10 +383,17 @@ setSelectedService("");
 
 setServiceQuantity(1);
 
+setVariablePrice("");
+
 
 }catch(err){
 
 console.log(err);
+
+alert(
+err.response?.data?.message ||
+"Failed adding service"
+);
 
 }
 
@@ -339,6 +403,7 @@ console.log(err);
 
 const handleDeleteService=async(serviceId)=>{
 
+if(isCompleted) return;
 
 try{
 
@@ -358,6 +423,11 @@ setServices(res.data);
 
 console.log(err);
 
+alert(
+err.response?.data?.message ||
+"Failed removing service"
+);
+
 }
 
 
@@ -366,6 +436,7 @@ console.log(err);
 
 const handleAddPart = async()=>{
 
+if(isCompleted) return;
 
 try{
 
@@ -531,6 +602,29 @@ Generate Estimate
 
 
 
+{
+
+isCompleted &&
+
+<div className="
+mb-6
+bg-amber-50
+border
+border-amber-300
+text-amber-800
+rounded-xl
+p-4
+">
+
+This job is marked completed. Services, spare parts and mechanic
+assignment can no longer be modified.
+
+</div>
+
+}
+
+
+
 
 
 
@@ -684,7 +778,9 @@ Not Assigned
 
 
 
+{
 
+!isCompleted &&
 
 <div className="mt-4">
 
@@ -793,6 +889,8 @@ error &&
 
 </div>
 
+}
+
 
 
 
@@ -867,6 +965,12 @@ Services
 
 
 
+{
+
+!isCompleted &&
+
+<>
+
 <div className="grid md:grid-cols-2 gap-3">
 
 
@@ -875,7 +979,7 @@ Services
 value={selectedService}
 
 onChange={(e)=>
-setSelectedService(e.target.value)
+handleServiceSelect(e.target.value)
 }
 
 
@@ -910,8 +1014,15 @@ value={service.id}
 
 
 {service.name}
--
-KES {service.price}
+{
+service.pricing_type === "variable"
+? " - Quote on inspection"
+: ` - KES ${service.price}${
+service.pricing_type === "unit"
+? ` per ${service.unit}`
+: ""
+}`
+}
 
 
 </option>
@@ -935,6 +1046,8 @@ min="1"
 
 value={serviceQuantity}
 
+disabled={!isSelectedServiceUnitBased}
+
 onChange={(e)=>
 setServiceQuantity(e.target.value)
 }
@@ -944,15 +1057,77 @@ className="
 border
 rounded-lg
 p-2
+disabled:bg-slate-100
+disabled:text-slate-400
 "
 
-placeholder="Quantity"
+placeholder={
+isSelectedServiceUnitBased
+? `Quantity (${selectedCatalogService.unit})`
+: "Quantity (fixed = 1)"
+}
 
 />
 
 
 
 </div>
+
+
+
+{
+
+isSelectedServiceVariable &&
+
+<div className="mt-3">
+
+<label className="text-sm font-semibold text-slate-600">
+
+Assessed price for this job
+
+</label>
+
+
+{
+
+selectedCatalogService.min_price && selectedCatalogService.max_price &&
+
+<p className="text-xs text-slate-500 mb-1">
+
+Suggested range: KES {selectedCatalogService.min_price} - {selectedCatalogService.max_price}
+
+</p>
+
+}
+
+
+<input
+
+type="number"
+
+min="0"
+
+value={variablePrice}
+
+onChange={(e)=>
+setVariablePrice(e.target.value)
+}
+
+placeholder="Enter price after inspection"
+
+className="
+border
+rounded-lg
+p-2
+w-full
+mt-1
+"
+
+/>
+
+</div>
+
+}
 
 
 
@@ -981,6 +1156,10 @@ rounded-lg
 Add Service
 
 </button>
+
+</>
+
+}
 
 
 
@@ -1050,8 +1229,13 @@ Quantity:
 
 <p className="text-sm text-gray-500">
 
-Unit:
-KES {service.price}
+{
+service.pricing_type === "unit"
+? `KES ${service.price} per ${service.unit}`
+: service.pricing_type === "variable"
+? `Assessed price: KES ${service.price}`
+: `Fixed price: KES ${service.price}`
+}
 
 </p>
 
@@ -1076,6 +1260,9 @@ Number(service.quantity)
 </p>
 
 
+{
+
+!isCompleted &&
 
 <button
 
@@ -1092,6 +1279,8 @@ mt-2
 Remove
 
 </button>
+
+}
 
 
 </div>
@@ -1128,6 +1317,12 @@ Spare Parts
 
 </h2>
 
+
+{
+
+!isCompleted &&
+
+<>
 
 <div className="grid md:grid-cols-2 gap-3">
 
@@ -1228,6 +1423,10 @@ rounded-lg
 Add Part
 
 </button>
+
+</>
+
+}
 
 
 
