@@ -303,12 +303,7 @@ const ServiceReceiptDetails = () => {
         </div>
         {/* END OUTER FRAME */}
 
-        {/* BRAND LOGOS */}
-        <div className="doc-logos flex justify-between items-center px-2 mt-3">
-          <img src="/brands/nissan.png" alt="Nissan" className="h-16 object-contain" />
-          <img src="/brands/ford.jpg" alt="Ford" className="h-16 object-contain" />
-          <img src="/brands/subaru.jpg" alt="Subaru" className="h-16 object-contain" />
-        </div>
+       
 
       </div>
     </div>

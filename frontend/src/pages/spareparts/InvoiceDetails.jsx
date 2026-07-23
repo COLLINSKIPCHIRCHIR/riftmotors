@@ -168,6 +168,7 @@ export default function InvoiceDetails() {
                 </svg>
                 riftmotorsltd@gmail.com
               </p>
+              <p className="font-bold text-black">PIN: PO51561799Q</p>
             </div>
 
           </div>
@@ -181,34 +182,53 @@ export default function InvoiceDetails() {
             </h2>
           </div>
 
-          {/* REF / CUSTOMER / DATE / KRA / STATUS — bordered form fields */}
-          <table className="w-full border border-black text-[10px] leading-[13px]">
-            <tbody>
-              <tr>
-                <td className="border border-black px-1 py-0.5 font-bold w-[10%]">REF:</td>
-                <td className="border border-black px-1 py-0.5" colSpan={2}>{field(invoice.invoice_number)}</td>
-                <td className="border border-black px-1 py-0.5 font-bold w-[10%]">Date:</td>
-                <td className="border border-black px-1 py-0.5">{new Date(invoice.created_at).toLocaleDateString()}</td>
-              </tr>
-              <tr>
-                <td className="border border-black px-1 py-0.5 font-bold">Bill To:</td>
-                <td className="border border-black px-1 py-0.5" colSpan={2}>{field(invoice.customer_name)}</td>
-                <td className="border border-black px-1 py-0.5 font-bold">KRA Pin:</td>
-                <td className="border border-black px-1 py-0.5">{field(invoice.customer_kra_pin)}</td>
-              </tr>
-              <tr>
-                <td className="border border-black px-1 py-0.5 font-bold">Address:</td>
-                <td className="border border-black px-1 py-0.5" colSpan={2}>{field(invoice.customer_address)}</td>
-                <td className="border border-black px-1 py-0.5 font-bold">Status:</td>
-                <td className="border border-black px-1 py-0.5">{invoice.status}</td>
-              </tr>
-              <tr>
-                <td className="border border-black px-1 py-0.5 font-bold">Mobile:</td>
-                <td className="border border-black px-1 py-0.5" colSpan={2}>{field(invoice.customer_phone)}</td>
-                <td className="border border-black px-1 py-0.5" colSpan={2}></td>
-              </tr>
-            </tbody>
-          </table>
+          {/* REF / CUSTOMER / VEHICLE GRID — matches EstimateDetails so converted data isn't lost */}
+<table className="w-full border border-black text-[10px] leading-[13px]">
+  <tbody>
+    <tr>
+      <td className="border border-black px-1 py-0.5 font-bold w-[10%]">REF:</td>
+      <td className="border border-black px-1 py-0.5" colSpan={2}>{field(invoice.invoice_number)}</td>
+      <td className="border border-black px-1 py-0.5 font-bold w-[10%]">Date:</td>
+      <td className="border border-black px-1 py-0.5">{new Date(invoice.created_at).toLocaleDateString()}</td>
+    </tr>
+    <tr>
+      <td className="border border-black px-1 py-0.5 font-bold">Bill To:</td>
+      <td className="border border-black px-1 py-0.5" colSpan={2}></td>
+      <td className="border border-black px-1 py-0.5 font-bold">KRA Pin:</td>
+      <td className="border border-black px-1 py-0.5">{field(invoice.customer_kra_pin)}</td>
+    </tr>
+    <tr>
+      <td className="border border-black px-1 py-0.5 font-bold">Customer:</td>
+      <td className="border border-black px-1 py-0.5" colSpan={2}>{field(invoice.customer_name)}</td>
+      <td className="border border-black px-1 py-0.5 font-bold">Reg No:</td>
+      <td className="border border-black px-1 py-0.5">{field(invoice.reg_no)}</td>
+    </tr>
+    <tr>
+      <td className="border border-black px-1 py-0.5 font-bold">Address:</td>
+      <td className="border border-black px-1 py-0.5" colSpan={2}>{field(invoice.customer_address)}</td>
+      <td className="border border-black px-1 py-0.5 font-bold">Model:</td>
+      <td className="border border-black px-1 py-0.5">{field(invoice.model)}</td>
+    </tr>
+    <tr>
+      <td className="border border-black px-1 py-0.5 font-bold">Contact Person:</td>
+      <td className="border border-black px-1 py-0.5" colSpan={2}>{field(invoice.contact_person)}</td>
+      <td className="border border-black px-1 py-0.5 font-bold">Vin No:</td>
+      <td className="border border-black px-1 py-0.5">{field(invoice.vin_no)}</td>
+    </tr>
+    <tr>
+      <td className="border border-black px-1 py-0.5 font-bold">Mobile:</td>
+      <td className="border border-black px-1 py-0.5" colSpan={2}>{field(invoice.customer_phone)}</td>
+      <td className="border border-black px-1 py-0.5 font-bold">Engine:</td>
+      <td className="border border-black px-1 py-0.5">{field(invoice.engine)}</td>
+    </tr>
+    <tr>
+      <td className="border border-black px-1 py-0.5 font-bold">Status:</td>
+      <td className="border border-black px-1 py-0.5" colSpan={2}>{invoice.status}</td>
+      <td className="border border-black px-1 py-0.5 font-bold">Mileage:</td>
+      <td className="border border-black px-1 py-0.5">{field(invoice.mileage)}</td>
+    </tr>
+  </tbody>
+</table>
 
           {/* ACTIONS */}
           <div className="flex justify-end gap-3 my-3 print:hidden flex-wrap">
@@ -324,9 +344,10 @@ export default function InvoiceDetails() {
           </div>
 
           {/* PRINTED BY / PRINTED ON */}
-          <p className="mt-1 text-[9px] text-gray-500">
-            Printed By: {user?.username || "N/A"} &nbsp;|&nbsp; Printed On: {new Date().toLocaleString()}
-          </p>
+          <div className="mt-1 flex justify-between text-[9px] text-gray-500">
+            <p>Printed By: {user?.username || "N/A"}</p>
+            <p>Printed On: {new Date().toLocaleString()}</p>
+          </div>
 
           {/* MARKETING FOOTER — invoices only */}
           <div className="mt-2 pt-1 border-t border-dashed border-gray-400 text-center text-[8px] text-gray-500">

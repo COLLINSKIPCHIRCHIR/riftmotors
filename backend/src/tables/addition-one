@@ -1,0 +1,33 @@
+
+ALTER TABLE customers
+  ADD COLUMN IF NOT EXISTS kra_pin VARCHAR(50);
+
+
+
+  ALTER TABLE customer_vehicles
+  ADD COLUMN IF NOT EXISTS vin_no VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS engine_number VARCHAR(100);
+
+
+
+////////////////////////////////////////////////
+  -- SERVICE
+ALTER TABLE service_invoices ADD COLUMN IF NOT EXISTS amount_paid NUMERIC(12,2) DEFAULT 0;
+-- status VARCHAR(30) already exists on service_invoices — just start using 'partial' as a value
+
+ALTER TABLE service_receipts ADD COLUMN IF NOT EXISTS account_balance_before NUMERIC(12,2) DEFAULT 0;
+ALTER TABLE service_receipts ADD COLUMN IF NOT EXISTS account_balance_after NUMERIC(12,2) DEFAULT 0;
+
+-- SPARE PARTS
+ALTER TABLE spare_invoices ADD COLUMN IF NOT EXISTS amount_paid NUMERIC(12,2) DEFAULT 0;
+-- spare_invoices.status is already 'unpaid' default — same idea, add 'partial' as a possible value
+
+ALTER TABLE spare_sales ADD COLUMN IF NOT EXISTS account_balance_before NUMERIC(12,2) DEFAULT 0;
+ALTER TABLE spare_sales ADD COLUMN IF NOT EXISTS account_balance_after NUMERIC(12,2) DEFAULT 0;
+
+
+ALTER TABLE customer_vehicles ADD COLUMN updated_at TIMESTAMP DEFAULT NOW();
+
+
+ALTER TABLE service_receipts ADD COLUMN IF NOT EXISTS discount_type VARCHAR(20) DEFAULT 'amount';
+ALTER TABLE service_receipts ADD COLUMN IF NOT EXISTS discount_value NUMERIC(12,2) DEFAULT 0;

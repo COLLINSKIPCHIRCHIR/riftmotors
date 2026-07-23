@@ -157,6 +157,7 @@ const ServiceEstimateDetails =()=>{
                 </svg>
                 riftmotorsltd@gmail.com
               </p>
+              <p className="font-bold text-black">PIN: PO51561799Q</p>
             </div>
 
           </div>
@@ -390,9 +391,10 @@ const ServiceEstimateDetails =()=>{
         </div>
 
           {/* PRINTED BY / PRINTED ON */}
-            <p className="mt-1 text-[9px] text-gray-500">
-            Printed By: {user?.username || "N/A"} &nbsp;|&nbsp; Printed On: {new Date().toLocaleString()}
-            </p>
+            <div className="mt-1 flex justify-between text-[9px] text-gray-500">
+            <p>Printed By: {user?.username || "N/A"}</p>
+            <p>Printed On: {new Date().toLocaleString()}</p>
+          </div>
         </div>
         {/* END OUTER FRAME */}
 
