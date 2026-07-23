@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
+import RequirePermission from "./components/RequirePermission";
 import AdminLayout from "./layouts/AdminLayout";
 
 // ✅ Import admin pages
@@ -80,141 +81,64 @@ function App() {
             </ProtectedRoute>
           }
         >
+          {/* Dashboard has no permission gate - everyone with admin access lands here */}
           <Route path="dashboard" element={<AdminDashboard />} />
+
           {/* ✅ Vehicle Sales Dropdown Pages */}
-          <Route path="vehicles/add" element={<AddVehicle />} />
-          <Route path="vehicles" element={<VehicleInventory />} />
-          <Route path="vehicles/sell" element={<SellVehicle />} />
-          <Route path="customers" element={<CustomersList />} />
-          <Route path="customers/new" element={<AddCustomer />} />
+          <Route path="vehicles/add" element={<RequirePermission permission="vehicles.create"><AddVehicle /></RequirePermission>} />
+          <Route path="vehicles" element={<RequirePermission permission="vehicles.view"><VehicleInventory /></RequirePermission>} />
+          <Route path="vehicles/sell" element={<RequirePermission permission="vehicles.sell"><SellVehicle /></RequirePermission>} />
+
+          {/* ✅ Customers */}
+          <Route path="customers" element={<RequirePermission permission="customers.view"><CustomersList /></RequirePermission>} />
+          <Route path="customers/new" element={<RequirePermission permission="customers.create"><AddCustomer /></RequirePermission>} />
 
           {/* ✅ Unified Inventory */}
-          <Route path="inventory" element={<Inventory />} />
-          {/* ✅ Other Admin Pages */}
-          <Route path="spare-parts" element={<SpareParts />} />
-          <Route 
-          path="services"
-          element={<ServiceDashboard/>}
-          />
+          <Route path="inventory" element={<RequirePermission permission="inventory.view"><Inventory /></RequirePermission>} />
 
+          {/* ✅ Spare Parts */}
+          <Route path="spare-parts" element={<RequirePermission permission="spareparts.view"><SpareParts /></RequirePermission>} />
+          <Route path="spare-parts/add" element={<RequirePermission permission="spareparts.create"><AddSparePart /></RequirePermission>} />
+          <Route path="spare-parts/inventory" element={<RequirePermission permission="spareparts.view"><SparepartsInventory /></RequirePermission>} />
+          <Route path="spare-parts/edit/:id" element={<RequirePermission permission="spareparts.edit"><EditSparePart /></RequirePermission>} />
+          <Route path="spare-parts/sell" element={<RequirePermission permission="spareparts.sell"><SellSpareParts /></RequirePermission>} />
+          <Route path="spare-parts/suppliers" element={<RequirePermission permission="suppliers.view"><Suppliers /></RequirePermission>} />
+          <Route path="spare-parts/estimates" element={<RequirePermission permission="spareparts.estimates"><SpareEstimates /></RequirePermission>} />
+          <Route path="spare-parts/estimates/create" element={<RequirePermission permission="spareparts.estimates"><CreateEstimate /></RequirePermission>} />
+          <Route path="spare-parts/estimates/:id" element={<RequirePermission permission="spareparts.estimates"><EstimateDetails /></RequirePermission>} />
+          <Route path="spare-parts/estimates/:id/edit" element={<RequirePermission permission="spareparts.estimates"><EditEstimate /></RequirePermission>} />
+          <Route path="spare-parts/history/:id" element={<RequirePermission permission="spareparts.stock.view"><StockHistory /></RequirePermission>} />
+          <Route path="spare-parts/purchases/create" element={<RequirePermission permission="spareparts.purchase"><CreatePurchase /></RequirePermission>} />
+          <Route path="spare-parts/invoices" element={<RequirePermission permission="spareparts.invoices"><SpareInvoices /></RequirePermission>} />
+          <Route path="spare-parts/invoices/:id" element={<RequirePermission permission="spareparts.invoices"><InvoiceDetails /></RequirePermission>} />
+          <Route path="spare-parts/receipts" element={<RequirePermission permission="spareparts.receipts"><SpareReceipts /></RequirePermission>} />
+          <Route path="spare-parts/receipts/:id" element={<RequirePermission permission="spareparts.receipts"><ViewReceipt /></RequirePermission>} />
 
-          <Route
-          path="services/jobs"
-          element={<ServiceJobs/>}
-          />
+          {/* ✅ Services */}
+          <Route path="services" element={<RequirePermission permission="services.view"><ServiceDashboard /></RequirePermission>} />
+          <Route path="services/jobs" element={<RequirePermission permission="services.jobs"><ServiceJobs /></RequirePermission>} />
+          <Route path="services/jobs/create" element={<RequirePermission permission="services.jobs"><CreateJob /></RequirePermission>} />
+          <Route path="services/jobs/:id" element={<RequirePermission permission="services.jobs"><JobDetails /></RequirePermission>} />
+          <Route path="services/vehicles" element={<RequirePermission permission="services.vehicles"><CustomerVehicles /></RequirePermission>} />
+          <Route path="services/vehicles/:id" element={<RequirePermission permission="services.vehicles"><VehicleDetails /></RequirePermission>} />
+          <Route path="services/catalog" element={<RequirePermission permission="services.catalog"><ServiceCatalog /></RequirePermission>} />
+          <Route path="services/mechanics" element={<RequirePermission permission="services.mechanics"><Mechanics /></RequirePermission>} />
+          <Route path="services/estimates" element={<RequirePermission permission="services.estimates"><ServiceEstimates /></RequirePermission>} />
+          <Route path="services/estimates/:id" element={<RequirePermission permission="services.estimates"><ServiceEstimateDetails /></RequirePermission>} />
+          <Route path="services/invoices" element={<RequirePermission permission="services.invoices"><ServiceInvoices /></RequirePermission>} />
+          <Route path="services/invoices/:id" element={<RequirePermission permission="services.invoices"><ServiceInvoiceDetails /></RequirePermission>} />
+          <Route path="services/receipts" element={<RequirePermission permission="services.receipts"><ServiceReceipts /></RequirePermission>} />
+          <Route path="services/receipts/:id" element={<RequirePermission permission="services.receipts"><ServiceReceiptDetails /></RequirePermission>} />
 
+          {/* ✅ Administration */}
+          <Route path="roles" element={<RequirePermission permission="roles.view"><RolesPermissions /></RequirePermission>} />
+          <Route path="users" element={<RequirePermission permission="users.view"><Users /></RequirePermission>} />
 
-          <Route
-          path="services/vehicles"
-          element={<CustomerVehicles/>}
-          />
-
-
-          <Route
-          path="services/catalog"
-          element={<ServiceCatalog/>}
-          />
-
-          <Route 
-          path="services/jobs/create"
-          element={<CreateJob/>}
-          />
-
-          <Route
-          path="services/jobs/:id"
-          element={<JobDetails/>}
-          />
-
-          <Route
-          path="services/vehicles/:id"
-          element={<VehicleDetails />}
-          />
-
-          <Route
-          path="services/mechanics"
-          element={<Mechanics/>}
-          />
-
-          <Route
-          path="services/estimates/:id"
-          element={<ServiceEstimateDetails/>}
-          />
-
-          <Route
-          path="services/estimates"
-          element={<ServiceEstimates/>}
-          />
-
-          <Route
-          path="services/invoices"
-          element={<ServiceInvoices/>}
-          />
-
-
-          <Route
-          path="services/invoices/:id"
-          element={<ServiceInvoiceDetails/>}
-          />
-
-          <Route
-          path="services/receipts"
-          element={<ServiceReceipts/>}
-          />
-
-
-          <Route
-          path="services/receipts/:id"
-          element={<ServiceReceiptDetails/>}
-          />
-
-          <Route
-              path="roles"
-              element={<RolesPermissions />}
-          />
-
-
-          <Route
-              path="users"
-              element={<Users />}
-          />
-          
-
-
-
-
-          <Route path="car-wash" element={<CarWash />} />
-          <Route path="sales" element={<SalesTransactions />} />
+          {/* ✅ Misc */}
+          <Route path="car-wash" element={<RequirePermission permission="carwash.view"><CarWash /></RequirePermission>} />
+          <Route path="sales" element={<RequirePermission permission="sales.view"><SalesTransactions /></RequirePermission>} />
           <Route path="employees" element={<Employees />} />
-          <Route path="reports" element={<Reports />} />
-
-          <Route path="spare-parts/add" element={<AddSparePart />} />
-          <Route path="spare-parts/inventory" element={<SparepartsInventory />} />
-          <Route path="spare-parts/sell" element={<SellSpareParts />} />
-          <Route path="spare-parts/suppliers" element={<Suppliers />} />
-          <Route path="spare-parts/estimates" element={<SpareEstimates />} />
-          <Route path="spare-parts/estimates/create" element={<CreateEstimate />} />
-          <Route path="spare-parts/estimates/:id" element={<EstimateDetails />} />
-          <Route path="spare-parts/edit/:id" element={<EditSparePart />} />
-          <Route
-            path="spare-parts/estimates/:id/edit"
-            element={<EditEstimate />}
-          />
-          <Route
-            path="spare-parts/history/:id"
-            element={<StockHistory />}
-          />
-          <Route
-            path="spare-parts/purchases/create"
-            element={<CreatePurchase />}
-          />
-
-
-          <Route path="spare-parts/invoices" element={<SpareInvoices />} />
-          <Route path="spare-parts/invoices/:id" element={<InvoiceDetails />} />
-
-          {/* ✅ Spare Parts Receipts */}
-          <Route path="spare-parts/receipts" element={<SpareReceipts />} />
-          <Route path="spare-parts/receipts/:id" element={<ViewReceipt />} />
+          <Route path="reports" element={<RequirePermission permission="reports.view"><Reports /></RequirePermission>} />
         </Route>
 
         {/* Fallback */}

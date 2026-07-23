@@ -6,6 +6,7 @@ import {
   FaArrowUp, FaArrowRight
 } from "react-icons/fa";
 import API from "../api/api";
+import { hasPermission } from "../utils/permissions";
 
 const StatCard = ({ title, value, sub, icon, color, onClick }) => (
   <div
@@ -166,22 +167,26 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick Actions */}
+      {["spareparts.estimates","spareparts.sell","spareparts.create","spareparts.purchase"].some(hasPermission) && (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "New Estimate", path: "/admin/spare-parts/estimates/create", color: "bg-blue-600" },
-          { label: "Sell Parts", path: "/admin/spare-parts/sell", color: "bg-green-600" },
-          { label: "Add Part", path: "/admin/spare-parts/add", color: "bg-purple-600" },
-          { label: "New Purchase", path: "/admin/spare-parts/purchases/create", color: "bg-orange-500" },
-        ].map((action) => (
-          <button
-            key={action.path}
-            onClick={() => navigate(action.path)}
-            className={`${action.color} text-white rounded-xl py-3 px-4 text-sm font-medium hover:opacity-90 transition-opacity`}
-          >
-            {action.label}
-          </button>
-        ))}
+          { label: "New Estimate", path: "/admin/spare-parts/estimates/create", color: "bg-blue-600", permission: "spareparts.estimates" },
+          { label: "Sell Parts", path: "/admin/spare-parts/sell", color: "bg-green-600", permission: "spareparts.sell" },
+          { label: "Add Part", path: "/admin/spare-parts/add", color: "bg-purple-600", permission: "spareparts.create" },
+          { label: "New Purchase", path: "/admin/spare-parts/purchases/create", color: "bg-orange-500", permission: "spareparts.purchase" },
+        ]
+          .filter((action) => !action.permission || hasPermission(action.permission))
+          .map((action) => (
+            <button
+              key={action.path}
+              onClick={() => navigate(action.path)}
+              className={`${action.color} text-white rounded-xl py-3 px-4 text-sm font-medium hover:opacity-90 transition-opacity`}
+            >
+              {action.label}
+            </button>
+          ))}
       </div>
+      )}
 
     </div>
   );
