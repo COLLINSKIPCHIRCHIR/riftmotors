@@ -396,16 +396,22 @@ const ServiceEstimateDetails =()=>{
 
             <table className="border border-black w-[40%] h-fit">
               <tbody>
+                {totalDiscount > 0 && (
+                  <>
+                    <tr>
+                      <td className="border border-black px-1 py-0.5">Total</td>
+                      <td className="border border-black px-1 py-0.5 text-right">{(Number(estimate.subtotal) + totalDiscount).toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black px-1 py-0.5">Discount</td>
+                      <td className="border border-black px-1 py-0.5 text-right">-{totalDiscount.toFixed(2)}</td>
+                    </tr>
+                  </>
+                )}
                 <tr>
                   <td className="border border-black px-1 py-0.5">Sub Total</td>
                   <td className="border border-black px-1 py-0.5 text-right">{Number(estimate.subtotal).toFixed(2)}</td>
                 </tr>
-                {totalDiscount > 0 && (
-                  <tr>
-                    <td className="border border-black px-1 py-0.5">Discount</td>
-                    <td className="border border-black px-1 py-0.5 text-right">-{totalDiscount.toFixed(2)}</td>
-                  </tr>
-                )}
                 <tr>
                   <td className="border border-black px-1 py-0.5">Vat ({estimate.tax_rate}%)</td>
                   <td className="border border-black px-1 py-0.5 text-right">{Number(estimate.tax_amount).toFixed(2)}</td>
