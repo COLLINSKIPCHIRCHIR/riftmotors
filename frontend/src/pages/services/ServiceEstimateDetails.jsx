@@ -15,6 +15,13 @@ const field = (value) => {
   return value;
 };
 
+// Discount amount for a single line item — the difference between what it
+// would have cost and what it actually costs. Works the same whether the
+// underlying adjustment was a flat KES reduction or a percentage discount,
+// so the table only ever has to display one clean number.
+const lineDiscount = (item) =>
+  Number(item.original_price || 0) - Number(item.total_price || 0);
+
 const ServiceEstimateDetails =()=>{
 
   const {id}=useParams();
@@ -52,8 +59,21 @@ const ServiceEstimateDetails =()=>{
   }
 
   // Renders the printable area into a PDF and returns it as a Blob.
+  // `onclone` strips anything marked `.capture-hide` (the live discount
+  // editing controls) from the CLONED document before html2canvas draws
+  // it, so the exported file only ever shows the discount amount — never
+  // the input boxes or Apply buttons, even though those are visible on
+  // screen. This is separate from `print:hidden`, which only affects the
+  // browser's native window.print() and has no effect on html2canvas.
   const generatePdfBlob = async () => {
-    const canvas = await html2canvas(printRef.current, { scale: 2 });
+    const canvas = await html2canvas(printRef.current, {
+      scale: 2,
+      onclone: (clonedDoc) => {
+        clonedDoc.querySelectorAll(".capture-hide").forEach((el) => {
+          el.style.display = "none";
+        });
+      },
+    });
     const imgData = canvas.toDataURL("image/png");
 
     const pdf = new jsPDF("p", "mm", "a4");
@@ -112,6 +132,12 @@ const ServiceEstimateDetails =()=>{
     const res = await getServiceEstimate(id);
     setEstimate(res.data);
   }
+
+  // Sum of every line's discount — feeds the Discount row in the totals box.
+  const totalDiscount = (estimate.items || []).reduce(
+    (sum, item) => sum + lineDiscount(item),
+    0
+  );
 
   return (
     <div className="print-container p-6 bg-gray-100 min-h-screen">
@@ -244,9 +270,11 @@ const ServiceEstimateDetails =()=>{
             </div>
           )}
 
-          {/* ITEMS — same bordered/compact styling as the items table on the
-              paper estimate; the per-item adjustment controls (logic unchanged)
-              live inside the Total cell so the table still fits densely. */}
+          {/* ITEMS — Discount now gets its own column so the Total column
+              stays a single clean number. Editing controls only render on
+              screen for pending estimates, and are stripped out of the
+              PDF/Share capture via the capture-hide + onclone combo above,
+              on top of print:hidden for the native browser Print button. */}
           <table className="w-full border border-black text-[9px] leading-tight mt-2">
             <thead className="bg-gray-100">
               <tr>
@@ -254,25 +282,28 @@ const ServiceEstimateDetails =()=>{
                 <th className="p-0.5 text-left border border-black">Type</th>
                 <th className="p-0.5 border border-black">Qty</th>
                 <th className="p-0.5 border border-black">Price</th>
+                <th className="p-0.5 border border-black">Discount</th>
                 <th className="p-0.5 border border-black">Total</th>
               </tr>
             </thead>
             <tbody>
-              {estimate.items?.map(item=>(
+              {estimate.items?.map(item=>{
+                const discount = lineDiscount(item);
+                const canEdit = estimate.status === "pending";
+                return (
                 <tr key={item.id}>
                   <td className="p-0.5 border border-black align-top">{item.description}</td>
                   <td className="p-0.5 border border-black align-top">{item.item_type}</td>
                   <td className="p-0.5 border border-black text-center align-top">{item.quantity}</td>
                   <td className="p-0.5 border border-black text-right align-top">{Number(item.unit_price).toFixed(2)}</td>
+
                   <td className="p-0.5 border border-black align-top">
+                    {/* Printed/shared/downloaded view: just the amount */}
+                    <div>{discount > 0 ? `KES ${discount.toFixed(2)}` : "-"}</div>
 
-                    <div className="text-gray-500">
-                      Original: KES {Number(item.original_price).toFixed(2)}
-                    </div>
-
-                    {item.item_type==="service" && estimate.status==="pending" && (
-                      <div className="mt-1 print:hidden">
-                        <label className="text-gray-500">Discount / Reduction</label>
+                    {/* On-screen only editing controls, stripped from exports */}
+                    {canEdit && item.item_type==="service" && (
+                      <div className="mt-1 print:hidden capture-hide">
                         <div className="flex gap-1 mt-0.5">
                           <input
                             type="number"
@@ -286,7 +317,7 @@ const ServiceEstimateDetails =()=>{
                                 }
                               })
                             }
-                            className="border border-black rounded px-1 py-0.5 w-16 text-[9px]"
+                            className="border border-black rounded px-1 py-0.5 w-14 text-[9px]"
                           />
                           <button
                             onClick={()=>handleAdjustmentUpdate(item.id)}
@@ -296,9 +327,8 @@ const ServiceEstimateDetails =()=>{
                       </div>
                     )}
 
-                    {item.item_type==="sparepart" && estimate.status==="pending" && (
-                      <div className="mt-1 print:hidden">
-                        <label className="text-gray-500">Discount</label>
+                    {canEdit && item.item_type==="sparepart" && (
+                      <div className="mt-1 print:hidden capture-hide">
                         <div className="flex gap-1 mt-0.5 items-center">
                           <select
                             onChange={(e)=>
@@ -327,7 +357,7 @@ const ServiceEstimateDetails =()=>{
                                 }
                               })
                             }
-                            className="border border-black rounded px-1 py-0.5 w-14 text-[9px]"
+                            className="border border-black rounded px-1 py-0.5 w-12 text-[9px]"
                           />
                           <button
                             onClick={()=>handleAdjustmentUpdate(item.id)}
@@ -336,13 +366,13 @@ const ServiceEstimateDetails =()=>{
                         </div>
                       </div>
                     )}
+                  </td>
 
-                    <p className="mt-1">Adjustment: KES {Number(item.adjustment).toFixed(2)}</p>
-                    <p className="font-bold">Final: KES {Number(item.total_price).toFixed(2)}</p>
-
+                  <td className="p-0.5 border border-black align-top text-right font-bold">
+                    KES {Number(item.total_price).toFixed(2)}
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
 
@@ -370,6 +400,12 @@ const ServiceEstimateDetails =()=>{
                   <td className="border border-black px-1 py-0.5">Sub Total</td>
                   <td className="border border-black px-1 py-0.5 text-right">{Number(estimate.subtotal).toFixed(2)}</td>
                 </tr>
+                {totalDiscount > 0 && (
+                  <tr>
+                    <td className="border border-black px-1 py-0.5">Discount</td>
+                    <td className="border border-black px-1 py-0.5 text-right">-{totalDiscount.toFixed(2)}</td>
+                  </tr>
+                )}
                 <tr>
                   <td className="border border-black px-1 py-0.5">Vat ({estimate.tax_rate}%)</td>
                   <td className="border border-black px-1 py-0.5 text-right">{Number(estimate.tax_amount).toFixed(2)}</td>
