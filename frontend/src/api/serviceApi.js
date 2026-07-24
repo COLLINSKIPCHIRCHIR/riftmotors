@@ -78,8 +78,8 @@ export const deleteJobPart = (id)=>
  API.delete(`/job-parts/${id}`);
 
 
-export const getSpareParts = () =>
- API.get("/spareparts");
+export const getSpareParts = (params = {}) =>
+  API.get("/spareparts", { params });
 
 export const getVehicleDetails = (id) =>
  API.get(`/service-vehicles/${id}`);

@@ -11,7 +11,6 @@ import {
  getServiceCatalog,
  addJobService,
  deleteJobService,
- getSpareParts,
  addJobPart,
  createServiceEstimate,
 
@@ -20,6 +19,7 @@ import {
 
 
 import CreateEstimateModal from "./CreateEstimateModal";
+import SparePartSearchSelect from "./SparePartSearchSelect";
 
 import {
  FaUserCog,
@@ -60,9 +60,10 @@ const [variablePrice,setVariablePrice]=useState("");
 
 const [error,setError]=useState("");
 
-const [spareParts,setSpareParts]=useState([]);
+// NOTE: spareParts (the full 2000-row list) is gone. SparePartSearchSelect
+// fetches matches from the backend as the user types instead.
 
-const [selectedPart,setSelectedPart]=useState("");
+const [selectedPart,setSelectedPart]=useState(null);
 
 const [partQuantity,setPartQuantity]=useState(1);
 
@@ -110,18 +111,6 @@ await getJobServices(id);
 setServices(
 servicesRes.data
 );
-
-
-const partsCatalog =
-await getSpareParts();
-
-
-setSpareParts(
-partsCatalog.data.data || partsCatalog.data
-);
-
-
-
 
 
 const partsRes =
@@ -438,25 +427,20 @@ const handleAddPart = async()=>{
 
 if(isCompleted) return;
 
+if(!selectedPart) return;
+
 try{
-
-
-const part =
-spareParts.find(
-p=>p.id===Number(selectedPart)
-);
-
 
 
 await addJobPart({
 
 job_id:id,
 
-sparepart_id:selectedPart,
+sparepart_id:selectedPart.id,
 
 quantity:partQuantity,
 
-unit_price:part.selling_price
+unit_price:selectedPart.selling_price
 
 });
 
@@ -469,7 +453,7 @@ await getJobParts(id);
 setParts(res.data);
 
 
-setSelectedPart("");
+setSelectedPart(null);
 
 setPartQuantity(1);
 
@@ -1042,7 +1026,9 @@ service.pricing_type === "unit"
 
 type="number"
 
-min="1"
+min="0.01"
+
+step="0.01"
 
 value={serviceQuantity}
 
@@ -1327,58 +1313,11 @@ Spare Parts
 <div className="grid md:grid-cols-2 gap-3">
 
 
-<select
+<SparePartSearchSelect
 
-value={selectedPart}
+onSelect={setSelectedPart}
 
-onChange={(e)=>
-setSelectedPart(e.target.value)
-}
-
-className="border rounded-lg p-2"
-
->
-
-
-<option value="">
-
-Select Part
-
-</option>
-
-
-{
-
-spareParts.map(part=>(
-
-
-<option
-
-key={part.id}
-
-value={part.id}
-
->
-
-
-{part.name}
-
--
-
-KES {part.selling_price}
-
-(stock {part.quantity})
-
-
-</option>
-
-
-))
-
-}
-
-
-</select>
+/>
 
 
 

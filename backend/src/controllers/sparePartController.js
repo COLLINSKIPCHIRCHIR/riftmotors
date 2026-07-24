@@ -10,7 +10,7 @@ import {
 } from "../models/sparePartModel.js";
 
 // ➤ Add Spare Part
-export const createSparePart = async (req, res) => {
+export const createSparePart = async (req, res, next) => {
   try {
     const part = await addSparePart(req.body);
     res.status(201).json(part);
@@ -31,7 +31,7 @@ export const fetchSpareParts = async (req, res, next) => {
 };
 
 // ➤ Get One
-export const fetchSparePart = async (req, res) => {
+export const fetchSparePart = async (req, res, next) => {
   try {
     const part = await getSparePartById(req.params.id);
     if (!part) return res.status(404).json({ message: "Not found" });
@@ -42,7 +42,7 @@ export const fetchSparePart = async (req, res) => {
 };
 
 // ➤ Update
-export const editSparePart = async (req, res) => {
+export const editSparePart = async (req, res, next) => {
   try {
     const updated = await updateSparePart(req.params.id, req.body);
     res.json(updated);
@@ -52,7 +52,7 @@ export const editSparePart = async (req, res) => {
 };
 
 // ➤ Delete
-export const removeSparePart = async (req, res) => {
+export const removeSparePart = async (req, res, next) => {
   try {
     const removed = await deleteSparePart(req.params.id);
     res.json(removed);
@@ -61,7 +61,7 @@ export const removeSparePart = async (req, res) => {
   }
 };
 
-export const fetchLowStockParts = async (req, res) => {
+export const fetchLowStockParts = async (req, res, next) => {
   try {
     const parts = await getLowStockParts();
     res.json(parts);

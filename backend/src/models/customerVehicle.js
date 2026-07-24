@@ -1,67 +1,45 @@
 import pool from "../config/db.js";
 
 
-export const createCustomerVehicle = async(data)=>{
+export const createCustomerVehicle = async (data) => {
+  const {
+    customer_id,
+    registration_number,
+    make,
+    model,
+    year,
+    mileage,
+    color,
+    fuel_type,
+    transmission,
+    vin_no,
+    engine_number
+  } = data;
 
-const {
-customer_id,
-registration_number,
-make,
-model,
-year,
-mileage,
-color,
-fuel_type,
-transmission,
-vin_no,
-engine_number
+  const result = await pool.query(
+    `
+    INSERT INTO customer_vehicles
+    (customer_id, registration_number, make, model, year, mileage, color, fuel_type, transmission, vin_no, engine_number)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+    RETURNING *
+    `,
+    [
+      customer_id,
+      registration_number,
+      make || null,
+      model || null,
+      year === "" ? null : year,       // <-- this was the crash
+      mileage,
+      color || null,
+      fuel_type || null,
+      transmission || null,
+      vin_no,
+      engine_number
+    ]
+  );
 
-}=data;
-
-
-const result = await pool.query(
-
-`
-INSERT INTO customer_vehicles
-(
-customer_id,
-registration_number,
-make,
-model,
-year,
-mileage,
-color,
-fuel_type,
-transmission,
-vin_no,
-engine_number
-)
-
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-
-RETURNING *
-`,
-
-[
-customer_id,
-registration_number,
-make,
-model,
-year,
-mileage,
-color,
-fuel_type,
-transmission,
-vin_no || null,
-engine_number || null
-]
-
-);
-
-
-return result.rows[0];
-
-}
+  return result.rows[0];
+};
 
 // NOTE: SELECT * already picks up vin_no / engine_number automatically
 // now that the columns exist on customer_vehicles - no change needed here.

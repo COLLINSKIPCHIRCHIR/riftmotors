@@ -276,14 +276,22 @@ const ServiceEstimateDetails =()=>{
               PDF/Share capture via the capture-hide + onclone combo above,
               on top of print:hidden for the native browser Print button. */}
           <table className="w-full border border-black text-[9px] leading-tight mt-2">
+            <colgroup>
+              <col className="w-[34%]" />
+              <col className="w-[12%]" />
+              <col className="w-[8%]" />
+              <col className="w-[15%]" />
+              <col className="w-[15%]" />
+              <col className="w-[16%]" />
+            </colgroup>
             <thead className="bg-gray-100">
               <tr>
                 <th className="p-0.5 text-left border border-black">Description</th>
                 <th className="p-0.5 text-left border border-black">Type</th>
                 <th className="p-0.5 border border-black">Qty</th>
-                <th className="p-0.5 border border-black">Price</th>
-                <th className="p-0.5 border border-black">Discount</th>
-                <th className="p-0.5 border border-black">Total</th>
+                <th className="p-0.5 border border-black">Price (KES)</th>
+                <th className="p-0.5 border border-black">Discount (KES)</th>
+                <th className="p-0.5 border border-black">Total (KES)</th>
               </tr>
             </thead>
             <tbody>
@@ -299,7 +307,7 @@ const ServiceEstimateDetails =()=>{
 
                   <td className="p-0.5 border border-black align-top">
                     {/* Printed/shared/downloaded view: just the amount */}
-                    <div>{discount > 0 ? `KES ${discount.toFixed(2)}` : "-"}</div>
+                    <div className="text-right">{discount > 0 ? discount.toFixed(2) : "-"}</div>
 
                     {/* On-screen only editing controls, stripped from exports */}
                     {canEdit && item.item_type==="service" && (
@@ -369,37 +377,27 @@ const ServiceEstimateDetails =()=>{
                   </td>
 
                   <td className="p-0.5 border border-black align-top text-right font-bold">
-                    KES {Number(item.total_price).toFixed(2)}
+                    {Number(item.total_price).toFixed(2)}
                   </td>
                 </tr>
               )})}
+
+              {/* SUMMARY ROW — lands in the same Price / Discount / Total
+                  columns as the line items above, so it's self-explanatory
+                  without a separate table: Items Total sits in the Price
+                  column, Discount Applied in the Discount column, and
+                  Amount After Discount in the Total column. Only shown
+                  when a discount actually brings something to summarize. */}
+              {totalDiscount > 0 && (
+                <tr className="bg-gray-100 font-bold">
+                  <td colSpan={3} className="p-0.5 border border-black text-right">Totals</td>
+                  <td className="p-0.5 border border-black text-right">{(Number(estimate.subtotal) + totalDiscount).toFixed(2)}</td>
+                  <td className="p-0.5 border border-black text-right">{totalDiscount.toFixed(2)}</td>
+                  <td className="p-0.5 border border-black text-right">{Number(estimate.subtotal).toFixed(2)}</td>
+                </tr>
+              )}
             </tbody>
           </table>
-
-          {/* DISCOUNT SUMMARY STRIP — a quick, self-explanatory glance at
-              the discount math right under the items, before the customer
-              even reaches the totals box. Only shows when a discount was
-              actually applied. */}
-          {totalDiscount > 0 && (
-            <table className="w-full border border-black text-[10px] leading-[13px] mt-2">
-              <tbody>
-                <tr className="bg-gray-100">
-                  <td className="border border-black px-1 py-1 text-center">
-                    <div className="text-gray-600">Items Total</div>
-                    <div className="font-bold">KES {(Number(estimate.subtotal) + totalDiscount).toFixed(2)}</div>
-                  </td>
-                  <td className="border border-black px-1 py-1 text-center">
-                    <div className="text-gray-600">Discount Applied</div>
-                    <div className="font-bold text-green-700">- KES {totalDiscount.toFixed(2)}</div>
-                  </td>
-                  <td className="border border-black px-1 py-1 text-center">
-                    <div className="text-gray-600">Amount After Discount</div>
-                    <div className="font-bold">KES {Number(estimate.subtotal).toFixed(2)}</div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          )}
 
           {/* PAYMENT DETAILS + TOTALS — both boxed tables, sitting side by
               side like the "Payment To" / "Sub Total, Vat, Total" pair on

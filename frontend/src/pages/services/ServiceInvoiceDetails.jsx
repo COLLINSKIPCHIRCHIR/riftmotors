@@ -283,14 +283,22 @@ const ServiceInvoiceDetails = () => {
           {/* ITEMS — Discount gets its own column, same as the estimate,
               so a converted estimate looks like the same document family. */}
           <table className="w-full border border-black text-[9px] leading-tight mt-2">
+            <colgroup>
+              <col className="w-[34%]" />
+              <col className="w-[12%]" />
+              <col className="w-[8%]" />
+              <col className="w-[15%]" />
+              <col className="w-[15%]" />
+              <col className="w-[16%]" />
+            </colgroup>
             <thead className="bg-gray-100">
               <tr>
                 <th className="p-0.5 text-left border border-black">Description</th>
                 <th className="p-0.5 text-left border border-black">Type</th>
                 <th className="p-0.5 border border-black">Qty</th>
-                <th className="p-0.5 border border-black">Price</th>
-                <th className="p-0.5 border border-black">Discount</th>
-                <th className="p-0.5 border border-black">Total</th>
+                <th className="p-0.5 border border-black">Price (KES)</th>
+                <th className="p-0.5 border border-black">Discount (KES)</th>
+                <th className="p-0.5 border border-black">Total (KES)</th>
               </tr>
             </thead>
             <tbody>
@@ -303,40 +311,28 @@ const ServiceInvoiceDetails = () => {
                   <td className="p-0.5 border border-black text-center align-top">{item.quantity}</td>
                   <td className="p-0.5 border border-black text-right align-top">{Number(item.unit_price).toFixed(2)}</td>
                   <td className="p-0.5 border border-black text-right align-top">
-                    {discount > 0 ? `KES ${discount.toFixed(2)}` : "-"}
+                    {discount > 0 ? discount.toFixed(2) : "-"}
                   </td>
                   <td className="p-0.5 border border-black align-top text-right font-bold">
-                    KES {Number(item.total_price).toFixed(2)}
+                    {Number(item.total_price).toFixed(2)}
                   </td>
                 </tr>
               )})}
+
+              {/* SUMMARY ROW — lands in the same Price / Discount / Total
+                  columns as the line items above: Items Total sits in the
+                  Price column, Discount Applied in the Discount column,
+                  Amount After Discount in the Total column. */}
+              {totalDiscount > 0 && (
+                <tr className="bg-gray-100 font-bold">
+                  <td colSpan={3} className="p-0.5 border border-black text-right">Totals</td>
+                  <td className="p-0.5 border border-black text-right">{(Number(invoice.subtotal) + totalDiscount).toFixed(2)}</td>
+                  <td className="p-0.5 border border-black text-right">{totalDiscount.toFixed(2)}</td>
+                  <td className="p-0.5 border border-black text-right">{Number(invoice.subtotal).toFixed(2)}</td>
+                </tr>
+              )}
             </tbody>
           </table>
-
-          {/* DISCOUNT SUMMARY STRIP — a quick, self-explanatory glance at
-              the discount math right under the items, before the customer
-              even reaches the totals box. Only shows when a discount was
-              actually applied. */}
-          {totalDiscount > 0 && (
-            <table className="w-full border border-black text-[10px] leading-[13px] mt-2">
-              <tbody>
-                <tr className="bg-gray-100">
-                  <td className="border border-black px-1 py-1 text-center">
-                    <div className="text-gray-600">Items Total</div>
-                    <div className="font-bold">KES {(Number(invoice.subtotal) + totalDiscount).toFixed(2)}</div>
-                  </td>
-                  <td className="border border-black px-1 py-1 text-center">
-                    <div className="text-gray-600">Discount Applied</div>
-                    <div className="font-bold text-green-700">- KES {totalDiscount.toFixed(2)}</div>
-                  </td>
-                  <td className="border border-black px-1 py-1 text-center">
-                    <div className="text-gray-600">Amount After Discount</div>
-                    <div className="font-bold">KES {Number(invoice.subtotal).toFixed(2)}</div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          )}
 
           {/* PAYMENT DETAILS + TOTALS */}
           <div className="flex justify-between mt-2 gap-4 text-[10px] leading-[13px]">
