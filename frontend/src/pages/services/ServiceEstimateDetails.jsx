@@ -376,6 +376,31 @@ const ServiceEstimateDetails =()=>{
             </tbody>
           </table>
 
+          {/* DISCOUNT SUMMARY STRIP — a quick, self-explanatory glance at
+              the discount math right under the items, before the customer
+              even reaches the totals box. Only shows when a discount was
+              actually applied. */}
+          {totalDiscount > 0 && (
+            <table className="w-full border border-black text-[10px] leading-[13px] mt-2">
+              <tbody>
+                <tr className="bg-gray-100">
+                  <td className="border border-black px-1 py-1 text-center">
+                    <div className="text-gray-600">Items Total</div>
+                    <div className="font-bold">KES {(Number(estimate.subtotal) + totalDiscount).toFixed(2)}</div>
+                  </td>
+                  <td className="border border-black px-1 py-1 text-center">
+                    <div className="text-gray-600">Discount Applied</div>
+                    <div className="font-bold text-green-700">- KES {totalDiscount.toFixed(2)}</div>
+                  </td>
+                  <td className="border border-black px-1 py-1 text-center">
+                    <div className="text-gray-600">Amount After Discount</div>
+                    <div className="font-bold">KES {Number(estimate.subtotal).toFixed(2)}</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          )}
+
           {/* PAYMENT DETAILS + TOTALS — both boxed tables, sitting side by
               side like the "Payment To" / "Sub Total, Vat, Total" pair on
               the paper estimate. */}

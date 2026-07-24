@@ -313,6 +313,31 @@ const ServiceInvoiceDetails = () => {
             </tbody>
           </table>
 
+          {/* DISCOUNT SUMMARY STRIP — a quick, self-explanatory glance at
+              the discount math right under the items, before the customer
+              even reaches the totals box. Only shows when a discount was
+              actually applied. */}
+          {totalDiscount > 0 && (
+            <table className="w-full border border-black text-[10px] leading-[13px] mt-2">
+              <tbody>
+                <tr className="bg-gray-100">
+                  <td className="border border-black px-1 py-1 text-center">
+                    <div className="text-gray-600">Items Total</div>
+                    <div className="font-bold">KES {(Number(invoice.subtotal) + totalDiscount).toFixed(2)}</div>
+                  </td>
+                  <td className="border border-black px-1 py-1 text-center">
+                    <div className="text-gray-600">Discount Applied</div>
+                    <div className="font-bold text-green-700">- KES {totalDiscount.toFixed(2)}</div>
+                  </td>
+                  <td className="border border-black px-1 py-1 text-center">
+                    <div className="text-gray-600">Amount After Discount</div>
+                    <div className="font-bold">KES {Number(invoice.subtotal).toFixed(2)}</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          )}
+
           {/* PAYMENT DETAILS + TOTALS */}
           <div className="flex justify-between mt-2 gap-4 text-[10px] leading-[13px]">
 
