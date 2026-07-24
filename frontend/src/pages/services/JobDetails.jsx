@@ -12,6 +12,7 @@ import {
  addJobService,
  deleteJobService,
  addJobPart,
+ deleteJobPart, 
  createServiceEstimate,
 
 
@@ -470,6 +471,33 @@ err.response?.data?.message ||
 
 }
 
+
+}
+
+
+const handleDeletePart = async(partId)=>{
+
+if(isCompleted) return;
+
+try{
+
+await deleteJobPart(partId);
+
+const res =
+await getJobParts(id);
+
+setParts(res.data);
+
+}catch(err){
+
+console.log(err);
+
+alert(
+err.response?.data?.message ||
+"Failed removing part"
+);
+
+}
 
 }
 
@@ -1425,7 +1453,7 @@ items
 </div>
 
 
-<div>
+<div className="text-right">
 
 
 <p className="font-bold">
@@ -1433,6 +1461,29 @@ items
 KES {part.total_price}
 
 </p>
+
+
+{
+
+!isCompleted &&
+
+<button
+
+onClick={()=>handleDeletePart(part.id)}
+
+className="
+text-red-500
+text-sm
+mt-2
+"
+
+>
+
+Remove
+
+</button>
+
+}
 
 
 </div>
