@@ -1,6 +1,8 @@
 import pool from "../config/db.js";
 import { recordSpareSale } from "./spareSalesModel.js";
 import { recordStockMovement } from "./stockMovementModel.js"; // add this if not imported yet
+import { queryWithDiagnostics } from "../utils/dbDebug.js";
+
 
 export const createSpareInvoiceTables = async () => {
   const query = `
@@ -107,55 +109,62 @@ export const convertEstimateToInvoice = async (estimateId) => {
     const invoiceId = invoiceRes.rows[0].id;
 
     // 2️⃣ Insert invoice items AND deduct stock immediately
-    for (const item of items) {
-      // Lock the sparepart row
-      const stockRes = await client.query(
-        `SELECT quantity FROM spareparts WHERE id=$1 FOR UPDATE`,
-        [item.sparepart_id]
-      );
+   for (const item of items) {
 
-      if (stockRes.rows.length === 0) {
-        throw new Error(`Spare part ID ${item.sparepart_id} not found`);
-      }
+  // Cast once — item.quantity may come back as a NUMERIC-formatted string;
+  // spareparts.quantity and spare_invoice_items.quantity are both INT.
+  const quantity = Math.round(Number(item.quantity));
 
-      const availableQty = stockRes.rows[0].quantity;
+  const stockRes = await queryWithDiagnostics(
+    client,
+    `lock sparepart stock (id=${item.sparepart_id})`,
+    `SELECT quantity FROM spareparts WHERE id=$1 FOR UPDATE`,
+    [item.sparepart_id]
+  );
 
-      if (availableQty < item.quantity) {
-        throw new Error(
-          `Insufficient stock for spare part ID ${item.sparepart_id}. Available: ${availableQty}`
-        );
-      }
+  if (stockRes.rows.length === 0) {
+    throw new Error(`Spare part ID ${item.sparepart_id} not found`);
+  }
 
-      // Deduct stock
-      await client.query(
-        `UPDATE spareparts SET quantity = quantity - $1 WHERE id = $2`,
-        [item.quantity, item.sparepart_id]
-      );
+  const availableQty = stockRes.rows[0].quantity;
 
-      // Record stock movement
-      await recordStockMovement(
-        client,
-        item.sparepart_id,
-        "OUT",           // was "invoice"
-        item.quantity,
-        "invoice",
-        invoiceId
-      );
+  if (availableQty < quantity) {
+    throw new Error(
+      `Insufficient stock for spare part ID ${item.sparepart_id}. Available: ${availableQty}`
+    );
+  }
 
-      // Insert invoice item
-      await client.query(
-        `INSERT INTO spare_invoice_items
-         (invoice_id, sparepart_id, quantity, unit_price, total_price)
-         VALUES ($1,$2,$3,$4,$5)`,
-        [
-          invoiceId,
-          item.sparepart_id,
-          item.quantity,
-          item.unit_price,
-          item.total_price
-        ]
-      );
-    }
+  await queryWithDiagnostics(
+    client,
+    `deduct sparepart stock (id=${item.sparepart_id})`,
+    `UPDATE spareparts SET quantity = quantity - $1 WHERE id = $2`,
+    [quantity, item.sparepart_id]
+  );
+
+  await recordStockMovement(
+    client,
+    item.sparepart_id,
+    "OUT",
+    quantity,
+    "invoice",
+    invoiceId
+  );
+
+  await queryWithDiagnostics(
+    client,
+    `insert invoice item (estimate_item_id=${item.id})`,
+    `INSERT INTO spare_invoice_items
+     (invoice_id, sparepart_id, quantity, unit_price, total_price)
+     VALUES ($1,$2,$3,$4,$5)`,
+    [
+      invoiceId,
+      item.sparepart_id,
+      quantity,
+      item.unit_price,
+      item.total_price
+    ]
+  );
+}
 
     // 3️⃣ Update estimate status
     await client.query(

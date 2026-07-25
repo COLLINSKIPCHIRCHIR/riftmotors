@@ -8,11 +8,13 @@ export const recordStockMovement = async (
   reference_type,
   reference_id
 ) => {
+  const safeQuantity = Math.round(Number(quantity));
+
   await client.query(
     `INSERT INTO stock_movements
      (sparepart_id, type, quantity, reference_type, reference_id)
      VALUES ($1, $2, $3, $4, $5)`,
-    [sparepart_id, type, quantity, reference_type, reference_id]
+    [sparepart_id, type, safeQuantity, reference_type, reference_id]
   );
 };
 
