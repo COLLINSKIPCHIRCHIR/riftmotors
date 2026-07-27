@@ -68,6 +68,15 @@ const [selectedPart,setSelectedPart]=useState(null);
 
 const [partQuantity,setPartQuantity]=useState(1);
 
+// Manually entered selling price for the job. Pre-filled with the
+// catalog selling_price as a suggestion when a part is picked, but the
+// user can override it per-job. The buying_price is the hard floor —
+// enforced here for instant feedback and again on the backend as the
+// real rule.
+const [partUnitPrice,setPartUnitPrice]=useState("");
+
+const [partPriceError,setPartPriceError]=useState("");
+
 const [showEstimateModal,setShowEstimateModal]=useState(false);
 
 useEffect(()=>{
@@ -424,11 +433,75 @@ err.response?.data?.message ||
 }
 
 
+// Called by SparePartSearchSelect when a part is picked (or cleared).
+// Pre-fills the manual price field with the suggested selling_price,
+// and resets any stale validation error from a previous part.
+const handleSelectPart = (part)=>{
+
+setSelectedPart(part);
+
+setPartUnitPrice(
+part ? part.selling_price : ""
+);
+
+setPartPriceError("");
+
+}
+
+
+const handlePartPriceChange = (value)=>{
+
+setPartUnitPrice(value);
+
+if(
+selectedPart &&
+value !== "" &&
+Number(value) < Number(selectedPart.buying_price)
+){
+
+setPartPriceError(
+`Price cannot be below buying price (KES ${selectedPart.buying_price})`
+);
+
+}else{
+
+setPartPriceError("");
+
+}
+
+}
+
+
+const isPartPriceInvalid =
+!selectedPart ||
+partUnitPrice === "" ||
+Number(partUnitPrice) <= 0 ||
+Number(partUnitPrice) < Number(selectedPart.buying_price);
+
+
 const handleAddPart = async()=>{
 
 if(isCompleted) return;
 
 if(!selectedPart) return;
+
+if(!partUnitPrice || Number(partUnitPrice) <= 0){
+
+alert("Enter a selling price for this part");
+
+return;
+
+}
+
+if(Number(partUnitPrice) < Number(selectedPart.buying_price)){
+
+alert(
+`Selling price cannot be below buying price (KES ${selectedPart.buying_price})`
+);
+
+return;
+
+}
 
 try{
 
@@ -441,7 +514,7 @@ sparepart_id:selectedPart.id,
 
 quantity:partQuantity,
 
-unit_price:selectedPart.selling_price
+unit_price:partUnitPrice
 
 });
 
@@ -457,6 +530,10 @@ setParts(res.data);
 setSelectedPart(null);
 
 setPartQuantity(1);
+
+setPartUnitPrice("");
+
+setPartPriceError("");
 
 
 
@@ -1343,7 +1420,7 @@ Spare Parts
 
 <SparePartSearchSelect
 
-onSelect={setSelectedPart}
+onSelect={handleSelectPart}
 
 />
 
@@ -1370,11 +1447,77 @@ className="border rounded-lg p-2"
 
 
 
+{
+
+selectedPart &&
+
+<div className="mt-3">
+
+<label className="text-sm font-semibold text-slate-600">
+
+Selling price (KES)
+
+</label>
+
+
+<p className="text-xs text-slate-500 mb-1">
+
+Suggested: KES {selectedPart.selling_price}
+{" "}·{" "}
+Buying price: KES {selectedPart.buying_price} (minimum allowed)
+
+</p>
+
+
+<input
+
+type="number"
+
+min={selectedPart.buying_price}
+
+step="0.01"
+
+value={partUnitPrice}
+
+onChange={(e)=>
+handlePartPriceChange(e.target.value)
+}
+
+placeholder="Enter the price to charge for this job"
+
+className="
+border
+rounded-lg
+p-2
+w-full
+"
+
+/>
+
+
+{
+
+partPriceError &&
+
+<p className="text-red-500 text-sm mt-1">
+
+{partPriceError}
+
+</p>
+
+}
+
+</div>
+
+}
+
+
+
 <button
 
 onClick={handleAddPart}
 
-disabled={!selectedPart}
+disabled={isPartPriceInvalid}
 
 className="
 mt-3
@@ -1432,6 +1575,13 @@ flex justify-between
 <p className="text-sm text-gray-500">
 
 Qty: {part.quantity}
+
+</p>
+
+
+<p className="text-sm text-gray-500">
+
+Unit price: KES {part.unit_price}
 
 </p>
 

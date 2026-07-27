@@ -31,3 +31,68 @@ ALTER TABLE customer_vehicles ADD COLUMN updated_at TIMESTAMP DEFAULT NOW();
 
 ALTER TABLE service_receipts ADD COLUMN IF NOT EXISTS discount_type VARCHAR(20) DEFAULT 'amount';
 ALTER TABLE service_receipts ADD COLUMN IF NOT EXISTS discount_value NUMERIC(12,2) DEFAULT 0;
+
+
+
+//////////////////////////////////////////////////
+ALTER TABLE service_catalog
+ADD COLUMN pricing_type VARCHAR(10) NOT NULL DEFAULT 'fixed'
+    CHECK (pricing_type IN ('fixed', 'unit')),
+ADD COLUMN unit VARCHAR(50);
+
+
+ALTER TABLE job_services
+ADD COLUMN total_price NUMERIC GENERATED ALWAYS AS (quantity * price) STORED;
+
+
+ALTER TABLE job_services
+ADD CONSTRAINT job_services_job_service_unique UNIQUE (job_id, service_id);
+
+
+ALTER TABLE service_jobs ALTER COLUMN job_number DROP NOT NULL;
+
+
+SELECT conname FROM pg_constraint WHERE conrelid = 'service_catalog'::regclass AND contype = 'c';
+
+
+ALTER TABLE service_catalog DROP CONSTRAINT service_catalog_pricing_type_check;
+
+ALTER TABLE service_catalog
+ADD CONSTRAINT service_catalog_pricing_type_check
+CHECK (pricing_type IN ('fixed', 'unit', 'variable'));
+
+
+
+
+//////////////////////////////////
+
+BEGIN;
+
+ALTER TABLE job_services DROP COLUMN total_price;
+
+ALTER TABLE job_services
+  ALTER COLUMN quantity TYPE NUMERIC(10,2) USING quantity::numeric(10,2),
+  ALTER COLUMN quantity SET DEFAULT 1;
+
+ALTER TABLE job_services
+  ADD COLUMN total_price NUMERIC GENERATED ALWAYS AS (quantity * price) STORED;
+
+COMMIT;
+
+
+ALTER TABLE service_estimate_items
+  ALTER COLUMN quantity TYPE NUMERIC(10,2) USING quantity::numeric(10,2);
+
+ALTER TABLE service_invoice_items
+  ALTER COLUMN quantity TYPE NUMERIC(10,2) USING quantity::numeric(10,2);
+
+ALTER TABLE service_receipt_items
+  ALTER COLUMN quantity TYPE NUMERIC(10,2) USING quantity::numeric(10,2);
+
+
+  ALTER TABLE stock_movements ALTER COLUMN quantity TYPE NUMERIC(10,2) USING quantity::numeric(10,2);
+
+
+  ALTER TABLE spare_invoice_items ALTER COLUMN quantity TYPE NUMERIC(10,2) USING quantity::numeric(10,2);
+
+  ALTER TABLE spare_estimate_items ALTER COLUMN quantity TYPE NUMERIC(10,2) USING quantity::numeric(10,2);
