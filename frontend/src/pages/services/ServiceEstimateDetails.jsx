@@ -139,6 +139,14 @@ const ServiceEstimateDetails =()=>{
     0
   );
 
+  // Sum of every line's quantity — feeds the Qty column in the items-table
+  // totals row so the estimate is self-explanatory without cross-checking
+  // the summary box further down the page.
+  const totalQty = (estimate.items || []).reduce(
+    (sum, item) => sum + Number(item.quantity || 0),
+    0
+  );
+
   return (
     <div className="print-container p-6 bg-gray-100 min-h-screen">
       <div ref={printRef} className="max-w-5xl mx-auto bg-white print-document border border-black p-3 text-[10px] leading-[13px]">
@@ -382,20 +390,20 @@ const ServiceEstimateDetails =()=>{
                 </tr>
               )})}
 
-              {/* SUMMARY ROW — lands in the same Price / Discount / Total
-                  columns as the line items above, so it's self-explanatory
-                  without a separate table: Items Total sits in the Price
-                  column, Discount Applied in the Discount column, and
-                  Amount After Discount in the Total column. Only shown
-                  when a discount actually brings something to summarize. */}
-              {totalDiscount > 0 && (
-                <tr className="bg-gray-100 font-bold">
-                  <td colSpan={3} className="p-0.5 border border-black text-right">Totals</td>
-                  <td className="p-0.5 border border-black text-right">{(Number(estimate.subtotal) + totalDiscount).toFixed(2)}</td>
-                  <td className="p-0.5 border border-black text-right">{totalDiscount.toFixed(2)}</td>
-                  <td className="p-0.5 border border-black text-right">{Number(estimate.subtotal).toFixed(2)}</td>
-                </tr>
-              )}
+              {/* TOTALS ROW — always shown, lands in the same Qty / Price /
+                  Discount / Total columns as the line items above, so the
+                  estimate is self-explanatory on its own: Qty column sums
+                  every line's quantity, Price column shows the pre-discount
+                  items total, Discount column shows what was taken off (or
+                  "-" when there's none), and Total lands in the same column
+                  as estimate.subtotal further down. */}
+              <tr className="bg-gray-100 font-bold">
+                <td colSpan={2} className="p-0.5 border border-black text-right">Totals</td>
+                <td className="p-0.5 border border-black text-center">{totalQty}</td>
+                <td className="p-0.5 border border-black text-right">{(Number(estimate.subtotal) + totalDiscount).toFixed(2)}</td>
+                <td className="p-0.5 border border-black text-right">{totalDiscount > 0 ? totalDiscount.toFixed(2) : "-"}</td>
+                <td className="p-0.5 border border-black text-right">{Number(estimate.subtotal).toFixed(2)}</td>
+              </tr>
             </tbody>
           </table>
 

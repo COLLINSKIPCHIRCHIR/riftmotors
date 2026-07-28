@@ -121,6 +121,18 @@ export default function InvoiceDetails() {
     }
   };
 
+  // Sum of every line's quantity and total — feeds the Totals row at the
+  // bottom of the items table so the invoice is self-explanatory without
+  // cross-checking the Sub Total box further down the page.
+  const totalQty = (invoice?.items || []).reduce(
+    (sum, item) => sum + Number(item.quantity || 0),
+    0
+  );
+  const totalAmount = (invoice?.items || []).reduce(
+    (sum, item) => sum + Number(item.total_price || 0),
+    0
+  );
+
   if (loading) return <div className="p-6">Loading...</div>;
   if (!invoice) return <div className="p-6">Invoice not found</div>;
 
@@ -295,6 +307,18 @@ export default function InvoiceDetails() {
                   <td className="p-0.5 border border-black text-right font-bold">{Number(item.total_price).toFixed(2)}</td>
                 </tr>
               ))}
+
+              {/* TOTALS ROW — always shown, mirrors the pattern used across
+                  the estimate/invoice family: Qty column sums every line's
+                  quantity, Total column sums every line's total, so the
+                  items table is self-explanatory without cross-checking
+                  the Sub Total box further down. */}
+              <tr className="bg-gray-100 font-bold">
+                <td colSpan={2} className="p-0.5 border border-black text-right">Totals</td>
+                <td className="p-0.5 border border-black text-center">{totalQty}</td>
+                <td className="p-0.5 border border-black text-right">-</td>
+                <td className="p-0.5 border border-black text-right">{totalAmount.toFixed(2)}</td>
+              </tr>
             </tbody>
           </table>
 

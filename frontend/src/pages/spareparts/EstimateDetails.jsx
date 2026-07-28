@@ -100,6 +100,18 @@ export default function EstimateDetails(){
     }
   };
 
+  // Sum of every line's quantity and total — feeds the Totals row at the
+  // bottom of the items table so the estimate is self-explanatory without
+  // cross-checking the Sub Total box further down the page.
+  const totalQty = (estimate.items || []).reduce(
+    (sum, item) => sum + Number(item.quantity || 0),
+    0
+  );
+  const totalAmount = (estimate.items || []).reduce(
+    (sum, item) => sum + Number(item.total || 0),
+    0
+  );
+
   return (
     <div className="p-6 bg-gray-100 min-h-screen print-container">
       <div ref={printRef} className="max-w-5xl mx-auto bg-white print-document border border-black p-3 text-[10px] leading-[13px]">
@@ -255,6 +267,18 @@ export default function EstimateDetails(){
                 <td className="p-0.5 border border-black text-right font-bold">{Number(item.total).toFixed(2)}</td>
               </tr>
             ))}
+
+            {/* TOTALS ROW — always shown, mirrors the pattern used in
+                ServiceEstimateDetails.jsx: Qty column sums every line's
+                quantity, Total column sums every line's total, so the
+                items table is self-explanatory without cross-checking the
+                Sub Total box further down. */}
+            <tr className="bg-gray-100 font-bold">
+              <td colSpan={2} className="p-0.5 border border-black text-right">Totals</td>
+              <td className="p-0.5 border border-black text-center">{totalQty}</td>
+              <td className="p-0.5 border border-black text-right">-</td>
+              <td className="p-0.5 border border-black text-right">{totalAmount.toFixed(2)}</td>
+            </tr>
           </tbody>
         </table>
 

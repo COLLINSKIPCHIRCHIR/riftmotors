@@ -11,6 +11,12 @@ export default function SellSpareParts() {
   const [discount, setDiscount] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
 
+  // Manually entered selling price for this sale. Pre-filled with the
+  // catalog selling_price as a suggestion, editable per sale, but never
+  // allowed below buying_price — same rule as the job card parts flow.
+  const [unitPrice, setUnitPrice] = useState(0);
+  const [priceError, setPriceError] = useState("");
+
   const [customers, setCustomers] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
@@ -78,20 +84,34 @@ export default function SellSpareParts() {
     setSelectedPart(part);
     setQuantity(1);
     setDiscount(0);
+    setUnitPrice(part.selling_price);
+    setPriceError("");
   };
 
   // ------------------------------
-  // Auto calculate total
+  // Auto calculate total — now driven by the manually entered unitPrice
+  // instead of selectedPart.selling_price directly
   // ------------------------------
   useEffect(() => {
     if (selectedPart) {
-      const sellingPrice = Number(selectedPart.selling_price) || 0;
+      const price = Number(unitPrice) || 0;
       const discountedPrice =
-        sellingPrice - (sellingPrice * Number(discount || 0)) / 100;
+        price - (price * Number(discount || 0)) / 100;
 
       setTotalPrice(discountedPrice * Number(quantity || 0));
+
+      if (
+        unitPrice !== "" &&
+        Number(unitPrice) < Number(selectedPart.buying_price)
+      ) {
+        setPriceError(
+          `Price cannot be below buying price (Ksh ${selectedPart.buying_price})`
+        );
+      } else {
+        setPriceError("");
+      }
     }
-  }, [selectedPart, discount, quantity]);
+  }, [selectedPart, unitPrice, discount, quantity]);
 
   // ------------------------------
   // Add to Cart (UPDATED ✅)
@@ -100,6 +120,14 @@ export default function SellSpareParts() {
     if (!selectedPart) return alert("Select a spare part first!");
     if (quantity > selectedPart.quantity)
       return alert("Not enough stock available!");
+
+    if (!unitPrice || Number(unitPrice) <= 0)
+      return alert("Enter a selling price!");
+
+    if (Number(unitPrice) < Number(selectedPart.buying_price))
+      return alert(
+        `Price cannot be below buying price (Ksh ${selectedPart.buying_price})`
+      );
 
     const existingIndex = cart.findIndex(
       (item) => item.sparepart_id === selectedPart.id
@@ -119,7 +147,7 @@ export default function SellSpareParts() {
         sparepart_id: selectedPart.id,
         name: selectedPart.name,
         part_number: selectedPart.part_number,
-        unit_price: Number(selectedPart.selling_price),
+        unit_price: Number(unitPrice),
         quantity: Number(quantity),
         discount_percent: Number(discount),
         total: itemTotal,
@@ -197,7 +225,7 @@ export default function SellSpareParts() {
       setCart([]);
     } catch (err) {
       console.error("❌ Error creating estimate:", err);
-      alert("Failed to create estimate. Check console.");
+      alert(err.response?.data?.message || "Failed to create estimate. Check console.");
     }
   };
 
@@ -264,10 +292,26 @@ export default function SellSpareParts() {
 
             <p><strong>Name:</strong> {selectedPart.name}</p>
             <p><strong>Stock:</strong> {selectedPart.quantity}</p>
-            <p>
-              <strong>Selling Price:</strong> Ksh{" "}
-              {selectedPart.selling_price}
+            <p className="text-sm text-gray-600">
+              Suggested selling price: Ksh {selectedPart.selling_price}
+              {" "}·{" "}
+              Buying price: Ksh {selectedPart.buying_price} (minimum allowed)
             </p>
+
+            <label>Selling Price (Ksh)</label>
+            <input
+              type="number"
+              min={selectedPart.buying_price}
+              step="0.01"
+              value={unitPrice}
+              onChange={(e) =>
+                setUnitPrice(e.target.value)
+              }
+              className="border p-2 w-full rounded"
+            />
+            {priceError && (
+              <p className="text-red-600 text-sm mt-1">{priceError}</p>
+            )}
 
             <label>Quantity</label>
             <input
@@ -297,7 +341,8 @@ export default function SellSpareParts() {
 
             <button
               onClick={addToCart}
-              className="mt-3 bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+              disabled={!!priceError || !unitPrice}
+              className="mt-3 bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 disabled:bg-gray-400"
             >
               <FaShoppingCart /> Add to Cart
             </button>

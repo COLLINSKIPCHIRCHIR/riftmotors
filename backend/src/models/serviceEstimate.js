@@ -176,71 +176,55 @@ export const createServiceEstimate = async (
 
     // get services
 
-    const services = await client.query(
+   const services = await client.query(
+  `
+  SELECT
 
-      `
-      SELECT
+  js.id AS job_item_id,
+  js.created_at,
+  js.service_id,
+  sc.name,
+  js.quantity,
+  js.price,
+  sc.min_price,
+  sc.max_price
 
-      js.service_id,
+  FROM job_services js
 
-      sc.name,
+  JOIN service_catalog sc
+  ON js.service_id=sc.id
 
-      js.quantity,
+  WHERE js.job_id=$1
 
-      js.price,
-
-      sc.min_price,
-
-      sc.max_price
-
-      FROM job_services js
-
-
-      JOIN service_catalog sc
-
-      ON js.service_id=sc.id
-
-
-      WHERE js.job_id=$1
-
-      `,
-      [job_id]
-
-    );
-
+  `,
+  [job_id]
+);
 
 
 
     // get parts
 
     const parts = await client.query(
+  `
+  SELECT
 
-      `
-      SELECT
+  jp.id AS job_item_id,
+  jp.created_at,
+  jp.sparepart_id,
+  sp.name,
+  jp.quantity,
+  jp.unit_price
 
-      jp.sparepart_id,
+  FROM job_parts jp
 
-      sp.name,
+  JOIN spareparts sp
+  ON jp.sparepart_id=sp.id
 
-      jp.quantity,
+  WHERE jp.job_id=$1
 
-      jp.unit_price
-
-      FROM job_parts jp
-
-
-      JOIN spareparts sp
-
-      ON jp.sparepart_id=sp.id
-
-
-      WHERE jp.job_id=$1
-
-      `,
-      [job_id]
-
-    );
-
+  `,
+  [job_id]
+);
 
 
 
@@ -365,149 +349,109 @@ export const createServiceEstimate = async (
     // insert services
 
 
-    for (const service of services.rows) {
+    const mergedItems = [
+  ...services.rows.map(row => ({ ...row, item_type: "service" })),
+  ...parts.rows.map(row => ({ ...row, item_type: "sparepart" })),
+].sort((a, b) => {
+  const diff = new Date(a.created_at) - new Date(b.created_at);
+  return diff !== 0 ? diff : a.job_item_id - b.job_item_id;
+});
 
+console.log(
+  "MERGE ORDER DEBUG:",
+  mergedItems.map(i => ({
+    type: i.item_type,
+    name: i.name,
+    created_at: i.created_at,
+    job_item_id: i.job_item_id
+  }))
+);
 
-      const originalPrice =
-        Number(service.price) *
-        Number(service.quantity);
+for (const item of mergedItems) {
 
+  const originalPrice =
+    item.item_type === "service"
+      ? Number(item.price) * Number(item.quantity)
+      : Number(item.unit_price) * Number(item.quantity);
 
-      const adjustment = 0;
+  const adjustment = 0;
+  const finalPrice = originalPrice - adjustment;
 
+  if (item.item_type === "service") {
 
-      const finalPrice =
-        originalPrice - adjustment;
+    await client.query(
+      `
+      INSERT INTO service_estimate_items
 
+      (
+      estimate_id,
+      item_type,
+      service_id,
+      description,
+      quantity,
+      unit_price,
+      original_price,
+      adjustment,
+      total_price,
+      min_price,
+      max_price
+      )
 
-
-      await client.query(
-
-        `
-        INSERT INTO service_estimate_items
-
-        (
+      VALUES($1,'service',$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      `,
+      [
         estimate_id,
-        item_type,
-        service_id,
-        description,
-        quantity,
-        unit_price,
-        original_price,
+        item.service_id,
+        item.name,
+        item.quantity,
+        item.price,
+        originalPrice,
         adjustment,
-        total_price,
-        min_price,
-        max_price
+        finalPrice,
+        item.min_price,
+        item.max_price
+      ]
+    );
 
-        )
+  } else {
 
-        VALUES($1,'service',$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    await client.query(
+      `
+      INSERT INTO service_estimate_items
 
-        `,
+      (
+      estimate_id,
+      item_type,
+      sparepart_id,
+      description,
+      quantity,
+      unit_price,
+      original_price,
+      adjustment,
+      total_price,
+      discount_type,
+      discount_value
+      )
 
-        [
-
-          estimate_id,
-
-          service.service_id,
-
-          service.name,
-
-          service.quantity,
-
-          service.price,
-
-          originalPrice,
-
-          adjustment,
-
-          finalPrice,
-
-          service.min_price,
-
-          service.max_price
-
-
-        ]
-
-      );
-
-
-    }
-
-
-
-
-    // insert parts
-
-
-    for (const part of parts.rows) {
-
-
-      const originalPrice =
-        Number(part.unit_price) *
-        Number(part.quantity);
-
-
-      const adjustment = 0;
-
-
-      const finalPrice =
-        originalPrice;
-
-
-      await client.query(
-
-        `
-        INSERT INTO service_estimate_items
-
-        (
+      VALUES($1,'sparepart',$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      `,
+      [
         estimate_id,
-        item_type,
-        sparepart_id,
-        description,
-        quantity,
-        unit_price,
-        original_price,
+        item.sparepart_id,
+        item.name,
+        item.quantity,
+        item.unit_price,
+        originalPrice,
         adjustment,
-        total_price,
-        discount_type,
-        discount_value
+        finalPrice,
+        "amount",
+        0
+      ]
+    );
 
-        )
+  }
 
-        VALUES($1,'sparepart',$2,$3,$4,$5,$6,$7,$8,$9,$10)
-
-        `,
-
-        [
-
-          estimate_id,
-
-          part.sparepart_id,
-
-          part.name,
-
-          part.quantity,
-
-          part.unit_price,
-
-          originalPrice,
-
-          adjustment,
-
-          finalPrice,
-
-          "amount",
-
-          0
-
-        ]
-
-      );
-
-
-    }
+}
 
     await recalculateEstimateTotals(
       client,

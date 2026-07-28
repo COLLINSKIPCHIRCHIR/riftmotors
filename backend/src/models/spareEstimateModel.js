@@ -11,25 +11,83 @@ export const createEstimate = async (data) => {
     discount = 0
   } = data;
 
-  let subtotal = 0;
-  items.forEach(i => {
-    subtotal += i.quantity * i.unit_price;
-  });
-
-  const taxRate = data.tax_rate || 0;
-
-  const taxAmount =
-    subtotal * (Number(taxRate) / 100);
-
-  const total =
-    subtotal
-    + taxAmount
-    - discount;
+  if (!items || items.length === 0) {
+    const err = new Error("Estimate must have at least one item");
+    err.statusCode = 400;
+    throw err;
+  }
 
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
+
+    // Fetch buying_price for every sparepart in the cart in one query,
+    // then validate each item's unit_price against it before anything
+    // gets inserted. This is the real enforcement point — the frontend
+    // check is just UX, this is what actually stops underpriced sales,
+    // whether they come from SellSpareParts.jsx, a future screen, or a
+    // direct API call.
+    const sparepartIds = items.map(i => i.sparepart_id);
+
+    const stockResult = await client.query(
+      `SELECT id, buying_price, quantity FROM spareparts WHERE id = ANY($1::int[])`,
+      [sparepartIds]
+    );
+
+    const stockById = {};
+    stockResult.rows.forEach(row => {
+      stockById[row.id] = row;
+    });
+
+    for (const item of items) {
+      const stock = stockById[item.sparepart_id];
+
+      if (!stock) {
+        const err = new Error(`Spare part ${item.sparepart_id} not found`);
+        err.statusCode = 404;
+        throw err;
+      }
+
+      if (Number(item.quantity) > Number(stock.quantity)) {
+        const err = new Error(
+          `Insufficient stock for one of the items. Available: ${stock.quantity}`
+        );
+        err.statusCode = 400;
+        throw err;
+      }
+
+      const price = Number(item.unit_price);
+
+      if (!price || price <= 0) {
+        const err = new Error("Every item needs a valid selling price");
+        err.statusCode = 400;
+        throw err;
+      }
+
+      if (price < Number(stock.buying_price)) {
+        const err = new Error(
+          `Selling price (KES ${price}) cannot be below buying price (KES ${stock.buying_price}) for one of the items`
+        );
+        err.statusCode = 400;
+        throw err;
+      }
+    }
+
+    let subtotal = 0;
+    items.forEach(i => {
+      subtotal += i.quantity * i.unit_price;
+    });
+
+    const taxRate = data.tax_rate || 0;
+
+    const taxAmount =
+      subtotal * (Number(taxRate) / 100);
+
+    const total =
+      subtotal
+      + taxAmount
+      - discount;
 
     const estimateResult = await client.query(
       `INSERT INTO spare_estimates
