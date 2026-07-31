@@ -212,7 +212,9 @@ const ServiceEstimateDetails =()=>{
             <tbody>
               <tr>
                 <td className="border border-black px-1 py-0.5 font-bold w-[10%]">REF:</td>
-                <td className="border border-black px-1 py-0.5" colSpan={2}>EST-{estimate.id}</td>
+                <td className="border border-black px-1 py-0.5" colSpan={2}>
+                  {estimate.estimate_number || `EST-${estimate.id}`}
+                </td>
                 <td className="border border-black px-1 py-0.5 font-bold w-[10%]">Date:</td>
                 <td className="border border-black px-1 py-0.5">{new Date(estimate.created_at).toLocaleDateString()}</td>
               </tr>

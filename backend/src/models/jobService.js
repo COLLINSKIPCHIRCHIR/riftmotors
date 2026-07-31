@@ -3,11 +3,38 @@ import { ensureJobEditable } from "../utils/jobGuards.js";
 
 // Create service attached to a job
 export const createJobService = async (data) => {
-    const { job_id, service_id } = data;
+    const { job_id, service_id, is_custom, custom_name } = data;
     let { quantity, price } = data;
 
     await ensureJobEditable(job_id);
 
+    // --- CUSTOM / NOT-IN-CATALOG SERVICE ---
+    if (is_custom) {
+        if (!custom_name || !custom_name.trim()) {
+            const err = new Error("Enter a name for the custom service");
+            err.statusCode = 400;
+            throw err;
+        }
+        if (price === undefined || price === null || price === "") {
+            const err = new Error("Enter a price for the custom service");
+            err.statusCode = 400;
+            throw err;
+        }
+
+        const result = await pool.query(
+            `
+            INSERT INTO job_services
+            (job_id, service_id, custom_name, is_custom, quantity, price)
+            VALUES ($1, NULL, $2, true, $3, $4)
+            RETURNING *
+            `,
+            [job_id, custom_name.trim(), quantity || 1, price]
+        );
+
+        return result.rows[0];
+    }
+
+    // --- EXISTING CATALOG-BASED FLOW (unchanged) ---
     const catalogResult = await pool.query(
         `SELECT price, pricing_type FROM service_catalog WHERE id=$1`,
         [service_id]
@@ -23,23 +50,13 @@ export const createJobService = async (data) => {
 
     const pricing_type = catalogService.pricing_type;
 
-    // Variable-priced services (spray painting, panel beating, etc.)
-    // MUST have a price supplied manually — the catalog price is just a
-    // suggested range and cannot be trusted as the real charge.
     if (pricing_type === "variable" && (price === undefined || price === null || price === "")) {
         const err = new Error("This service requires a manually entered price after inspection");
         err.statusCode = 400;
         throw err;
     }
 
-    // Fixed and variable services are always quantity 1 — only unit-based
-    // services (e.g. fibre works) can carry a quantity.
-    if (pricing_type === "unit") {
-        quantity = quantity || 1;
-    } else {
-        quantity = 1;
-    }
-
+    quantity = pricing_type === "unit" ? (quantity || 1) : 1;
     const finalPrice = pricing_type === "variable" ? price : (price ?? catalogService.price);
 
     const result = await pool.query(
@@ -47,15 +64,10 @@ export const createJobService = async (data) => {
         INSERT INTO job_services
         (job_id, service_id, quantity, price)
         VALUES ($1,$2,$3,$4)
-
         ON CONFLICT(job_id,service_id)
         DO UPDATE SET
-            quantity = CASE
-                WHEN $5 = 'unit' THEN job_services.quantity + EXCLUDED.quantity
-                ELSE 1
-            END,
+            quantity = CASE WHEN $5 = 'unit' THEN job_services.quantity + EXCLUDED.quantity ELSE 1 END,
             price = EXCLUDED.price
-
         RETURNING *
         `,
         [job_id, service_id, quantity, finalPrice, pricing_type]
@@ -70,20 +82,20 @@ export const getJobServices = async (job_id) => {
         `
         SELECT 
         js.*,
-        sc.name AS service_name,
+        COALESCE(sc.name, js.custom_name) AS service_name,
         sc.description,
-        sc.pricing_type,
+        COALESCE(sc.pricing_type, 'fixed') AS pricing_type,
         sc.unit
         FROM job_services js
-        JOIN service_catalog sc ON js.service_id = sc.id
+        LEFT JOIN service_catalog sc ON js.service_id = sc.id
         WHERE js.job_id=$1
         ORDER BY js.id DESC
         `,
         [job_id]
     );
-
     return result.rows;
 };
+
 
 // Delete service from job
 export const deleteJobService = async (id) => {

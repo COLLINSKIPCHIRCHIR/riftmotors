@@ -141,24 +141,18 @@ export const createServiceEstimate = async (
     // get job customer details
 
     const jobResult = await client.query(
-
-      `
-      SELECT
-      sj.id,
-      c.name AS customer_name,
-      c.phone AS customer_phone
-
-      FROM service_jobs sj
-
-      LEFT JOIN customers c
-      ON sj.customer_id = c.id
-
-      WHERE sj.id=$1
-
-      `,
-      [job_id]
-
-    );
+  `
+  SELECT
+  sj.id,
+  sj.job_number,
+  c.name AS customer_name,
+  c.phone AS customer_phone
+  FROM service_jobs sj
+  LEFT JOIN customers c ON sj.customer_id = c.id
+  WHERE sj.id=$1
+  `,
+  [job_id]
+);
 
 
 
@@ -171,10 +165,19 @@ export const createServiceEstimate = async (
 
     const job = jobResult.rows[0];
 
-
+    // Estimate number always mirrors the job number so the two documents
+    // are traceable at a glance (JOB-000123 -> EST-000123). If this job
+    // already has an estimate, this will collide on re-generation - that's
+    // expected, since a job should only ever carry one live estimate.
+    const estimate_number = job.job_number.replace("JOB-", "EST-");
 
 
     // get services
+    // LEFT JOIN here (not INNER JOIN) — custom services have service_id
+    // NULL and no service_catalog row, so an inner join would silently
+    // drop them from the estimate. name falls back to custom_name,
+    // min_price/max_price come back null for custom rows and that's fine,
+    // they're only used for the min/max clamp on catalog services.
 
    const services = await client.query(
   `
@@ -183,7 +186,8 @@ export const createServiceEstimate = async (
   js.id AS job_item_id,
   js.created_at,
   js.service_id,
-  sc.name,
+  js.is_custom,
+  COALESCE(sc.name, js.custom_name) AS name,
   js.quantity,
   js.price,
   sc.min_price,
@@ -191,7 +195,7 @@ export const createServiceEstimate = async (
 
   FROM job_services js
 
-  JOIN service_catalog sc
+  LEFT JOIN service_catalog sc
   ON js.service_id=sc.id
 
   WHERE js.job_id=$1
@@ -211,6 +215,7 @@ const parts = await client.query(
   jp.created_at,
   jp.sparepart_id,
   jp.customer_supplied,
+  jp.is_custom,
   COALESCE(sp.name, jp.part_name) AS name,
   jp.quantity,
   jp.unit_price
@@ -292,6 +297,7 @@ const parts = await client.query(
 
       (
       job_id,
+      estimate_number,
       customer_name,
       customer_phone,
       subtotal,
@@ -304,7 +310,7 @@ const parts = await client.query(
 
       )
 
-      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending')
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pending')
 
 
       RETURNING *
@@ -314,6 +320,8 @@ const parts = await client.query(
       [
 
         job_id,
+
+        estimate_number,
 
         job.customer_name,
 
@@ -352,16 +360,6 @@ const parts = await client.query(
   return diff !== 0 ? diff : a.job_item_id - b.job_item_id;
 });
 
-console.log(
-  "MERGE ORDER DEBUG:",
-  mergedItems.map(i => ({
-    type: i.item_type,
-    name: i.name,
-    created_at: i.created_at,
-    job_item_id: i.job_item_id
-  }))
-);
-
 for (const item of mergedItems) {
 
   const originalPrice = item.customer_supplied
@@ -391,10 +389,11 @@ for (const item of mergedItems) {
       total_price,
       min_price,
       max_price,
-      customer_supplied
+      customer_supplied,
+      is_custom
       )
 
-      VALUES($1,'service',$2,$3,$4,$5,$6,$7,$8,$9,$10,false)
+      VALUES($1,'service',$2,$3,$4,$5,$6,$7,$8,$9,$10,false,$11)
       `,
       [
         estimate_id,
@@ -406,7 +405,8 @@ for (const item of mergedItems) {
         adjustment,
         finalPrice,
         item.min_price,
-        item.max_price
+        item.max_price,
+        item.is_custom || false
       ]
     );
 
@@ -428,10 +428,11 @@ for (const item of mergedItems) {
       total_price,
       discount_type,
       discount_value,
-      customer_supplied
+      customer_supplied,
+      is_custom
       )
 
-      VALUES($1,'sparepart',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      VALUES($1,'sparepart',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
       `,
       [
         estimate_id,
@@ -444,7 +445,8 @@ for (const item of mergedItems) {
         finalPrice,
         "amount",
         0,
-        item.customer_supplied
+        item.customer_supplied,
+        item.is_custom || false
       ]
     );
 
@@ -521,11 +523,6 @@ export const getServiceEstimates = async () => {
 
 
 // GET SINGLE ESTIMATE
-// Now pulls vehicle details (via service_jobs -> customer_vehicles) and
-// customer KRA pin (via service_jobs -> customers). All LEFT JOINs, so a
-// job with no vehicle attached, or a customer with no kra_pin, still
-// returns cleanly - those fields just come back null and the frontend
-// renders them as "N/A".
 
 export const getServiceEstimateById = async (id) => {
 

@@ -1,4 +1,4 @@
-import React,{useEffect,useState} from "react";
+import React,{useEffect,useState,useRef} from "react";
 import {useParams, useNavigate} from "react-router-dom";
 
 import {
@@ -18,6 +18,8 @@ import {
 
 } from "../../api/serviceApi";
 
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 import CreateEstimateModal from "./CreateEstimateModal";
 import SparePartSearchSelect from "./SparePartSearchSelect";
@@ -37,6 +39,8 @@ const JobDetails =()=>{
 const {id}=useParams();
 
 const navigate = useNavigate();
+
+const printRef = useRef();
 
 
 const [job,setJob]=useState(null);
@@ -61,6 +65,17 @@ const [variablePrice,setVariablePrice]=useState("");
 
 const [error,setError]=useState("");
 
+// "catalog" = pick from service_catalog (existing flow).
+// "custom"  = service not in the system at all - typed name + price,
+// billed as-is, no catalog row, no min/max guardrails.
+const [serviceMode,setServiceMode]=useState("catalog");
+
+const [customServiceName,setCustomServiceName]=useState("");
+
+const [customServicePrice,setCustomServicePrice]=useState("");
+
+const [customServiceQuantity,setCustomServiceQuantity]=useState(1);
+
 // NOTE: spareParts (the full 2000-row list) is gone. SparePartSearchSelect
 // fetches matches from the backend as the user types instead.
 
@@ -77,12 +92,20 @@ const [partUnitPrice,setPartUnitPrice]=useState("");
 
 const [partPriceError,setPartPriceError]=useState("");
 
-// When the customer brings their own part, there's no inventory link, no
-// price, and no stock check — just a name and a quantity. Toggling this
-// swaps the inventory search + price fields out for a plain text field.
-const [isCustomerSupplied,setIsCustomerSupplied]=useState(false);
+// Three ways a part can end up on a job:
+// "inventory" - linked to a spareparts row, priced with a buying-price floor
+// "customer"  - customer brought their own, free, no inventory link
+// "custom"    - not in inventory at all, but still billable (bought
+//               elsewhere for this job) - typed name/number/price
+const [partMode,setPartMode]=useState("inventory");
 
 const [customerPartName,setCustomerPartName]=useState("");
+
+const [customPartName,setCustomPartName]=useState("");
+
+const [customPartNumber,setCustomPartNumber]=useState("");
+
+const [customPartPrice,setCustomPartPrice]=useState("");
 
 const [showEstimateModal,setShowEstimateModal]=useState(false);
 
@@ -226,8 +249,45 @@ err.response?.data?.message ||
 }
 
 
+// Renders the printable area into a PDF and returns it as a Blob.
+// `onclone` strips anything marked `.capture-hide` (dropdowns, inputs,
+// add/remove/assign buttons) from the CLONED document before
+// html2canvas draws it, so the exported file only ever shows the job
+// card content — never the editing controls. `print:hidden` covers the
+// native browser Print button separately.
+const generatePdfBlob = async () => {
+  const canvas = await html2canvas(printRef.current, {
+    scale: 2,
+    onclone: (clonedDoc) => {
+      clonedDoc.querySelectorAll(".capture-hide").forEach((el) => {
+        el.style.display = "none";
+      });
+    },
+  });
+  const imgData = canvas.toDataURL("image/png");
 
+  const pdf = new jsPDF("p", "mm", "a4");
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = (canvas.height * pageWidth) / canvas.width;
 
+  pdf.addImage(imgData, "PNG", 0, 0, pageWidth, pageHeight);
+  return pdf.output("blob");
+};
+
+const handleDownloadPdf = async () => {
+  try {
+    const blob = await generatePdfBlob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${job.job_number}.pdf`;
+    link.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.log(err);
+    alert("Could not generate PDF");
+  }
+};
 
 
 
@@ -315,10 +375,93 @@ setVariablePrice("");
 }
 
 
+// Switching between catalog/custom clears out whatever was picked/typed
+// for the other mode so stale state never leaks across.
+const handleServiceModeChange = (mode)=>{
+
+setServiceMode(mode);
+
+setSelectedService("");
+
+setServiceQuantity(1);
+
+setVariablePrice("");
+
+setCustomServiceName("");
+
+setCustomServicePrice("");
+
+setCustomServiceQuantity(1);
+
+}
+
+
 const handleAddService = async()=>{
 
 if(isCompleted) return;
 
+// --- CUSTOM / NOT-IN-CATALOG SERVICE ---
+if(serviceMode==="custom"){
+
+if(!customServiceName.trim()){
+
+alert("Enter the service name");
+
+return;
+
+}
+
+if(!customServicePrice || Number(customServicePrice) <= 0){
+
+alert("Enter a price for this service");
+
+return;
+
+}
+
+try{
+
+await addJobService({
+
+job_id:id,
+
+is_custom:true,
+
+custom_name:customServiceName.trim(),
+
+price:customServicePrice,
+
+quantity:customServiceQuantity || 1
+
+});
+
+const res =
+await getJobServices(id);
+
+setServices(res.data);
+
+setCustomServiceName("");
+
+setCustomServicePrice("");
+
+setCustomServiceQuantity(1);
+
+}catch(err){
+
+console.log(err);
+
+alert(
+err.response?.data?.message ||
+"Failed adding service"
+);
+
+}
+
+return;
+
+}
+
+// --- CATALOG SERVICE (existing flow) ---
 const exists =
 services.find(
 s=>s.service_id===Number(selectedService)
@@ -479,12 +622,13 @@ setPartPriceError("");
 }
 
 
-// Toggling customer-supplied clears out whatever was picked/typed for
-// the other mode, so switching back and forth never leaves stale state
-// behind (e.g. a selected inventory part with a customer-supplied name).
-const handleToggleCustomerSupplied = (checked)=>{
+// Switching between inventory/customer/custom clears out whatever was
+// picked/typed for the other modes, so switching back and forth never
+// leaves stale state behind (e.g. a selected inventory part with a
+// customer-supplied name still sitting in state).
+const handlePartModeChange = (mode)=>{
 
-setIsCustomerSupplied(checked);
+setPartMode(mode);
 
 setSelectedPart(null);
 
@@ -494,24 +638,40 @@ setPartPriceError("");
 
 setCustomerPartName("");
 
+setCustomPartName("");
+
+setCustomPartNumber("");
+
+setCustomPartPrice("");
+
 }
 
 
-const isPartPriceInvalid =
-!isCustomerSupplied &&
-(
+const isInventoryPriceInvalid =
 !selectedPart ||
 partUnitPrice === "" ||
 Number(partUnitPrice) <= 0 ||
-Number(partUnitPrice) < Number(selectedPart.buying_price)
-);
+Number(partUnitPrice) < Number(selectedPart.buying_price);
+
+
+const isCustomPartInvalid =
+!customPartName.trim() ||
+!customPartPrice ||
+Number(customPartPrice) <= 0;
+
+
+const isAddPartDisabled =
+partMode === "inventory" ? isInventoryPriceInvalid :
+partMode === "custom" ? isCustomPartInvalid :
+false;
 
 
 const handleAddPart = async()=>{
 
 if(isCompleted) return;
 
-if(isCustomerSupplied){
+// --- CUSTOMER SUPPLIED ---
+if(partMode==="customer"){
 
 if(!customerPartName.trim()){
 
@@ -548,8 +708,6 @@ setCustomerPartName("");
 
 setPartQuantity(1);
 
-setIsCustomerSupplied(false);
-
 
 }catch(err){
 
@@ -566,6 +724,72 @@ return;
 
 }
 
+// --- CUSTOM / NOT-IN-INVENTORY, STILL BILLABLE ---
+if(partMode==="custom"){
+
+if(!customPartName.trim()){
+
+alert("Enter the part name");
+
+return;
+
+}
+
+if(!customPartPrice || Number(customPartPrice) <= 0){
+
+alert("Enter a selling price for this part");
+
+return;
+
+}
+
+try{
+
+await addJobPart({
+
+job_id:id,
+
+is_custom:true,
+
+part_name:customPartName.trim(),
+
+part_number:customPartNumber.trim() || null,
+
+unit_price:customPartPrice,
+
+quantity:partQuantity
+
+});
+
+const res =
+await getJobParts(id);
+
+setParts(res.data);
+
+setCustomPartName("");
+
+setCustomPartNumber("");
+
+setCustomPartPrice("");
+
+setPartQuantity(1);
+
+}catch(err){
+
+console.log(err);
+
+alert(
+err.response?.data?.message ||
+"Failed adding part"
+);
+
+}
+
+return;
+
+}
+
+// --- INVENTORY-LINKED (existing flow) ---
 if(!selectedPart) return;
 
 if(!partUnitPrice || Number(partUnitPrice) <= 0){
@@ -699,7 +923,7 @@ alert(
 return (
 
 
-<div>
+<div ref={printRef}>
 
 
 
@@ -750,6 +974,8 @@ text-blue-600
 
 </span>
 
+<div className="flex gap-2 print:hidden capture-hide">
+
 <button
 
 onClick={()=>setShowEstimateModal(true)}
@@ -767,6 +993,44 @@ rounded-lg
 Generate Estimate
 
 </button>
+
+<button
+
+onClick={()=>window.print()}
+
+className="
+bg-gray-800
+text-white
+px-4
+py-2
+rounded-lg
+"
+
+>
+
+Print
+
+</button>
+
+<button
+
+onClick={handleDownloadPdf}
+
+className="
+bg-blue-800
+text-white
+px-4
+py-2
+rounded-lg
+"
+
+>
+
+Download PDF
+
+</button>
+
+</div>
 
 
 
@@ -955,7 +1219,7 @@ Not Assigned
 
 !isCompleted &&
 
-<div className="mt-4">
+<div className="mt-4 print:hidden capture-hide">
 
 
 <select
@@ -1142,6 +1406,49 @@ Services
 
 !isCompleted &&
 
+<div className="print:hidden capture-hide">
+
+<div className="flex gap-4 text-sm mb-3">
+
+<label className="flex items-center gap-1">
+
+<input
+
+type="radio"
+
+checked={serviceMode==="catalog"}
+
+onChange={()=>handleServiceModeChange("catalog")}
+
+/>
+
+From catalog
+
+</label>
+
+<label className="flex items-center gap-1">
+
+<input
+
+type="radio"
+
+checked={serviceMode==="custom"}
+
+onChange={()=>handleServiceModeChange("custom")}
+
+/>
+
+Not in system (bill it)
+
+</label>
+
+</div>
+
+
+{
+
+serviceMode==="catalog" ?
+
 <>
 
 <div className="grid md:grid-cols-2 gap-3">
@@ -1304,6 +1611,69 @@ mt-1
 
 }
 
+</>
+
+:
+
+<div className="grid md:grid-cols-3 gap-3">
+
+<input
+
+type="text"
+
+placeholder="Service name"
+
+value={customServiceName}
+
+onChange={(e)=>
+setCustomServiceName(e.target.value)
+}
+
+className="border rounded-lg p-2"
+
+/>
+
+<input
+
+type="number"
+
+min="1"
+
+value={customServiceQuantity}
+
+onChange={(e)=>
+setCustomServiceQuantity(e.target.value)
+}
+
+placeholder="Quantity"
+
+className="border rounded-lg p-2"
+
+/>
+
+<input
+
+type="number"
+
+min="0.01"
+
+step="0.01"
+
+value={customServicePrice}
+
+onChange={(e)=>
+setCustomServicePrice(e.target.value)
+}
+
+placeholder="Price (KES)"
+
+className="border rounded-lg p-2"
+
+/>
+
+</div>
+
+}
 
 
 
@@ -1312,7 +1682,11 @@ mt-1
 
 onClick={handleAddService}
 
-disabled={!selectedService}
+disabled={
+serviceMode==="catalog"
+? !selectedService
+: (!customServiceName.trim() || !customServicePrice || Number(customServicePrice) <= 0)
+}
 
 
 className="
@@ -1332,7 +1706,7 @@ Add Service
 
 </button>
 
-</>
+</div>
 
 }
 
@@ -1390,6 +1764,12 @@ bg-slate-50
 <h3 className="font-semibold text-lg">
 
 {service.service_name}
+{
+service.is_custom &&
+<span className="italic text-gray-500 text-sm ml-1">
+(custom)
+</span>
+}
 
 </h3>
 
@@ -1405,7 +1785,9 @@ Quantity:
 <p className="text-sm text-gray-500">
 
 {
-service.pricing_type === "unit"
+service.is_custom
+? `Price: KES ${service.price}`
+: service.pricing_type === "unit"
 ? `KES ${service.price} per ${service.unit}`
 : service.pricing_type === "variable"
 ? `Assessed price: KES ${service.price}`
@@ -1447,6 +1829,8 @@ className="
 text-red-500
 text-sm
 mt-2
+print:hidden
+capture-hide
 "
 
 >
@@ -1497,25 +1881,59 @@ Spare Parts
 
 !isCompleted &&
 
-<>
+<div className="print:hidden capture-hide">
 
-<label className="flex items-center gap-2 text-sm mb-3">
+<div className="flex gap-4 text-sm mb-3">
+
+<label className="flex items-center gap-1">
 
 <input
 
-type="checkbox"
+type="radio"
 
-checked={isCustomerSupplied}
+checked={partMode==="inventory"}
 
-onChange={(e)=>
-handleToggleCustomerSupplied(e.target.checked)
-}
+onChange={()=>handlePartModeChange("inventory")}
 
 />
 
-Customer supplied this part
+From inventory
 
 </label>
+
+<label className="flex items-center gap-1">
+
+<input
+
+type="radio"
+
+checked={partMode==="customer"}
+
+onChange={()=>handlePartModeChange("customer")}
+
+/>
+
+Customer supplied
+
+</label>
+
+<label className="flex items-center gap-1">
+
+<input
+
+type="radio"
+
+checked={partMode==="custom"}
+
+onChange={()=>handlePartModeChange("custom")}
+
+/>
+
+Not in system (bill it)
+
+</label>
+
+</div>
 
 
 <div className="grid md:grid-cols-2 gap-3">
@@ -1523,7 +1941,20 @@ Customer supplied this part
 
 {
 
-isCustomerSupplied ?
+partMode==="inventory" &&
+
+<SparePartSearchSelect
+
+onSelect={handleSelectPart}
+
+/>
+
+}
+
+
+{
+
+partMode==="customer" &&
 
 <input
 
@@ -1541,13 +1972,48 @@ className="border rounded-lg p-2"
 
 />
 
-:
+}
 
-<SparePartSearchSelect
 
-onSelect={handleSelectPart}
+{
+
+partMode==="custom" &&
+
+<>
+
+<input
+
+type="text"
+
+placeholder="Part name"
+
+value={customPartName}
+
+onChange={(e)=>
+setCustomPartName(e.target.value)
+}
+
+className="border rounded-lg p-2"
 
 />
+
+<input
+
+type="text"
+
+placeholder="Part number (optional)"
+
+value={customPartNumber}
+
+onChange={(e)=>
+setCustomPartNumber(e.target.value)
+}
+
+className="border rounded-lg p-2"
+
+/>
+
+</>
 
 }
 
@@ -1576,7 +2042,51 @@ className="border rounded-lg p-2"
 
 {
 
-!isCustomerSupplied && selectedPart &&
+partMode==="custom" &&
+
+<div className="mt-3">
+
+<label className="text-sm font-semibold text-slate-600">
+
+Selling price (KES)
+
+</label>
+
+<input
+
+type="number"
+
+min="0.01"
+
+step="0.01"
+
+value={customPartPrice}
+
+onChange={(e)=>
+setCustomPartPrice(e.target.value)
+}
+
+placeholder="Enter the price to charge for this job"
+
+className="
+border
+rounded-lg
+p-2
+w-full
+mt-1
+"
+
+/>
+
+</div>
+
+}
+
+
+
+{
+
+partMode==="inventory" && selectedPart &&
 
 <div className="mt-3">
 
@@ -1641,7 +2151,7 @@ partPriceError &&
 
 {
 
-isCustomerSupplied &&
+partMode==="customer" &&
 
 <p className="text-xs text-slate-500 mt-3">
 
@@ -1658,7 +2168,7 @@ only labour and any other services will be billed.
 
 onClick={handleAddPart}
 
-disabled={isPartPriceInvalid}
+disabled={isAddPartDisabled}
 
 className="
 mt-3
@@ -1675,7 +2185,7 @@ Add Part
 
 </button>
 
-</>
+</div>
 
 }
 
@@ -1710,9 +2220,21 @@ flex justify-between
 
 {part.name}
 {
+part.part_number &&
+<span className="text-xs text-gray-400 ml-1">
+({part.part_number})
+</span>
+}
+{
 part.customer_supplied &&
 <span className="italic text-gray-500 text-sm ml-1">
 (customer supplied)
+</span>
+}
+{
+part.is_custom &&
+<span className="italic text-gray-500 text-sm ml-1">
+(custom)
 </span>
 }
 
@@ -1738,6 +2260,8 @@ part.customer_supplied
 
 {
 !part.customer_supplied &&
+!part.is_custom &&
+part.available_stock != null &&
 part.quantity > part.available_stock &&
 
 <p className="text-red-500 text-sm">
@@ -1777,6 +2301,8 @@ className="
 text-red-500
 text-sm
 mt-2
+print:hidden
+capture-hide
 "
 
 >
