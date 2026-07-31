@@ -13,6 +13,20 @@ const field = (value) => {
   return value;
 };
 
+// Formats a number as KES money with thousands separators, e.g. 3500 -> "3,500.00"
+const formatMoney = (value) =>
+  Number(value || 0).toLocaleString("en-KE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+// Formats a plain integer-ish number (qty, mileage) with thousands separators,
+// e.g. 12000 -> "12,000". No forced decimals. Falls back to "N/A" like field().
+const formatNumberField = (value) => {
+  if (value === null || value === undefined || value === "") return "N/A";
+  return Number(value).toLocaleString("en-KE");
+};
+
 export default function InvoiceDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -109,7 +123,7 @@ export default function InvoiceDetails() {
         });
       } else {
         const text = encodeURIComponent(
-          `Invoice ${invoice.invoice_number} from Rift Motors - total KES ${Number(invoice.total).toFixed(2)}. PDF attached separately.`
+          `Invoice ${invoice.invoice_number} from Rift Motors - total KES ${formatMoney(invoice.total)}. PDF attached separately.`
         );
         if (window.confirm("Your browser can't attach the PDF directly. Download it now, then open WhatsApp to send it manually?")) {
           await handleDownloadPdf();
@@ -180,7 +194,8 @@ export default function InvoiceDetails() {
                 </svg>
                 riftmotorsltd@gmail.com
               </p>
-              <p className="font-bold text-black">PIN: PO51561799Q</p>
+              {/* PIN bumped up from the surrounding 9px block to 12px for visibility */}
+              <p className="font-bold text-black text-[12px]">PIN: PO51561799Q</p>
             </div>
 
           </div>
@@ -237,7 +252,7 @@ export default function InvoiceDetails() {
       <td className="border border-black px-1 py-0.5 font-bold">Status:</td>
       <td className="border border-black px-1 py-0.5" colSpan={2}>{invoice.status}</td>
       <td className="border border-black px-1 py-0.5 font-bold">Mileage:</td>
-      <td className="border border-black px-1 py-0.5">{field(invoice.mileage)}</td>
+      <td className="border border-black px-1 py-0.5">{formatNumberField(invoice.mileage)}</td>
     </tr>
   </tbody>
 </table>
@@ -303,8 +318,8 @@ export default function InvoiceDetails() {
                   <td className="p-0.5 border border-black">{field(item.part_number)}</td>
                   <td className="p-0.5 border border-black">{item.name}</td>
                   <td className="p-0.5 border border-black text-center">{item.quantity}</td>
-                  <td className="p-0.5 border border-black text-right">{Number(item.unit_price).toFixed(2)}</td>
-                  <td className="p-0.5 border border-black text-right font-bold">{Number(item.total_price).toFixed(2)}</td>
+                  <td className="p-0.5 border border-black text-right">{formatMoney(item.unit_price)}</td>
+                  <td className="p-0.5 border border-black text-right font-bold">{formatMoney(item.total_price)}</td>
                 </tr>
               ))}
 
@@ -317,7 +332,7 @@ export default function InvoiceDetails() {
                 <td colSpan={2} className="p-0.5 border border-black text-right">Totals</td>
                 <td className="p-0.5 border border-black text-center">{totalQty}</td>
                 <td className="p-0.5 border border-black text-right">-</td>
-                <td className="p-0.5 border border-black text-right">{totalAmount.toFixed(2)}</td>
+                <td className="p-0.5 border border-black text-right">{formatMoney(totalAmount)}</td>
               </tr>
             </tbody>
           </table>
@@ -342,19 +357,19 @@ export default function InvoiceDetails() {
               <tbody>
                 <tr>
                   <td className="border border-black px-1 py-0.5">Sub Total</td>
-                  <td className="border border-black px-1 py-0.5 text-right">{Number(invoice.subtotal).toFixed(2)}</td>
+                  <td className="border border-black px-1 py-0.5 text-right">{formatMoney(invoice.subtotal)}</td>
                 </tr>
                 <tr>
                   <td className="border border-black px-1 py-0.5">Discount</td>
-                  <td className="border border-black px-1 py-0.5 text-right">{Number(invoice.discount).toFixed(2)}</td>
+                  <td className="border border-black px-1 py-0.5 text-right">{formatMoney(invoice.discount)}</td>
                 </tr>
                 <tr>
                   <td className="border border-black px-1 py-0.5">Vat ({invoice.tax_rate}%)</td>
-                  <td className="border border-black px-1 py-0.5 text-right">{Number(invoice.tax_amount).toFixed(2)}</td>
+                  <td className="border border-black px-1 py-0.5 text-right">{formatMoney(invoice.tax_amount)}</td>
                 </tr>
                 <tr>
                   <td className="border border-black px-1 py-0.5 font-bold">Total Amount</td>
-                  <td className="border border-black px-1 py-0.5 text-right font-bold">{Number(invoice.total).toFixed(2)}</td>
+                  <td className="border border-black px-1 py-0.5 text-right font-bold">{formatMoney(invoice.total)}</td>
                 </tr>
               </tbody>
             </table>

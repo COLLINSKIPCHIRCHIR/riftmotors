@@ -15,6 +15,17 @@ const field = (value) => {
   return value;
 };
 
+// Formats a number as KES money with thousands separators, e.g. 3500 -> "3,500.00"
+const formatMoney = (value) =>
+  Number(value || 0).toLocaleString("en-KE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+// Formats a plain integer-ish number (qty, mileage) with thousands separators,
+// e.g. 12000 -> "12,000". No forced decimals.
+const formatNumber = (value) => Number(value || 0).toLocaleString("en-KE");
+
 // Discount amount for a single line item — the difference between what it
 // would have cost and what it actually costs. Works the same whether the
 // underlying adjustment was a flat KES reduction or a percentage discount,
@@ -117,7 +128,7 @@ const ServiceEstimateDetails =()=>{
         });
       } else {
         const text = encodeURIComponent(
-          `Service Estimate EST-${estimate.id} from Rift Motors - total KES ${Number(estimate.total).toFixed(2)}. PDF attached separately.`
+          `Service Estimate EST-${estimate.id} from Rift Motors - total KES ${formatMoney(estimate.total)}. PDF attached separately.`
         );
         if (window.confirm("Your browser can't attach the PDF directly. Download it now, then open WhatsApp to send it manually?")) {
           await handleDownloadPdf();
@@ -193,7 +204,8 @@ const ServiceEstimateDetails =()=>{
                 </svg>
                 riftmotorsltd@gmail.com
               </p>
-              <p className="font-bold text-black">PIN: PO51561799Q</p>
+              {/* PIN bumped up from the surrounding 9px block to 12px for visibility */}
+              <p className="font-bold text-black text-[12px]">PIN: PO51561799Q</p>
             </div>
 
           </div>
@@ -250,7 +262,11 @@ const ServiceEstimateDetails =()=>{
               <tr>
                 <td className="border border-black px-1 py-0.5" colSpan={3}></td>
                 <td className="border border-black px-1 py-0.5 font-bold">Mileage:</td>
-                <td className="border border-black px-1 py-0.5">{field(estimate.mileage)}</td>
+                <td className="border border-black px-1 py-0.5">
+                  {estimate.mileage === null || estimate.mileage === undefined || estimate.mileage === ""
+                    ? "N/A"
+                    : formatNumber(estimate.mileage)}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -324,13 +340,13 @@ const ServiceEstimateDetails =()=>{
                   <td className="p-0.5 border border-black align-top">{item.item_type}</td>
                   <td className="p-0.5 border border-black text-center align-top">{item.quantity}</td>
                   <td className="p-0.5 border border-black text-right align-top">
-                    {item.customer_supplied ? "-" : Number(item.unit_price).toFixed(2)}
+                    {item.customer_supplied ? "-" : formatMoney(item.unit_price)}
                   </td>
 
                   <td className="p-0.5 border border-black align-top">
                     {/* Printed/shared/downloaded view: just the amount */}
                     <div className="text-right">
-                      {item.customer_supplied ? "-" : (discount > 0 ? discount.toFixed(2) : "-")}
+                      {item.customer_supplied ? "-" : (discount > 0 ? formatMoney(discount) : "-")}
                     </div>
 
                     {/* On-screen only editing controls, stripped from exports.
@@ -403,7 +419,7 @@ const ServiceEstimateDetails =()=>{
                   </td>
 
                   <td className="p-0.5 border border-black align-top text-right font-bold">
-                    {item.customer_supplied ? "-" : Number(item.total_price).toFixed(2)}
+                    {item.customer_supplied ? "-" : formatMoney(item.total_price)}
                   </td>
                 </tr>
               )})}
@@ -417,10 +433,10 @@ const ServiceEstimateDetails =()=>{
                   as estimate.subtotal further down. */}
               <tr className="bg-gray-100 font-bold">
                 <td colSpan={2} className="p-0.5 border border-black text-right">Totals</td>
-                <td className="p-0.5 border border-black text-center">{totalQty}</td>
-                <td className="p-0.5 border border-black text-right">{(Number(estimate.subtotal) + totalDiscount).toFixed(2)}</td>
-                <td className="p-0.5 border border-black text-right">{totalDiscount > 0 ? totalDiscount.toFixed(2) : "-"}</td>
-                <td className="p-0.5 border border-black text-right">{Number(estimate.subtotal).toFixed(2)}</td>
+                <td className="p-0.5 border border-black text-center">{formatNumber(totalQty)}</td>
+                <td className="p-0.5 border border-black text-right">{formatMoney(Number(estimate.subtotal) + totalDiscount)}</td>
+                <td className="p-0.5 border border-black text-right">{totalDiscount > 0 ? formatMoney(totalDiscount) : "-"}</td>
+                <td className="p-0.5 border border-black text-right">{formatMoney(estimate.subtotal)}</td>
               </tr>
             </tbody>
           </table>
@@ -449,25 +465,25 @@ const ServiceEstimateDetails =()=>{
                   <>
                     <tr>
                       <td className="border border-black px-1 py-0.5">Total</td>
-                      <td className="border border-black px-1 py-0.5 text-right">{(Number(estimate.subtotal) + totalDiscount).toFixed(2)}</td>
+                      <td className="border border-black px-1 py-0.5 text-right">{formatMoney(Number(estimate.subtotal) + totalDiscount)}</td>
                     </tr>
                     <tr>
                       <td className="border border-black px-1 py-0.5">Discount</td>
-                      <td className="border border-black px-1 py-0.5 text-right">-{totalDiscount.toFixed(2)}</td>
+                      <td className="border border-black px-1 py-0.5 text-right">-{formatMoney(totalDiscount)}</td>
                     </tr>
                   </>
                 )}
                 <tr>
                   <td className="border border-black px-1 py-0.5">Sub Total</td>
-                  <td className="border border-black px-1 py-0.5 text-right">{Number(estimate.subtotal).toFixed(2)}</td>
+                  <td className="border border-black px-1 py-0.5 text-right">{formatMoney(estimate.subtotal)}</td>
                 </tr>
                 <tr>
                   <td className="border border-black px-1 py-0.5">Vat ({estimate.tax_rate}%)</td>
-                  <td className="border border-black px-1 py-0.5 text-right">{Number(estimate.tax_amount).toFixed(2)}</td>
+                  <td className="border border-black px-1 py-0.5 text-right">{formatMoney(estimate.tax_amount)}</td>
                 </tr>
                 <tr>
                   <td className="border border-black px-1 py-0.5 font-bold">Total Amount</td>
-                  <td className="border border-black px-1 py-0.5 text-right font-bold">{Number(estimate.total).toFixed(2)}</td>
+                  <td className="border border-black px-1 py-0.5 text-right font-bold">{formatMoney(estimate.total)}</td>
                 </tr>
               </tbody>
             </table>

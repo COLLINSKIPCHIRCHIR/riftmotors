@@ -12,7 +12,10 @@ const field = (value) => {
 };
 
 const money = (value) => {
-  return Number(value || 0).toLocaleString("en-KE", { minimumFractionDigits: 2 });
+  return Number(value || 0).toLocaleString("en-KE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 };
 
 // --- Number-to-words helper, used for the "Fifty Thousand No Cents" line

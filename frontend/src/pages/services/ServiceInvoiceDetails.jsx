@@ -14,6 +14,17 @@ const field = (value) => {
   return value;
 };
 
+// Formats a number as KES money with thousands separators, e.g. 3500 -> "3,500.00"
+const formatMoney = (value) =>
+  Number(value || 0).toLocaleString("en-KE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+// Formats a plain integer-ish number (qty, mileage) with thousands separators,
+// e.g. 12000 -> "12,000". No forced decimals.
+const formatNumber = (value) => Number(value || 0).toLocaleString("en-KE");
+
 // Discount amount for a single line item — mirrors the same helper used
 // in ServiceEstimateDetails so the two documents stay visually consistent.
 const lineDiscount = (item) =>
@@ -113,7 +124,7 @@ const ServiceInvoiceDetails = () => {
         });
       } else {
         const text = encodeURIComponent(
-          `Service Invoice ${invoice.invoice_number} from Rift Motors - total KES ${Number(invoice.total).toFixed(2)}. PDF attached separately.`
+          `Service Invoice ${invoice.invoice_number} from Rift Motors - total KES ${formatMoney(invoice.total)}. PDF attached separately.`
         );
         if (window.confirm("Your browser can't attach the PDF directly. Download it now, then open WhatsApp to send it manually?")) {
           await handleDownloadPdf();
@@ -183,7 +194,8 @@ const ServiceInvoiceDetails = () => {
                 </svg>
                 riftmotorsltd@gmail.com
               </p>
-              <p className="font-bold text-black">PIN: PO51561799Q</p>
+              {/* PIN bumped up from the surrounding 9px block to 12px for visibility */}
+              <p className="font-bold text-black text-[12px]">PIN: PO51561799Q</p>
             </div>
 
           </div>
@@ -238,7 +250,11 @@ const ServiceInvoiceDetails = () => {
               <tr>
                 <td className="border border-black px-1 py-0.5" colSpan={3}></td>
                 <td className="border border-black px-1 py-0.5 font-bold">Mileage:</td>
-                <td className="border border-black px-1 py-0.5">{field(invoice.mileage)}</td>
+                <td className="border border-black px-1 py-0.5">
+                  {invoice.mileage === null || invoice.mileage === undefined || invoice.mileage === ""
+                    ? "N/A"
+                    : formatNumber(invoice.mileage)}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -323,13 +339,13 @@ const ServiceInvoiceDetails = () => {
                   <td className="p-0.5 border border-black align-top">{item.item_type}</td>
                   <td className="p-0.5 border border-black text-center align-top">{item.quantity}</td>
                   <td className="p-0.5 border border-black text-right align-top">
-                    {item.customer_supplied ? "-" : Number(item.unit_price).toFixed(2)}
+                    {item.customer_supplied ? "-" : formatMoney(item.unit_price)}
                   </td>
                   <td className="p-0.5 border border-black text-right align-top">
-                    {item.customer_supplied ? "-" : (discount > 0 ? discount.toFixed(2) : "-")}
+                    {item.customer_supplied ? "-" : (discount > 0 ? formatMoney(discount) : "-")}
                   </td>
                   <td className="p-0.5 border border-black align-top text-right font-bold">
-                    {item.customer_supplied ? "-" : Number(item.total_price).toFixed(2)}
+                    {item.customer_supplied ? "-" : formatMoney(item.total_price)}
                   </td>
                 </tr>
               )})}
@@ -343,10 +359,10 @@ const ServiceInvoiceDetails = () => {
                   as invoice.subtotal further down. */}
               <tr className="bg-gray-100 font-bold">
                 <td colSpan={2} className="p-0.5 border border-black text-right">Totals</td>
-                <td className="p-0.5 border border-black text-center">{totalQty}</td>
-                <td className="p-0.5 border border-black text-right">{(Number(invoice.subtotal) + totalDiscount).toFixed(2)}</td>
-                <td className="p-0.5 border border-black text-right">{totalDiscount > 0 ? totalDiscount.toFixed(2) : "-"}</td>
-                <td className="p-0.5 border border-black text-right">{Number(invoice.subtotal).toFixed(2)}</td>
+                <td className="p-0.5 border border-black text-center">{formatNumber(totalQty)}</td>
+                <td className="p-0.5 border border-black text-right">{formatMoney(Number(invoice.subtotal) + totalDiscount)}</td>
+                <td className="p-0.5 border border-black text-right">{totalDiscount > 0 ? formatMoney(totalDiscount) : "-"}</td>
+                <td className="p-0.5 border border-black text-right">{formatMoney(invoice.subtotal)}</td>
               </tr>
             </tbody>
           </table>
@@ -373,25 +389,25 @@ const ServiceInvoiceDetails = () => {
                   <>
                     <tr>
                       <td className="border border-black px-1 py-0.5">Total</td>
-                      <td className="border border-black px-1 py-0.5 text-right">{(Number(invoice.subtotal) + totalDiscount).toFixed(2)}</td>
+                      <td className="border border-black px-1 py-0.5 text-right">{formatMoney(Number(invoice.subtotal) + totalDiscount)}</td>
                     </tr>
                     <tr>
                       <td className="border border-black px-1 py-0.5">Discount</td>
-                      <td className="border border-black px-1 py-0.5 text-right">-{totalDiscount.toFixed(2)}</td>
+                      <td className="border border-black px-1 py-0.5 text-right">-{formatMoney(totalDiscount)}</td>
                     </tr>
                   </>
                 )}
                 <tr>
                   <td className="border border-black px-1 py-0.5">Sub Total</td>
-                  <td className="border border-black px-1 py-0.5 text-right">{Number(invoice.subtotal).toFixed(2)}</td>
+                  <td className="border border-black px-1 py-0.5 text-right">{formatMoney(invoice.subtotal)}</td>
                 </tr>
                 <tr>
                   <td className="border border-black px-1 py-0.5">Vat ({invoice.tax_rate}%)</td>
-                  <td className="border border-black px-1 py-0.5 text-right">{Number(invoice.tax_amount).toFixed(2)}</td>
+                  <td className="border border-black px-1 py-0.5 text-right">{formatMoney(invoice.tax_amount)}</td>
                 </tr>
                 <tr>
                   <td className="border border-black px-1 py-0.5 font-bold">Total Amount</td>
-                  <td className="border border-black px-1 py-0.5 text-right font-bold">{Number(invoice.total).toFixed(2)}</td>
+                  <td className="border border-black px-1 py-0.5 text-right font-bold">{formatMoney(invoice.total)}</td>
                 </tr>
               </tbody>
             </table>
