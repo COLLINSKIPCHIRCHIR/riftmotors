@@ -204,24 +204,19 @@ export const createServiceEstimate = async (
 
     // get parts
 
-    const parts = await client.query(
+const parts = await client.query(
   `
   SELECT
-
   jp.id AS job_item_id,
   jp.created_at,
   jp.sparepart_id,
-  sp.name,
+  jp.customer_supplied,
+  COALESCE(sp.name, jp.part_name) AS name,
   jp.quantity,
   jp.unit_price
-
   FROM job_parts jp
-
-  JOIN spareparts sp
-  ON jp.sparepart_id=sp.id
-
+  LEFT JOIN spareparts sp ON jp.sparepart_id = sp.id
   WHERE jp.job_id=$1
-
   `,
   [job_id]
 );
@@ -369,10 +364,11 @@ console.log(
 
 for (const item of mergedItems) {
 
-  const originalPrice =
-    item.item_type === "service"
-      ? Number(item.price) * Number(item.quantity)
-      : Number(item.unit_price) * Number(item.quantity);
+  const originalPrice = item.customer_supplied
+  ? 0
+  : item.item_type === "service"
+    ? Number(item.price) * Number(item.quantity)
+    : Number(item.unit_price) * Number(item.quantity);
 
   const adjustment = 0;
   const finalPrice = originalPrice - adjustment;
@@ -394,10 +390,11 @@ for (const item of mergedItems) {
       adjustment,
       total_price,
       min_price,
-      max_price
+      max_price,
+      customer_supplied
       )
 
-      VALUES($1,'service',$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      VALUES($1,'service',$2,$3,$4,$5,$6,$7,$8,$9,$10,false)
       `,
       [
         estimate_id,
@@ -430,10 +427,11 @@ for (const item of mergedItems) {
       adjustment,
       total_price,
       discount_type,
-      discount_value
+      discount_value,
+      customer_supplied
       )
 
-      VALUES($1,'sparepart',$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      VALUES($1,'sparepart',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
       `,
       [
         estimate_id,
@@ -445,7 +443,8 @@ for (const item of mergedItems) {
         adjustment,
         finalPrice,
         "amount",
-        0
+        0,
+        item.customer_supplied
       ]
     );
 

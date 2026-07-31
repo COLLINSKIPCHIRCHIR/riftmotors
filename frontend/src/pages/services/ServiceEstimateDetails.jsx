@@ -18,7 +18,9 @@ const field = (value) => {
 // Discount amount for a single line item — the difference between what it
 // would have cost and what it actually costs. Works the same whether the
 // underlying adjustment was a flat KES reduction or a percentage discount,
-// so the table only ever has to display one clean number.
+// so the table only ever has to display one clean number. Customer-supplied
+// parts are always zero-priced, so their discount is zero too - they never
+// contribute here.
 const lineDiscount = (item) =>
   Number(item.original_price || 0) - Number(item.total_price || 0);
 
@@ -282,7 +284,10 @@ const ServiceEstimateDetails =()=>{
               stays a single clean number. Editing controls only render on
               screen for pending estimates, and are stripped out of the
               PDF/Share capture via the capture-hide + onclone combo above,
-              on top of print:hidden for the native browser Print button. */}
+              on top of print:hidden for the native browser Print button.
+              Customer-supplied parts show "-" for price/total instead of
+              0.00, and never get a discount editor since there's nothing
+              to discount. */}
           <table className="w-full border border-black text-[9px] leading-tight mt-2">
             <colgroup>
               <col className="w-[34%]" />
@@ -308,16 +313,27 @@ const ServiceEstimateDetails =()=>{
                 const canEdit = estimate.status === "pending";
                 return (
                 <tr key={item.id}>
-                  <td className="p-0.5 border border-black align-top">{item.description}</td>
+                  <td className="p-0.5 border border-black align-top">
+                    {item.description}
+                    {item.customer_supplied &&
+                      <span className="italic text-gray-500 ml-1">(customer supplied)</span>
+                    }
+                  </td>
                   <td className="p-0.5 border border-black align-top">{item.item_type}</td>
                   <td className="p-0.5 border border-black text-center align-top">{item.quantity}</td>
-                  <td className="p-0.5 border border-black text-right align-top">{Number(item.unit_price).toFixed(2)}</td>
+                  <td className="p-0.5 border border-black text-right align-top">
+                    {item.customer_supplied ? "-" : Number(item.unit_price).toFixed(2)}
+                  </td>
 
                   <td className="p-0.5 border border-black align-top">
                     {/* Printed/shared/downloaded view: just the amount */}
-                    <div className="text-right">{discount > 0 ? discount.toFixed(2) : "-"}</div>
+                    <div className="text-right">
+                      {item.customer_supplied ? "-" : (discount > 0 ? discount.toFixed(2) : "-")}
+                    </div>
 
-                    {/* On-screen only editing controls, stripped from exports */}
+                    {/* On-screen only editing controls, stripped from exports.
+                        Never shown for customer-supplied parts - price is
+                        always zero, so there's nothing to discount. */}
                     {canEdit && item.item_type==="service" && (
                       <div className="mt-1 print:hidden capture-hide">
                         <div className="flex gap-1 mt-0.5">
@@ -343,7 +359,7 @@ const ServiceEstimateDetails =()=>{
                       </div>
                     )}
 
-                    {canEdit && item.item_type==="sparepart" && (
+                    {canEdit && item.item_type==="sparepart" && !item.customer_supplied && (
                       <div className="mt-1 print:hidden capture-hide">
                         <div className="flex gap-1 mt-0.5 items-center">
                           <select
@@ -385,7 +401,7 @@ const ServiceEstimateDetails =()=>{
                   </td>
 
                   <td className="p-0.5 border border-black align-top text-right font-bold">
-                    {Number(item.total_price).toFixed(2)}
+                    {item.customer_supplied ? "-" : Number(item.total_price).toFixed(2)}
                   </td>
                 </tr>
               )})}

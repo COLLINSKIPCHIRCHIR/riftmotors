@@ -169,70 +169,74 @@ export const convertServiceEstimateToInvoice = async (estimateId) => {
 
     for (const item of items) {
 
-      // Cast once — quantity comes back as NUMERIC ("1.00") but every
-      // downstream INTEGER column needs a real integer.
-      const quantity = Math.round(Number(item.quantity));
+  // Cast once — quantity comes back as NUMERIC ("1.00") but every
+  // downstream INTEGER column needs a real integer.
+  const quantity = Math.round(Number(item.quantity));
 
-      if (item.item_type === "sparepart") {
+  // Customer-supplied parts have no sparepart_id and never touch stock -
+  // they're a name-only, zero-priced line. Everything else (real
+  // inventory spareparts) goes through the usual lock/check/deduct.
+  if (item.item_type === "sparepart" && !item.customer_supplied) {
 
-        const stock = await queryWithDiagnostics(
-          client,
-          `lock sparepart stock (id=${item.sparepart_id})`,
-          `SELECT quantity FROM spareparts WHERE id=$1 FOR UPDATE`,
-          [item.sparepart_id]
-        );
+    const stock = await queryWithDiagnostics(
+      client,
+      `lock sparepart stock (id=${item.sparepart_id})`,
+      `SELECT quantity FROM spareparts WHERE id=$1 FOR UPDATE`,
+      [item.sparepart_id]
+    );
 
-        if (stock.rows.length === 0) {
-          throw new Error("Spare part missing");
-        }
-
-        if (stock.rows[0].quantity < quantity) {
-          throw new Error("Insufficient stock");
-        }
-
-        await queryWithDiagnostics(
-          client,
-          `deduct sparepart stock (id=${item.sparepart_id})`,
-          `UPDATE spareparts SET quantity = quantity - $1 WHERE id=$2`,
-          [quantity, item.sparepart_id]
-        );
-
-        await recordStockMovement(
-          client,
-          item.sparepart_id,
-          "OUT",
-          quantity,
-          "service_invoice",
-          invoiceId
-        );
-      }
-
-      await queryWithDiagnostics(
-        client,
-        `insert invoice item (estimate_item_id=${item.id})`,
-        `
-        INSERT INTO service_invoice_items
-        (invoice_id, item_type, service_id, sparepart_id, description,
-         quantity, unit_price, original_price, adjustment, total_price,
-         discount_type, discount_value)
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-        `,
-        [
-          invoiceId,
-          item.item_type,
-          item.service_id,
-          item.sparepart_id,
-          item.description,
-          quantity,
-          item.unit_price,
-          item.original_price,
-          item.adjustment,
-          item.total_price,
-          item.discount_type,
-          item.discount_value
-        ]
-      );
+    if (stock.rows.length === 0) {
+      throw new Error("Spare part missing");
     }
+
+    if (stock.rows[0].quantity < quantity) {
+      throw new Error("Insufficient stock");
+    }
+
+    await queryWithDiagnostics(
+      client,
+      `deduct sparepart stock (id=${item.sparepart_id})`,
+      `UPDATE spareparts SET quantity = quantity - $1 WHERE id=$2`,
+      [quantity, item.sparepart_id]
+    );
+
+    await recordStockMovement(
+      client,
+      item.sparepart_id,
+      "OUT",
+      quantity,
+      "service_invoice",
+      invoiceId
+    );
+  }
+
+  await queryWithDiagnostics(
+    client,
+    `insert invoice item (estimate_item_id=${item.id})`,
+    `
+    INSERT INTO service_invoice_items
+    (invoice_id, item_type, service_id, sparepart_id, customer_supplied, description,
+     quantity, unit_price, original_price, adjustment, total_price,
+     discount_type, discount_value)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+    `,
+    [
+      invoiceId,
+      item.item_type,
+      item.service_id,
+      item.sparepart_id,
+      item.customer_supplied,
+      item.description,
+      quantity,
+      item.unit_price,
+      item.original_price,
+      item.adjustment,
+      item.total_price,
+      item.discount_type,
+      item.discount_value
+    ]
+  );
+}
 
     await queryWithDiagnostics(
       client,

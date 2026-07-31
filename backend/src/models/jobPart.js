@@ -4,12 +4,36 @@ import { ensureJobEditable } from "../utils/jobGuards.js";
 
 // ADD PART TO JOB
 export const addJobPart = async (data) => {
-  const { job_id, sparepart_id, quantity, unit_price } = data;
+  const { job_id, sparepart_id, customer_supplied, part_name, quantity, unit_price } = data;
 
   await ensureJobEditable(job_id);
 
+  // CUSTOMER-SUPPLIED: no inventory link, no stock check, no charge.
+  // Just a name and a quantity, priced at zero so it never adds to the
+  // estimate/invoice total — labour and any other services still bill
+  // normally.
+  if (customer_supplied) {
+    if (!part_name || !part_name.trim()) {
+      const err = new Error("Part name is required for a customer-supplied part");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const result = await pool.query(
+      `
+      INSERT INTO job_parts
+      (job_id, sparepart_id, part_name, customer_supplied, quantity, unit_price, total_price)
+      VALUES($1,NULL,$2,true,$3,0,0)
+      RETURNING *
+      `,
+      [job_id, part_name.trim(), quantity]
+    );
+
+    return result.rows[0];
+  }
+
   const stockResult = await pool.query(
-    `SELECT quantity, buying_price, selling_price FROM spareparts WHERE id=$1`,
+    `SELECT quantity, buying_price FROM spareparts WHERE id=$1`,
     [sparepart_id]
   );
 
@@ -19,13 +43,7 @@ export const addJobPart = async (data) => {
     throw err;
   }
 
-  const { quantity: available, buying_price } = stockResult.rows[0];
-
-  if (available < quantity) {
-    const err = new Error(`Insufficient stock. Available stock is ${available}`);
-    err.statusCode = 400;
-    throw err;
-  }
+  const { buying_price } = stockResult.rows[0];
 
   const finalPrice = Number(unit_price);
 
@@ -43,13 +61,19 @@ export const addJobPart = async (data) => {
     throw err;
   }
 
+  // NOTE: no "insufficient stock" block here anymore. An estimate can
+  // always be built regardless of current stock levels - stock is only
+  // ever checked/decremented when the estimate is converted to an
+  // invoice. The frontend still surfaces a shortage warning for
+  // visibility, it just no longer prevents adding the part.
+
   const total_price = quantity * finalPrice;
 
   const result = await pool.query(
     `
     INSERT INTO job_parts
-    (job_id, sparepart_id, quantity, unit_price, total_price)
-    VALUES($1,$2,$3,$4,$5)
+    (job_id, sparepart_id, customer_supplied, quantity, unit_price, total_price)
+    VALUES($1,$2,false,$3,$4,$5)
     RETURNING *
     `,
     [job_id, sparepart_id, quantity, finalPrice, total_price]
@@ -69,12 +93,13 @@ const result = await pool.query(
     jp.quantity,
     jp.unit_price,
     jp.total_price,
-    sp.id AS sparepart_id,
-    sp.name,
+    jp.customer_supplied,
+    jp.sparepart_id,
+    COALESCE(sp.name, jp.part_name) AS name,
     sp.part_number,
     sp.quantity AS available_stock
     FROM job_parts jp
-    JOIN spareparts sp ON jp.sparepart_id = sp.id
+    LEFT JOIN spareparts sp ON jp.sparepart_id = sp.id
     WHERE jp.job_id=$1
     ORDER BY jp.id DESC
     `,
@@ -89,7 +114,7 @@ return result.rows;
 // UPDATE PART
 export const updateJobPart = async (id, data) => {
   const existing = await pool.query(
-    `SELECT job_id, sparepart_id FROM job_parts WHERE id=$1`,
+    `SELECT job_id, sparepart_id, customer_supplied FROM job_parts WHERE id=$1`,
     [id]
   );
 
@@ -101,7 +126,19 @@ export const updateJobPart = async (id, data) => {
 
   await ensureJobEditable(existing.rows[0].job_id);
 
-  const { quantity, unit_price } = data;
+  const { quantity } = data;
+
+  // Customer-supplied rows have no price to validate - only quantity
+  // can change, and total_price stays at zero.
+  if (existing.rows[0].customer_supplied) {
+    const result = await pool.query(
+      `UPDATE job_parts SET quantity=$1 WHERE id=$2 RETURNING *`,
+      [quantity, id]
+    );
+    return result.rows[0];
+  }
+
+  const { unit_price } = data;
   const finalPrice = Number(unit_price);
 
   const partResult = await pool.query(

@@ -77,6 +77,13 @@ const [partUnitPrice,setPartUnitPrice]=useState("");
 
 const [partPriceError,setPartPriceError]=useState("");
 
+// When the customer brings their own part, there's no inventory link, no
+// price, and no stock check — just a name and a quantity. Toggling this
+// swaps the inventory search + price fields out for a plain text field.
+const [isCustomerSupplied,setIsCustomerSupplied]=useState(false);
+
+const [customerPartName,setCustomerPartName]=useState("");
+
 const [showEstimateModal,setShowEstimateModal]=useState(false);
 
 useEffect(()=>{
@@ -472,16 +479,92 @@ setPartPriceError("");
 }
 
 
+// Toggling customer-supplied clears out whatever was picked/typed for
+// the other mode, so switching back and forth never leaves stale state
+// behind (e.g. a selected inventory part with a customer-supplied name).
+const handleToggleCustomerSupplied = (checked)=>{
+
+setIsCustomerSupplied(checked);
+
+setSelectedPart(null);
+
+setPartUnitPrice("");
+
+setPartPriceError("");
+
+setCustomerPartName("");
+
+}
+
+
 const isPartPriceInvalid =
+!isCustomerSupplied &&
+(
 !selectedPart ||
 partUnitPrice === "" ||
 Number(partUnitPrice) <= 0 ||
-Number(partUnitPrice) < Number(selectedPart.buying_price);
+Number(partUnitPrice) < Number(selectedPart.buying_price)
+);
 
 
 const handleAddPart = async()=>{
 
 if(isCompleted) return;
+
+if(isCustomerSupplied){
+
+if(!customerPartName.trim()){
+
+alert("Enter the part name");
+
+return;
+
+}
+
+try{
+
+
+await addJobPart({
+
+job_id:id,
+
+customer_supplied:true,
+
+part_name:customerPartName.trim(),
+
+quantity:partQuantity
+
+});
+
+
+const res =
+await getJobParts(id);
+
+
+setParts(res.data);
+
+
+setCustomerPartName("");
+
+setPartQuantity(1);
+
+setIsCustomerSupplied(false);
+
+
+}catch(err){
+
+console.log(err);
+
+alert(
+err.response?.data?.message ||
+"Failed adding part"
+);
+
+}
+
+return;
+
+}
 
 if(!selectedPart) return;
 
@@ -765,6 +848,7 @@ Vehicle:
 Registration:
 
 <b>
+
 {job.registration_number}
 
 </b>
@@ -1415,14 +1499,57 @@ Spare Parts
 
 <>
 
+<label className="flex items-center gap-2 text-sm mb-3">
+
+<input
+
+type="checkbox"
+
+checked={isCustomerSupplied}
+
+onChange={(e)=>
+handleToggleCustomerSupplied(e.target.checked)
+}
+
+/>
+
+Customer supplied this part
+
+</label>
+
+
 <div className="grid md:grid-cols-2 gap-3">
 
+
+{
+
+isCustomerSupplied ?
+
+<input
+
+type="text"
+
+placeholder="Part name"
+
+value={customerPartName}
+
+onChange={(e)=>
+setCustomerPartName(e.target.value)
+}
+
+className="border rounded-lg p-2"
+
+/>
+
+:
 
 <SparePartSearchSelect
 
 onSelect={handleSelectPart}
 
 />
+
+}
 
 
 
@@ -1449,7 +1576,7 @@ className="border rounded-lg p-2"
 
 {
 
-selectedPart &&
+!isCustomerSupplied && selectedPart &&
 
 <div className="mt-3">
 
@@ -1512,6 +1639,20 @@ partPriceError &&
 }
 
 
+{
+
+isCustomerSupplied &&
+
+<p className="text-xs text-slate-500 mt-3">
+
+No charge will be added for this part on the estimate/invoice —
+only labour and any other services will be billed.
+
+</p>
+
+}
+
+
 
 <button
 
@@ -1568,6 +1709,12 @@ flex justify-between
 <p className="font-semibold">
 
 {part.name}
+{
+part.customer_supplied &&
+<span className="italic text-gray-500 text-sm ml-1">
+(customer supplied)
+</span>
+}
 
 </p>
 
@@ -1581,11 +1728,16 @@ Qty: {part.quantity}
 
 <p className="text-sm text-gray-500">
 
-Unit price: KES {part.unit_price}
+{
+part.customer_supplied
+? "No charge"
+: `Unit price: KES ${part.unit_price}`
+}
 
 </p>
 
 {
+!part.customer_supplied &&
 part.quantity > part.available_stock &&
 
 <p className="text-red-500 text-sm">

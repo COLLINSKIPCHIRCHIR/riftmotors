@@ -314,15 +314,22 @@ const ServiceInvoiceDetails = () => {
                 const discount = lineDiscount(item);
                 return (
                 <tr key={item.id}>
-                  <td className="p-0.5 border border-black align-top">{item.description}</td>
+                  <td className="p-0.5 border border-black align-top">
+                    {item.description}
+                    {item.customer_supplied &&
+                      <span className="italic text-gray-500 ml-1">(customer supplied)</span>
+                    }
+                  </td>
                   <td className="p-0.5 border border-black align-top">{item.item_type}</td>
                   <td className="p-0.5 border border-black text-center align-top">{item.quantity}</td>
-                  <td className="p-0.5 border border-black text-right align-top">{Number(item.unit_price).toFixed(2)}</td>
                   <td className="p-0.5 border border-black text-right align-top">
-                    {discount > 0 ? discount.toFixed(2) : "-"}
+                    {item.customer_supplied ? "-" : Number(item.unit_price).toFixed(2)}
+                  </td>
+                  <td className="p-0.5 border border-black text-right align-top">
+                    {item.customer_supplied ? "-" : (discount > 0 ? discount.toFixed(2) : "-")}
                   </td>
                   <td className="p-0.5 border border-black align-top text-right font-bold">
-                    {Number(item.total_price).toFixed(2)}
+                    {item.customer_supplied ? "-" : Number(item.total_price).toFixed(2)}
                   </td>
                 </tr>
               )})}
