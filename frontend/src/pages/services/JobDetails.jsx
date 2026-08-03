@@ -1136,142 +1136,81 @@ return (
 
 {/* LETTERHEAD */}
 
-<div className="border-b-4 border-slate-900 pb-4 mb-4 print:border-black">
+<div className="border-b-4 border-slate-900 pb-2 print:border-black doc-header">
 
 <div className="flex justify-between items-start">
 
 <div className="flex items-center gap-3">
 
 <img
-
-src={WORKSHOP.logo}
-
-alt={`${WORKSHOP.name} logo`}
-
-className="h-20 w-auto object-contain print:h-24"
-
+  src={WORKSHOP.logo}
+  alt={`${WORKSHOP.name} logo`}
+  className="h-20 w-auto object-contain print:h-16"
 />
 
 <div>
-
-<p className="text-xs text-slate-500">
-
-{WORKSHOP.addressLine}
-
-</p>
-
-<p className="text-xs text-slate-500">
-
-Tel: {WORKSHOP.tel} · Email: {WORKSHOP.email}, {WORKSHOP.email2}
-
-</p>
-
+  <p className="text-xs text-slate-500">{WORKSHOP.addressLine}</p>
+  <p className="text-xs text-slate-500">
+    Tel: {WORKSHOP.tel} · Email: {WORKSHOP.email}, {WORKSHOP.email2}
+  </p>
 </div>
 
 </div>
-
-
-<div className="text-right">
-
-<p className="text-xs text-slate-400 uppercase">
-
-Job Number
-
-</p>
-
-<p className="text-2xl font-bold">
-
-{job.job_number}
-
-</p>
 
 {/* Status pill is a dashboard-only affordance - not part of the
     physical job card, so it's dropped from print/PDF output. */}
 <span
-
-className="
-inline-block
-mt-2
-px-3
-py-1
-rounded-full
-text-xs
-font-semibold
-bg-blue-100
-text-blue-600
-print:hidden
-capture-hide
-"
-
+  className="
+  inline-block
+  px-3
+  py-1
+  rounded-full
+  text-xs
+  font-semibold
+  bg-blue-100
+  text-blue-600
+  print:hidden
+  capture-hide
+  "
 >
-
-{job.status}
-
+  {job.status}
 </span>
 
 </div>
 
 </div>
 
-
-<div className="flex gap-2 print:hidden capture-hide mt-4">
-
-<button
-
-onClick={()=>setShowEstimateModal(true)}
-
-className="
-bg-green-600
-text-white
-px-4
-py-2
-rounded-lg
-"
-
->
-
-Generate Estimate
-
-</button>
-
-<button
-
-onClick={()=>window.print()}
-
-className="
-bg-gray-800
-text-white
-px-4
-py-2
-rounded-lg
-"
-
->
-
-Print
-
-</button>
-
-<button
-
-onClick={handleDownloadPdf}
-
-className="
-bg-blue-800
-text-white
-px-4
-py-2
-rounded-lg
-"
-
->
-
-Download PDF
-
-</button>
-
+{/* JOB NUMBER — sits where the estimate's centered "SERVICE ESTIMATE"
+    title sits, but left-aligned as requested. */}
+<div className="text-left py-2 border-b-2 border-slate-900 print:border-black mb-4">
+  <p className="text-[10px] text-slate-400 uppercase print:text-black">Job Number</p>
+  <h2 className="text-xl font-extrabold tracking-[3px] text-slate-900">
+    {job.job_number}
+  </h2>
 </div>
 
+<div className="flex gap-2 print:hidden capture-hide mb-4">
+
+<button
+  onClick={()=>setShowEstimateModal(true)}
+  className="bg-green-600 text-white px-4 py-2 rounded-lg"
+>
+  Generate Estimate
+</button>
+
+<button
+  onClick={()=>window.print()}
+  className="bg-gray-800 text-white px-4 py-2 rounded-lg"
+>
+  Print
+</button>
+
+<button
+  onClick={handleDownloadPdf}
+  className="bg-blue-800 text-white px-4 py-2 rounded-lg"
+>
+  Download PDF
+</button>
 
 </div>
 
@@ -3286,7 +3225,15 @@ Time
 
 </div>
 
+<div className="doc-logos-sm flex justify-center items-center gap-6 mt-4 hidden print:flex capture-show" data-capture-display="flex">
+  <img src="/brands/nissan.png" alt="Nissan" className="h-6 object-contain" />
+  <img src="/brands/ford.jpg" alt="Ford" className="h-6 object-contain" />
+  <img src="/brands/subaru.jpg" alt="Subaru" className="h-6 object-contain" />
 </div>
+
+</div>
+
+
 
 
 {
