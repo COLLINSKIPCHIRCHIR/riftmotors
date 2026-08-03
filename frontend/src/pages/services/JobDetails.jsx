@@ -1107,7 +1107,7 @@ const PrintCell = ({label,value,last})=>(
 return (
 
 
-<div ref={printRef} className="bg-white">
+<div ref={printRef} className="bg-white print-root">
 
 
 {/* Tighter print margins for the native browser Print button. Has no
@@ -1140,7 +1140,7 @@ return (
 
 <div className="flex justify-between items-start">
 
-<div className="flex items-start gap-3">
+<div className="flex items-center gap-3">
 
 <img
 
@@ -1148,19 +1148,13 @@ src={WORKSHOP.logo}
 
 alt={`${WORKSHOP.name} logo`}
 
-className="h-14 w-14 object-contain print:h-16 print:w-16"
+className="h-20 w-auto object-contain print:h-24"
 
 />
 
 <div>
 
-<h1 className="text-3xl font-extrabold tracking-wide print:text-center print:w-full">
-
-{WORKSHOP.name}
-
-</h1>
-
-<p className="text-xs text-slate-500 mt-1">
+<p className="text-xs text-slate-500">
 
 {WORKSHOP.addressLine}
 
