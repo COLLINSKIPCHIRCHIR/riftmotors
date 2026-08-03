@@ -15,7 +15,7 @@ import React from "react";
 const WORKSHOP = {
  name: "RIFT MOTORS LIMITED",
  addressLine: "KFA Showground Road P.O. Box 18962-20100 Nakuru - Kenya",
- tel: "",
+ tel: "0790406996",
  email: "info@riftmotors.com",
 };
 
