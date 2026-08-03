@@ -86,6 +86,14 @@ const navigate = useNavigate();
 
 const printRef = useRef();
 
+// cardRef wraps the print-only job-card replica (page 1 of the printed
+// output). termsRef wraps the terms & conditions sheet (page 2+). Kept
+// separate from printRef so the "Download PDF" flow can rasterize and
+// paginate each of them independently - see generatePdfBlob below.
+const cardRef = useRef();
+
+const termsRef = useRef();
+
 
 const [job,setJob]=useState(null);
 
@@ -311,34 +319,88 @@ err.response?.data?.message ||
 }
 
 
-// Renders the printable area into a PDF and returns it as a Blob.
+// Shared html2canvas options for both capture passes below.
 // `onclone` runs against a CLONED document before html2canvas draws it,
 // so we use it to swap which layout is visible in the exported image:
 //  - `.capture-hide`  -> dashboard-only controls/sections, forced hidden
-//  - `.capture-show`  -> the print-only job-card replica, forced visible
-// (the `.capture-show` element is normally hidden on screen via Tailwind's
-// `hidden` class and only shown for native printing via `print:block`,
-// but html2canvas doesn't apply @media print, so we force it here too.)
+//  - `.capture-show`  -> the print-only replica, forced visible
+// (these elements are normally hidden on screen via Tailwind's `hidden`
+// class and only shown for native printing via `print:block`, but
+// html2canvas doesn't apply @media print, so we force it here too.)
 // `print:hidden` covers the native browser Print button separately.
+const CAPTURE_OPTIONS = {
+  scale: 2,
+  onclone: (clonedDoc) => {
+    clonedDoc.querySelectorAll(".capture-hide").forEach((el) => {
+      el.style.display = "none";
+    });
+    clonedDoc.querySelectorAll(".capture-show").forEach((el) => {
+      el.style.display = el.getAttribute("data-capture-display") || "block";
+    });
+  },
+};
+
+// Slices a (possibly very tall) canvas into real A4-height chunks and
+// adds each chunk as its own PDF page. This is what actually makes
+// pagination work - a single addImage() call with a height taller than
+// one page just gets clipped by jsPDF instead of flowing onto new pages.
+// `startOnNewPage` forces a fresh page before the very first slice too,
+// which is how we guarantee the terms sheet never shares a page with
+// the job card, no matter how many pages the job card itself took up.
+const addCanvasAsPages = (pdf, canvas, { startOnNewPage }) => {
+  const pageWidthMm = pdf.internal.pageSize.getWidth();
+  const pageHeightMm = pdf.internal.pageSize.getHeight();
+  const pxPerMm = canvas.width / pageWidthMm;
+  const pageHeightPx = Math.floor(pageHeightMm * pxPerMm);
+
+  let renderedPx = 0;
+  let isFirstSlice = true;
+
+  while (renderedPx < canvas.height) {
+    const sliceHeightPx = Math.min(pageHeightPx, canvas.height - renderedPx);
+
+    const sliceCanvas = document.createElement("canvas");
+    sliceCanvas.width = canvas.width;
+    sliceCanvas.height = sliceHeightPx;
+    sliceCanvas
+      .getContext("2d")
+      .drawImage(
+        canvas,
+        0, renderedPx, canvas.width, sliceHeightPx,
+        0, 0, canvas.width, sliceHeightPx
+      );
+
+    if (!isFirstSlice || startOnNewPage) {
+      pdf.addPage();
+    }
+
+    pdf.addImage(
+      sliceCanvas.toDataURL("image/png"),
+      "PNG",
+      0,
+      0,
+      pageWidthMm,
+      sliceHeightPx / pxPerMm
+    );
+
+    renderedPx += sliceHeightPx;
+    isFirstSlice = false;
+  }
+};
+
+// Renders the job card and the terms sheet as two independent captures
+// and assembles them into a paginated PDF: job card first (page 1, or
+// more if it overflows), then the terms & conditions always starting on
+// a clean new page.
 const generatePdfBlob = async () => {
-  const canvas = await html2canvas(printRef.current, {
-    scale: 2,
-    onclone: (clonedDoc) => {
-      clonedDoc.querySelectorAll(".capture-hide").forEach((el) => {
-        el.style.display = "none";
-      });
-      clonedDoc.querySelectorAll(".capture-show").forEach((el) => {
-        el.style.display = el.getAttribute("data-capture-display") || "block";
-      });
-    },
-  });
-  const imgData = canvas.toDataURL("image/png");
-
   const pdf = new jsPDF("p", "mm", "a4");
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = (canvas.height * pageWidth) / canvas.width;
 
-  pdf.addImage(imgData, "PNG", 0, 0, pageWidth, pageHeight);
+  const cardCanvas = await html2canvas(cardRef.current, CAPTURE_OPTIONS);
+  addCanvasAsPages(pdf, cardCanvas, { startOnNewPage: false });
+
+  const termsCanvas = await html2canvas(termsRef.current, CAPTURE_OPTIONS);
+  addCanvasAsPages(pdf, termsCanvas, { startOnNewPage: true });
+
   return pdf.output("blob");
 };
 
@@ -1187,6 +1249,8 @@ Download PDF
     the `.capture-show` handling in generatePdfBlob's onclone above. */}
 <div
 
+ref={cardRef}
+
 className="hidden print:block capture-show text-black"
 
 data-capture-display="block"
@@ -1413,16 +1477,29 @@ Tool Check Box
 </div>
 
 
-{/* Comments / parts-kept declaration */}
+{/* Comments / Findings, with the parts-kept declaration alongside it */}
 
 <div className="grid grid-cols-[1fr_220px] border border-t-0 border-black text-xs">
 
 
-<div className="border-r border-black p-2 min-h-[70px]">
+<div
+
+className="border-r border-black p-2 min-h-[90px]"
+
+style={{
+
+backgroundImage:
+"repeating-linear-gradient(to bottom, transparent, transparent 17px, #cbd5e1 18px)",
+
+backgroundAttachment:"local",
+
+}}
+
+>
 
 <p className="font-bold uppercase text-[11px] mb-1">
 
-Comments
+Comments / Findings
 
 </p>
 
@@ -1463,7 +1540,39 @@ No
 </div>
 
 
-{/* Terms declaration */}
+{/* Solutions - blank ruled space for the technician to write up the
+    work done / remedy by hand before the card is filed or handed back
+    to the customer. */}
+
+<div className="border border-t-0 border-black p-2 text-xs">
+
+<p className="font-bold uppercase text-[11px] mb-2">
+
+Solutions
+
+</p>
+
+<div
+
+className="min-h-[150px]"
+
+style={{
+
+backgroundImage:
+"repeating-linear-gradient(to bottom, transparent, transparent 17px, #cbd5e1 18px)",
+
+backgroundAttachment:"local",
+
+}}
+
+>
+
+</div>
+
+</div>
+
+
+{/* Authorization line - sits directly above the signatures it refers to. */}
 
 <p className="text-[9px] leading-tight mt-3 border-t border-black pt-2">
 
@@ -1474,14 +1583,73 @@ is specifically drawn to the notice at reception under the Disposal of Uncollect
 </p>
 
 
+{/* SIGN-OFF - closes out page 1 of the job card, same as the physical
+    form. This is the print/PDF version; a separate on-screen-only copy
+    further down mirrors it for the dashboard view. */}
+
+<div className="grid grid-cols-3 gap-6 mt-6 pt-4 border-t border-black text-xs">
+
+<div>
+
+<div className="border-b border-black h-10"></div>
+
+<p className="text-[9px] uppercase text-slate-600 mt-1">
+
+Customer Signature
+
+</p>
+
+</div>
+
+<div>
+
+<div className="border-b border-black h-10"></div>
+
+<p className="text-[9px] uppercase text-slate-600 mt-1">
+
+Advisor's Signature
+
+</p>
+
+</div>
+
+<div>
+
+<div className="border-b border-black h-10"></div>
+
+<p className="text-[9px] uppercase text-slate-600 mt-1">
+
+Time
+
+</p>
+
+</div>
+
 </div>
 
 
-{/* Back of the job card sheet - kept in its own file since it's a big
-    block of static legal text with nothing to do with this component's
-    state. `break-before-page` (inside JobCardTerms) makes it start on
-    a fresh page when printing. */}
+</div>
+
+
+{/* Back of the job card sheet - a big block of static legal text with
+    nothing to do with this component's state, so it lives in its own
+    file. Wrapped here the same way as the job card above: hidden on
+    screen, shown for native printing, and forced visible for the
+    "Download PDF" export - and captured as its own page in
+    generatePdfBlob so it never lands on the same page as the job card. */}
+<div
+
+ref={termsRef}
+
+className="hidden print:block print:break-before-page capture-show text-black"
+
+data-capture-display="block"
+
+>
+
 <JobCardTerms/>
+
+</div>
 
 
 {
@@ -3053,10 +3221,12 @@ KES {grandTotal}
 
 
 
-{/* SIGN-OFF - matches the physical job card's signature strip, so it
-    stays visible in both the dashboard view and print/PDF output. */}
+{/* SIGN-OFF - dashboard-only reference copy. The print-only job card
+    page above now carries its own signature strip in the same spot it
+    appears on the physical form, so this copy is dropped from print/PDF
+    output to avoid signatures appearing twice. */}
 
-<div className="grid md:grid-cols-3 gap-6 mt-6 pt-6 border-t print:border-black text-sm">
+<div className="grid md:grid-cols-3 gap-6 mt-6 pt-6 border-t print:hidden capture-hide text-sm">
 
 <div>
 
