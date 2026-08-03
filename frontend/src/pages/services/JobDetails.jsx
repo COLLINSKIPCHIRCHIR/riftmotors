@@ -46,6 +46,13 @@ const WORKSHOP = {
 
  email: "info@riftmotors.com",
 
+ email2: "riftmotorsltd@gmail.com",
+
+ // Served straight from the CRA/Vite "public" folder, so the file itself
+ // lives at frontend/public/rmotologo.jpg on disk but is requested at
+ // this root-relative path in the browser.
+ logo: "/rmotologo.jpg",
+
 }
 
 // Simple generic car outline diagrams used on the printed job card so a
@@ -1105,8 +1112,26 @@ return (
 
 {/* Tighter print margins for the native browser Print button. Has no
     effect on the "Download PDF" flow (jsPDF places the full-bleed
-    canvas image itself). */}
-<style>{`@media print { @page { margin: 10mm; } }`}</style>
+    canvas image itself).
+    The html/body/#root reset below matters more than it looks: if the
+    dashboard's outer layout wrapper (sidebar shell, scroll container,
+    etc.) has a fixed height with overflow-y:auto - very common in admin
+    layouts - the browser will otherwise only print whatever fit in that
+    fixed height, i.e. just page 1, and silently drop everything below
+    it. This forces height back to auto and overflow back to visible
+    for print so the full multi-page content can flow. If your app's
+    root layout uses a different id/class for that scroll container,
+    add the same "height: auto; overflow: visible;" override for it
+    here too. */}
+<style>{`
+@media print {
+  @page { margin: 10mm; }
+  html, body, #root {
+    height: auto !important;
+    overflow: visible !important;
+  }
+}
+`}</style>
 
 
 {/* LETTERHEAD */}
@@ -1114,6 +1139,18 @@ return (
 <div className="border-b-4 border-slate-900 pb-4 mb-4 print:border-black">
 
 <div className="flex justify-between items-start">
+
+<div className="flex items-start gap-3">
+
+<img
+
+src={WORKSHOP.logo}
+
+alt={`${WORKSHOP.name} logo`}
+
+className="h-14 w-14 object-contain print:h-16 print:w-16"
+
+/>
 
 <div>
 
@@ -1131,9 +1168,11 @@ return (
 
 <p className="text-xs text-slate-500">
 
-Tel: {WORKSHOP.tel} · Email: {WORKSHOP.email}
+Tel: {WORKSHOP.tel} · Email: {WORKSHOP.email}, {WORKSHOP.email2}
 
 </p>
+
+</div>
 
 </div>
 
@@ -1633,23 +1672,12 @@ Time
 
 {/* Back of the job card sheet - a big block of static legal text with
     nothing to do with this component's state, so it lives in its own
-    file. Wrapped here the same way as the job card above: hidden on
-    screen, shown for native printing, and forced visible for the
-    "Download PDF" export - and captured as its own page in
-    generatePdfBlob so it never lands on the same page as the job card. */}
-<div
-
-ref={termsRef}
-
-className="hidden print:block print:break-before-page capture-show text-black"
-
-data-capture-display="block"
-
->
-
-<JobCardTerms/>
-
-</div>
+    file. JobCardTerms manages its own hidden/print:block/capture-show
+    visibility and its own break-before-page - termsRef is forwarded
+    straight into its root element (see JobCardTerms.jsx) so there's no
+    extra wrapper div sitting between the ref and the element that
+    actually needs to start on a fresh page. */}
+<JobCardTerms ref={termsRef}/>
 
 
 {

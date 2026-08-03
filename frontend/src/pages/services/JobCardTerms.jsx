@@ -17,6 +17,7 @@ const WORKSHOP = {
  addressLine: "KFA Showground Road P.O. Box 18962-20100 Nakuru - Kenya",
  tel: "0790406996",
  email: "info@riftmotors.com",
+ email2: "riftmotorsltd@gmail.com",
 };
 
 const TERMS = [
@@ -35,17 +36,26 @@ const TERMS = [
  `If the customer's indebtedness to the company is not satisfied within the time provided, the company may - having submitted notice in writing to the last known address - dispose of the vehicle and its contents as provided for under the terms of the Disposal of Uncollected Goods Act, 1987.`,
 ];
 
-const JobCardTerms = () => (
+const JobCardTerms = React.forwardRef((props, ref) => (
 
 <div
+
+ref={ref}
 
 className="hidden print:block capture-show break-before-page text-black"
 
 data-capture-display="block"
 
+// Tailwind's break-before-page sets the modern `break-before: page`,
+// but some print engines/preview modes still only honour the legacy
+// `page-break-before`. Setting both here (rather than relying on the
+// class alone) is what actually makes this reliably start on its own
+// page instead of trailing onto the bottom of page 1.
+style={{ breakBefore: "page", pageBreakBefore: "always" }}
+
 >
 
-<div className="text-center mb-4">
+<div className="text-center mb-4" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
 
 <h2 className="font-bold text-sm uppercase tracking-wide">
 
@@ -61,7 +71,7 @@ Terms of Business
 
 <p className="text-xs">
 
-Tel: {WORKSHOP.tel} Email: {WORKSHOP.email}
+Tel: {WORKSHOP.tel} Email: {WORKSHOP.email}, {WORKSHOP.email2}
 
 </p>
 
@@ -83,6 +93,8 @@ Tel: {WORKSHOP.tel} Email: {WORKSHOP.email}
 
 </div>
 
-)
+))
+
+JobCardTerms.displayName = "JobCardTerms";
 
 export default JobCardTerms;
