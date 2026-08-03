@@ -169,7 +169,9 @@ export const createServiceEstimate = async (
     // are traceable at a glance (JOB-000123 -> EST-000123). If this job
     // already has an estimate, this will collide on re-generation - that's
     // expected, since a job should only ever carry one live estimate.
-    const estimate_number = job.job_number.replace("JOB-", "EST-");
+    const estimate_number = job.job_number.startsWith("JOB-")
+  ? job.job_number.replace("JOB-", "EST-")
+  : `EST-${job.job_number}`;
 
 
     // get services

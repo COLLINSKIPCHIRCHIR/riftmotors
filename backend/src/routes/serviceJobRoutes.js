@@ -2,7 +2,8 @@ import express from "express";
 
 import {
 addServiceJob,
-fetchServiceJobs
+fetchServiceJobs,
+fetchServiceJobById
 
 } from "../controllers/serviceJobController.js";
 
@@ -21,6 +22,13 @@ addServiceJob
 router.get(
 "/",
 fetchServiceJobs
+);
+
+
+
+router.get(
+"/:id",
+fetchServiceJobById
 );
 
 

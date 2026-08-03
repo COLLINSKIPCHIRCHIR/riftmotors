@@ -2,7 +2,7 @@ import React,{useEffect,useState,useRef} from "react";
 import {useParams, useNavigate} from "react-router-dom";
 
 import {
- getServiceJobs,
+ getServiceJob,
  getJobAssignments,
  getJobServices,
  getJobParts,
@@ -12,7 +12,7 @@ import {
  addJobService,
  deleteJobService,
  addJobPart,
- deleteJobPart, 
+ deleteJobPart,
  createServiceEstimate,
 
 
@@ -27,11 +27,25 @@ import SparePartSearchSelect from "./SparePartSearchSelect";
 import {
  FaUserCog,
  FaCar,
- FaTools
+ FaTools,
+ FaIdCard,
+ FaClipboardList,
 
 } from "react-icons/fa";
 
+// Letterhead details for the printed job card. Edit to match the real
+// workshop's details - these are only used for the header/print output.
+const WORKSHOP = {
 
+ name: "RIFT MOTORS LTD",
+
+ addressLine: "KFA Show Ground Road, P.O. Box 18962-20100 Nakuru - Kenya",
+
+ tel: "0790-406996",
+
+ email: "info@riftmotors.com",
+
+}
 
 const JobDetails =()=>{
 
@@ -51,6 +65,9 @@ const [services,setServices]=useState([]);
 
 const [parts,setParts]=useState([]);
 
+// NOTE: kept the name "mechanics" for the underlying data/API (matches
+// the backend's mechanics table + assignMechanic/getMechanics
+// endpoints) - only the on-screen wording says "Technician".
 const [mechanics,setMechanics]=useState([]);
 
 const [selectedMechanic,setSelectedMechanic]=useState("");
@@ -109,6 +126,19 @@ const [customPartPrice,setCustomPartPrice]=useState("");
 
 const [showEstimateModal,setShowEstimateModal]=useState(false);
 
+// Freeform technician findings, written straight onto the job card -
+// same purpose as the pen-and-paper "Cause" / "Remedy" boxes on the
+// physical card. These are editable divs so a technician can type them
+// in, and they're captured into the PDF/print output along with
+// everything else in printRef.
+// TODO: these are UI-only right now - wire them up to job.cause /
+// job.remedy (or similar columns) once the backend has somewhere to
+// save them, and load/save on blur the same way the rest of the form
+// talks to the API.
+const [causeNotes,setCauseNotes]=useState("");
+
+const [remedyNotes,setRemedyNotes]=useState("");
+
 useEffect(()=>{
 
 
@@ -118,17 +148,19 @@ const loadData=async()=>{
 try{
 
 
-const jobsRes =
-await getServiceJobs();
+const jobRes =
+await getServiceJob(id);
 
 
 const currentJob =
-jobsRes.data.find(
-j=>j.id===Number(id)
-);
+jobRes.data;
 
 
 setJob(currentJob);
+
+setCauseNotes(currentJob?.cause_notes || "");
+
+setRemedyNotes(currentJob?.remedy_notes || "");
 
 
 
@@ -240,7 +272,7 @@ console.log(err);
 
 setError(
 err.response?.data?.message ||
-"Failed assigning mechanic"
+"Failed assigning technician"
 );
 
 }
@@ -919,51 +951,90 @@ alert(
 }
 
 
+// Small helper for the vehicle/customer detail grid below - renders a
+// label over a value, falling back to a dash when the backend hasn't
+// sent that field. Keeps the job-card grid markup readable.
+const DetailField = ({label,value})=>(
+
+<div className="border-b border-slate-300 pb-1">
+
+<p className="text-[10px] uppercase tracking-wide text-slate-400">
+
+{label}
+
+</p>
+
+<p className="text-sm font-medium text-slate-800">
+
+{value || "—"}
+
+</p>
+
+</div>
+
+)
+
 
 return (
 
 
-<div ref={printRef}>
+<div ref={printRef} className="bg-white">
 
 
 
+{/* LETTERHEAD */}
 
+<div className="border-b-4 border-slate-900 pb-4 mb-4">
 
-<div className="flex justify-between mb-6">
-
+<div className="flex justify-between items-start">
 
 <div>
 
-<h1 className="text-2xl font-bold">
+<h1 className="text-3xl font-extrabold tracking-wide">
 
-Job {job.job_number}
+{WORKSHOP.name}
 
 </h1>
 
+<p className="text-xs text-slate-500 mt-1">
 
-<p className="text-slate-500">
-
-Created:
-
-{
-new Date(job.created_at)
-.toLocaleDateString()
-
-}
+{WORKSHOP.addressLine}
 
 </p>
 
+<p className="text-xs text-slate-500">
+
+Tel: {WORKSHOP.tel} · Email: {WORKSHOP.email}
+
+</p>
 
 </div>
 
 
+<div className="text-right">
+
+<p className="text-xs text-slate-400 uppercase">
+
+Job Number
+
+</p>
+
+<p className="text-2xl font-bold">
+
+{job.job_number}
+
+</p>
 
 <span
 
 className="
-px-4
-py-2
+inline-block
+mt-2
+px-3
+py-1
 rounded-full
+text-xs
+font-semibold
 bg-blue-100
 text-blue-600
 "
@@ -974,7 +1045,12 @@ text-blue-600
 
 </span>
 
-<div className="flex gap-2 print:hidden capture-hide">
+</div>
+
+</div>
+
+
+<div className="flex gap-2 print:hidden capture-hide mt-4">
 
 <button
 
@@ -1033,7 +1109,6 @@ Download PDF
 </div>
 
 
-
 </div>
 
 
@@ -1052,7 +1127,7 @@ rounded-xl
 p-4
 ">
 
-This job is marked completed. Services, spare parts and mechanic
+This job is marked completed. Services, spare parts and technician
 assignment can no longer be modified.
 
 </div>
@@ -1061,28 +1136,112 @@ assignment can no longer be modified.
 
 
 
+{/* CUSTOMER / DELIVERY / JOB META */}
 
-
-
-
-
-
-<div className="grid md:grid-cols-3 gap-5">
-
-
-
-
-
+<div className="grid md:grid-cols-3 gap-5 mb-5">
 
 
 <div className="bg-white p-5 rounded-xl shadow border">
 
+<div className="flex items-center gap-3 mb-3">
+
+<FaIdCard className="text-slate-500"/>
+
+<h2 className="font-bold">
+
+Customer Detail / Contact Address
+
+</h2>
+
+</div>
+
+<div className="space-y-2">
+
+<DetailField label="Name" value={job.customer_name}/>
+
+<DetailField label="Address" value={job.customer_address}/>
+
+<DetailField label="Telephone Number" value={job.customer_phone}/>
+
+</div>
+
+</div>
+
+
+<div className="bg-white p-5 rounded-xl shadow border">
 
 <div className="flex items-center gap-3 mb-3">
 
+<FaClipboardList className="text-slate-500"/>
+
+<h2 className="font-bold">
+
+Deliver To
+
+</h2>
+
+</div>
+
+<div className="space-y-2">
+
+<DetailField label="Deliver To" value={job.deliver_to || job.customer_name}/>
+
+<DetailField label="Contact" value={job.deliver_to_contact || job.customer_phone}/>
+
+</div>
+
+</div>
+
+
+<div className="bg-white p-5 rounded-xl shadow border">
+
+<div className="flex items-center gap-3 mb-3">
+
+<FaClipboardList className="text-slate-500"/>
+
+<h2 className="font-bold">
+
+Job Info
+
+</h2>
+
+</div>
+
+<div className="space-y-2">
+
+<DetailField
+
+label="Date"
+
+value={new Date(job.created_at).toLocaleDateString()}
+
+/>
+
+<DetailField label="Service Advisor" value={job.service_advisor}/>
+
+<DetailField label="Order Number" value={job.order_number}/>
+
+<DetailField label="Time Promised" value={job.time_promised}/>
+
+</div>
+
+</div>
+
+
+</div>
+
+
+
+{/* VEHICLE + TECHNICIAN + COMPLAINT */}
+
+<div className="grid md:grid-cols-3 gap-5">
+
+
+<div className="bg-white p-5 rounded-xl shadow border md:col-span-2">
+
+<div className="flex items-center gap-3 mb-3">
 
 <FaCar className="text-blue-500"/>
-
 
 <h2 className="font-bold">
 
@@ -1090,55 +1249,27 @@ Vehicle
 
 </h2>
 
+</div>
+
+<div className="grid md:grid-cols-3 gap-4">
+
+<DetailField label="Make / Model" value={`${job.make || ""} ${job.model || ""}`.trim()}/>
+
+<DetailField label="Registration No" value={job.registration_number}/>
+
+<DetailField label="Date of 1st Reg" value={job.date_of_first_registration}/>
+
+<DetailField label="Selling Dealer" value={job.selling_dealer}/>
+
+<DetailField label="VIN Number" value={job.vin_no}/>
+
+<DetailField label="Engine Number" value={job.engine_number}/>
+
+<DetailField label="Mileage" value={job.mileage != null ? Number(job.mileage).toLocaleString("en-KE") : null}/>
 
 </div>
 
-
-
-<p>
-
-Vehicle:
-
-<b>
-{job.make} {job.model}
-</b>
-
-</p>
-
-
-
-<p>
-
-Registration:
-
-<b>
-
-{job.registration_number}
-
-</b>
-
-</p>
-
-
-
-<p>
-
-Customer:
-
-<b>
-{job.customer_name}
-
-</b>
-
-</p>
-
 </div>
-
-
-
-
-
-
 
 
 
@@ -1153,7 +1284,7 @@ Customer:
 
 <h2 className="font-bold">
 
-Assigned Mechanic
+Assigned Technician
 
 </h2>
 
@@ -1244,7 +1375,7 @@ w-full
 
 <option value="">
 
-Select Mechanic
+Select Technician
 
 </option>
 
@@ -1310,7 +1441,7 @@ rounded-lg
 >
 
 
-Assign Mechanic
+Assign Technician
 
 
 </button>
@@ -1335,14 +1466,13 @@ error &&
 </div>
 
 
+</div>
 
 
 
+{/* TYPE OF WORK / COMPLAINT */}
 
-
-
-
-<div className="bg-white p-5 rounded-xl shadow border">
+<div className="bg-white p-5 rounded-xl shadow border mt-5">
 
 
 <div className="flex items-center gap-3 mb-3">
@@ -1353,7 +1483,7 @@ error &&
 
 <h2 className="font-bold">
 
-Complaint
+Type of Work / Complaint
 
 </h2>
 
@@ -1362,7 +1492,7 @@ Complaint
 
 
 
-<p>
+<p className="whitespace-pre-wrap">
 
 {job.complaint || "No complaint"}
 
@@ -1374,6 +1504,111 @@ Complaint
 
 
 
+{/* CAUSE / REMEDY - technician's handwritten (or typed) findings */}
+
+<div className="grid md:grid-cols-2 gap-5 mt-5">
+
+
+<div className="bg-white rounded-xl shadow border p-5">
+
+<h2 className="font-bold mb-2">
+
+Cause
+
+</h2>
+
+<p className="text-xs text-slate-400 mb-2 print:hidden capture-hide">
+
+Technician: write the diagnosed cause here.
+
+</p>
+
+<div
+
+contentEditable={!isCompleted}
+
+suppressContentEditableWarning
+
+onBlur={(e)=>setCauseNotes(e.currentTarget.textContent)}
+
+className="
+min-h-[120px]
+p-3
+rounded-lg
+border
+border-slate-300
+text-sm
+leading-8
+whitespace-pre-wrap
+"
+
+style={{
+
+backgroundImage:
+"repeating-linear-gradient(to bottom, transparent, transparent 31px, #e2e8f0 32px)",
+
+backgroundAttachment:"local",
+
+}}
+
+>
+
+{causeNotes}
+
+</div>
+
+</div>
+
+
+<div className="bg-white rounded-xl shadow border p-5">
+
+<h2 className="font-bold mb-2">
+
+Remedy
+
+</h2>
+
+<p className="text-xs text-slate-400 mb-2 print:hidden capture-hide">
+
+Technician: write the work done / remedy here.
+
+</p>
+
+<div
+
+contentEditable={!isCompleted}
+
+suppressContentEditableWarning
+
+onBlur={(e)=>setRemedyNotes(e.currentTarget.textContent)}
+
+className="
+min-h-[120px]
+p-3
+rounded-lg
+border
+border-slate-300
+text-sm
+leading-8
+whitespace-pre-wrap
+"
+
+style={{
+
+backgroundImage:
+"repeating-linear-gradient(to bottom, transparent, transparent 31px, #e2e8f0 32px)",
+
+backgroundAttachment:"local",
+
+}}
+
+>
+
+{remedyNotes}
+
+</div>
+
+</div>
 
 
 </div>
@@ -1385,7 +1620,10 @@ Complaint
 
 
 
-<div className="grid md:grid-cols-2 gap-5 mt-6">
+{/* Hidden from the printed/exported job card - this is billing detail
+    for the office, not something that belongs on the technician's work
+    order. Still fully visible and editable on screen. */}
+<div className="grid md:grid-cols-2 gap-5 mt-6 print:hidden capture-hide">
 
 
 
@@ -2339,13 +2577,79 @@ Remove
 
 
 
+{/* TOOL CHECK BOX */}
+
+<div className="bg-white rounded-xl shadow border p-5 mt-6">
+
+<h2 className="font-bold mb-3">
+
+Tool Check Box
+
+</h2>
+
+<div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+
+{
+
+[
+"Jack","W/SP","Tow/R","Jumpers",
+"Reflectors","F/A Kit","Fire Ext.","Rubber Mats",
+].map(tool=>(
+
+<label key={tool} className="flex items-center gap-2">
+
+<input type="checkbox" disabled={isCompleted}/>
+
+{tool}
+
+</label>
+
+))
+
+}
+
+</div>
+
+</div>
+
+
+
+{/* COMMENTS */}
+
+<div className="bg-white rounded-xl shadow border p-5 mt-5">
+
+<h2 className="font-bold mb-2">
+
+Comments
+
+</h2>
+
+<div
+
+contentEditable={!isCompleted}
+
+suppressContentEditableWarning
+
+className="
+min-h-[70px]
+p-3
+rounded-lg
+border
+border-slate-300
+text-sm
+"
+
+>
+
+</div>
+
+</div>
 
 
 
 
 
-
-<div className="mt-6 bg-slate-900 text-white rounded-xl p-6">
+<div className="mt-6 bg-slate-900 text-white rounded-xl p-6 print:hidden capture-hide">
 
 
 <h2 className="text-xl font-bold">
@@ -2364,6 +2668,51 @@ KES {grandTotal}
 
 
 </div>
+
+
+
+{/* SIGN-OFF */}
+
+<div className="grid md:grid-cols-3 gap-6 mt-6 pt-6 border-t text-sm">
+
+<div>
+
+<div className="border-b border-slate-400 h-10"></div>
+
+<p className="text-xs text-slate-400 mt-1">
+
+Customer Signature
+
+</p>
+
+</div>
+
+<div>
+
+<div className="border-b border-slate-400 h-10"></div>
+
+<p className="text-xs text-slate-400 mt-1">
+
+Advisor's Signature
+
+</p>
+
+</div>
+
+<div>
+
+<div className="border-b border-slate-400 h-10"></div>
+
+<p className="text-xs text-slate-400 mt-1">
+
+Time
+
+</p>
+
+</div>
+
+</div>
+
 
 {
 showEstimateModal &&

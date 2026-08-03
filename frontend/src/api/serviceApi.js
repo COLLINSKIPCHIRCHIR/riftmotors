@@ -7,8 +7,13 @@ export const getServiceJobs = () =>
  API.get("/service-jobs");
 
 
+export const getServiceJob = (id) =>
+ API.get(`/service-jobs/${id}`);
+
+
 export const createServiceJob = (data)=>
  API.post("/service-jobs",data);
+
 
 
 
@@ -187,3 +192,5 @@ API.put(
 data
 
 );
+
+

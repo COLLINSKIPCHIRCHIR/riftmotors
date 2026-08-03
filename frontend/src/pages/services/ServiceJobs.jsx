@@ -20,9 +20,15 @@ const [vehicles,setVehicles]=useState([]);
 const [showModal,setShowModal]=useState(false);
 
 
+const [error,setError]=useState("");
+
+const [saving,setSaving]=useState(false);
+
+
 
 const [form,setForm]=useState({
 
+job_number:"",
 vehicle_id:"",
 complaint:"",
 notes:""
@@ -105,6 +111,29 @@ setForm({
 const submitJob=async()=>{
 
 
+if(!form.job_number.trim()){
+
+setError("Job number is required");
+
+return;
+
+}
+
+
+if(!form.vehicle_id){
+
+setError("Select a vehicle");
+
+return;
+
+}
+
+
+setError("");
+
+setSaving(true);
+
+
 try{
 
 
@@ -112,7 +141,7 @@ const data={
 
 
 job_number:
-"JOB-"+Date.now(),
+form.job_number.trim(),
 
 
 customer_id:
@@ -152,6 +181,7 @@ setShowModal(false);
 
 setForm({
 
+job_number:"",
 vehicle_id:"",
 complaint:"",
 notes:""
@@ -167,6 +197,19 @@ loadJobs();
 }catch(err){
 
 console.log(err);
+
+setError(
+
+err.response?.data?.message ||
+
+"Failed creating job"
+
+);
+
+
+}finally{
+
+setSaving(false);
 
 }
 
@@ -443,6 +486,39 @@ Create Service Job
 
 
 
+<label className="text-sm">
+
+Job Number
+
+</label>
+
+
+
+<input
+
+type="text"
+
+name="job_number"
+
+value={form.job_number}
+
+onChange={handleChange}
+
+placeholder="e.g. JOB-2026-014"
+
+className="
+w-full
+border
+rounded-lg
+p-2
+mb-4
+"
+
+/>
+
+
+
+
 
 
 <label className="text-sm">
@@ -576,6 +652,18 @@ mb-4
 
 
 
+{
+
+error &&
+
+<p className="text-red-500 text-sm mb-4">
+
+{error}
+
+</p>
+
+}
+
 
 
 
@@ -607,17 +695,20 @@ Cancel
 
 onClick={submitJob}
 
+disabled={saving}
+
 className="
 bg-blue-600
 text-white
 px-4
 py-2
 rounded-lg
+disabled:opacity-50
 "
 
 >
 
-Create Job
+{saving ? "Creating..." : "Create Job"}
 
 </button>
 
