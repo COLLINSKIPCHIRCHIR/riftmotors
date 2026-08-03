@@ -23,6 +23,7 @@ import html2canvas from "html2canvas";
 
 import CreateEstimateModal from "./CreateEstimateModal";
 import SparePartSearchSelect from "./SparePartSearchSelect";
+import JobCardTerms from "./JobCardTerms";
 
 import {
  FaUserCog,
@@ -46,6 +47,35 @@ const WORKSHOP = {
  email: "info@riftmotors.com",
 
 }
+
+// Simple generic car outline diagrams used on the printed job card so a
+// technician/customer can mark damage locations, matching the paper job
+// card. Purely decorative/print-only - no data binding.
+const CarSideDiagram = ({flip=false}) => (
+ <svg
+  viewBox="0 0 120 50"
+  className="w-16 h-8"
+  style={flip ? {transform:"scaleX(-1)"} : undefined}
+ >
+  <path
+   d="M10 38 Q10 28 22 26 L34 14 Q40 8 52 8 L74 8 Q84 8 90 16 L100 26 Q112 28 112 38 L112 40 L104 40 Q104 46 98 46 Q92 46 92 40 L34 40 Q34 46 28 46 Q22 46 22 40 L10 40 Z"
+   fill="none"
+   stroke="#94a3b8"
+   strokeWidth="2"
+  />
+  <circle cx="28" cy="40" r="6" fill="none" stroke="#94a3b8" strokeWidth="2"/>
+  <circle cx="98" cy="40" r="6" fill="none" stroke="#94a3b8" strokeWidth="2"/>
+ </svg>
+)
+
+const CarFrontDiagram = () => (
+ <svg viewBox="0 0 80 50" className="w-12 h-8">
+  <rect x="15" y="10" width="50" height="28" rx="6" fill="none" stroke="#94a3b8" strokeWidth="2"/>
+  <line x1="40" y1="10" x2="40" y2="38" stroke="#94a3b8" strokeWidth="2"/>
+  <circle cx="22" cy="42" r="4" fill="none" stroke="#94a3b8" strokeWidth="2"/>
+  <circle cx="58" cy="42" r="4" fill="none" stroke="#94a3b8" strokeWidth="2"/>
+ </svg>
+)
 
 const JobDetails =()=>{
 
@@ -282,17 +312,23 @@ err.response?.data?.message ||
 
 
 // Renders the printable area into a PDF and returns it as a Blob.
-// `onclone` strips anything marked `.capture-hide` (dropdowns, inputs,
-// add/remove/assign buttons) from the CLONED document before
-// html2canvas draws it, so the exported file only ever shows the job
-// card content — never the editing controls. `print:hidden` covers the
-// native browser Print button separately.
+// `onclone` runs against a CLONED document before html2canvas draws it,
+// so we use it to swap which layout is visible in the exported image:
+//  - `.capture-hide`  -> dashboard-only controls/sections, forced hidden
+//  - `.capture-show`  -> the print-only job-card replica, forced visible
+// (the `.capture-show` element is normally hidden on screen via Tailwind's
+// `hidden` class and only shown for native printing via `print:block`,
+// but html2canvas doesn't apply @media print, so we force it here too.)
+// `print:hidden` covers the native browser Print button separately.
 const generatePdfBlob = async () => {
   const canvas = await html2canvas(printRef.current, {
     scale: 2,
     onclone: (clonedDoc) => {
       clonedDoc.querySelectorAll(".capture-hide").forEach((el) => {
         el.style.display = "none";
+      });
+      clonedDoc.querySelectorAll(".capture-show").forEach((el) => {
+        el.style.display = el.getAttribute("data-capture-display") || "block";
       });
     },
   });
@@ -951,9 +987,9 @@ alert(
 }
 
 
-// Small helper for the vehicle/customer detail grid below - renders a
-// label over a value, falling back to a dash when the backend hasn't
-// sent that field. Keeps the job-card grid markup readable.
+// Small helper for the vehicle/customer detail grid below (screen view) -
+// renders a label over a value, falling back to a dash when the backend
+// hasn't sent that field. Keeps the job-card grid markup readable.
 const DetailField = ({label,value})=>(
 
 <div className="border-b border-slate-300 pb-1">
@@ -975,22 +1011,51 @@ const DetailField = ({label,value})=>(
 )
 
 
+// Same idea as DetailField, but styled as a compact bordered row for the
+// print-only job-card replica (label + value side by side, like the
+// pre-printed paper form).
+const PrintCell = ({label,value,last})=>(
+
+<div className={`px-2 py-1 flex justify-between gap-2 ${last ? "" : "border-b border-black"}`}>
+
+<span className="uppercase text-[9px] text-slate-600">
+
+{label}
+
+</span>
+
+<span className="font-medium">
+
+{value || ""}
+
+</span>
+
+</div>
+
+)
+
+
 return (
 
 
 <div ref={printRef} className="bg-white">
 
 
+{/* Tighter print margins for the native browser Print button. Has no
+    effect on the "Download PDF" flow (jsPDF places the full-bleed
+    canvas image itself). */}
+<style>{`@media print { @page { margin: 10mm; } }`}</style>
+
 
 {/* LETTERHEAD */}
 
-<div className="border-b-4 border-slate-900 pb-4 mb-4">
+<div className="border-b-4 border-slate-900 pb-4 mb-4 print:border-black">
 
 <div className="flex justify-between items-start">
 
 <div>
 
-<h1 className="text-3xl font-extrabold tracking-wide">
+<h1 className="text-3xl font-extrabold tracking-wide print:text-center print:w-full">
 
 {WORKSHOP.name}
 
@@ -1025,6 +1090,8 @@ Job Number
 
 </p>
 
+{/* Status pill is a dashboard-only affordance - not part of the
+    physical job card, so it's dropped from print/PDF output. */}
 <span
 
 className="
@@ -1037,6 +1104,8 @@ text-xs
 font-semibold
 bg-blue-100
 text-blue-600
+print:hidden
+capture-hide
 "
 
 >
@@ -1112,6 +1181,308 @@ Download PDF
 </div>
 
 
+{/* PRINT-ONLY JOB CARD - mirrors the physical Rift Motors job card.
+    Hidden on screen (Tailwind `hidden`), shown for native printing via
+    `print:block`, and forced visible for the "Download PDF" export via
+    the `.capture-show` handling in generatePdfBlob's onclone above. */}
+<div
+
+className="hidden print:block capture-show text-black"
+
+data-capture-display="block"
+
+>
+
+
+{/* Customer detail / Deliver to */}
+
+<div className="grid grid-cols-[1fr_260px] border border-black text-xs">
+
+
+<div className="border-r border-black p-2">
+
+<p className="font-bold uppercase text-[11px] mb-2">
+
+Customer Detail/Contact Address
+
+</p>
+
+<p className="mb-1">{job.customer_name || "—"}</p>
+
+<p className="mb-1">{job.customer_address || ""}</p>
+
+<p>{job.customer_phone || ""}</p>
+
+</div>
+
+
+<div className="p-2">
+
+<p className="font-bold uppercase text-[11px] mb-2">
+
+Deliver To
+
+</p>
+
+<p className="mb-1">
+
+{job.deliver_to || job.customer_name || "—"}
+
+</p>
+
+<p>
+
+{job.deliver_to_contact || job.customer_phone || ""}
+
+</p>
+
+</div>
+
+
+</div>
+
+
+{/* Registration / vehicle / job meta - 3 columns x 5 rows, same order
+    as the pre-printed form. */}
+
+<div className="grid grid-cols-3 border border-t-0 border-black text-xs">
+
+
+<div className="border-r border-black">
+
+<PrintCell label="Registration No" value={job.registration_number}/>
+
+<PrintCell label="Model" value={`${job.make || ""} ${job.model || ""}`.trim()}/>
+
+<PrintCell label="VIN Number" value={job.vin_no}/>
+
+<PrintCell label="Engine Number" value={job.engine_number}/>
+
+<PrintCell
+
+label="Kilometres"
+
+value={job.mileage != null ? Number(job.mileage).toLocaleString("en-KE") : null}
+
+last
+
+/>
+
+</div>
+
+
+<div className="border-r border-black">
+
+<PrintCell label="Date of 1st Reg" value={job.date_of_first_registration}/>
+
+<PrintCell label="Selling Dealer" value={job.selling_dealer}/>
+
+<PrintCell label="Contact" value={job.customer_name}/>
+
+<PrintCell label="Telephone Number" value={job.customer_phone}/>
+
+<PrintCell label="Time Promised" value={job.time_promised} last/>
+
+</div>
+
+
+<div>
+
+<PrintCell label="Job Number" value={job.job_number}/>
+
+<PrintCell label="Date" value={new Date(job.created_at).toLocaleDateString()}/>
+
+<PrintCell label="Service Advisor" value={job.service_advisor}/>
+
+<PrintCell label="Order Number" value={job.order_number}/>
+
+<PrintCell label="" value="" last/>
+
+</div>
+
+
+</div>
+
+
+{/* Type of work table, with damage-marking car diagrams like the
+    paper form. */}
+
+<div className="grid grid-cols-[50px_1fr_90px_90px] border border-t-0 border-black text-xs">
+
+
+<div className="border-r border-black border-b border-black p-1 font-bold uppercase text-[10px]">
+
+Item
+
+</div>
+
+<div className="border-r border-black border-b border-black p-1 font-bold uppercase text-[10px]">
+
+Type of Work
+
+</div>
+
+<div className="border-r border-black border-b border-black p-1 font-bold uppercase text-[10px]">
+
+Flat Rate
+
+</div>
+
+<div className="border-b border-black p-1 font-bold uppercase text-[10px]">
+
+Time Used
+
+</div>
+
+
+<div className="border-r border-black min-h-[180px]"></div>
+
+<div className="border-r border-black min-h-[180px] p-2 flex flex-col justify-between">
+
+<p className="whitespace-pre-wrap">
+
+{job.complaint || ""}
+
+</p>
+
+<div className="flex gap-3 justify-center mt-4">
+
+<CarSideDiagram/>
+
+<CarFrontDiagram/>
+
+<CarSideDiagram flip/>
+
+<CarFrontDiagram/>
+
+</div>
+
+</div>
+
+<div className="border-r border-black min-h-[180px]"></div>
+
+<div className="min-h-[180px]"></div>
+
+
+</div>
+
+
+{/* Tool check box */}
+
+<div className="border border-t-0 border-black p-2 text-xs">
+
+<p className="font-bold uppercase text-[11px] mb-2">
+
+Tool Check Box
+
+</p>
+
+<div className="grid grid-cols-4 gap-2">
+
+{
+
+[
+"Jack","W/SP","Tow/R","Jumpers",
+"Reflectors","F/A Kit","Fire Ext.","Rubber Mats",
+].map(tool=>(
+
+<label key={tool} className="flex items-center gap-2">
+
+<span className="w-3 h-3 border border-black inline-block"></span>
+
+{tool}
+
+</label>
+
+))
+
+}
+
+{
+
+[0,1,2,3].map(blank=>(
+
+<span key={blank} className="w-3 h-3 border border-black inline-block"></span>
+
+))
+
+}
+
+</div>
+
+</div>
+
+
+{/* Comments / parts-kept declaration */}
+
+<div className="grid grid-cols-[1fr_220px] border border-t-0 border-black text-xs">
+
+
+<div className="border-r border-black p-2 min-h-[70px]">
+
+<p className="font-bold uppercase text-[11px] mb-1">
+
+Comments
+
+</p>
+
+</div>
+
+
+<div className="p-2">
+
+<p className="mb-2">
+
+The Client wished to keep the replaced parts
+
+</p>
+
+<div className="flex gap-4">
+
+<label className="flex items-center gap-1">
+
+<span className="w-3 h-3 border border-black inline-block"></span>
+
+Yes
+
+</label>
+
+<label className="flex items-center gap-1">
+
+<span className="w-3 h-3 border border-black inline-block"></span>
+
+No
+
+</label>
+
+</div>
+
+</div>
+
+
+</div>
+
+
+{/* Terms declaration */}
+
+<p className="text-[9px] leading-tight mt-3 border-t border-black pt-2">
+
+I have read and agreed to the terms of business listed overleaf and authorised you to work
+accordingly. I acknowledge that cheques can only be accepted by prior arrangement. My attention
+is specifically drawn to the notice at reception under the Disposal of Uncollected Goods Act.
+
+</p>
+
+
+</div>
+
+
+{/* Back of the job card sheet - kept in its own file since it's a big
+    block of static legal text with nothing to do with this component's
+    state. `break-before-page` (inside JobCardTerms) makes it start on
+    a fresh page when printing. */}
+<JobCardTerms/>
+
 
 {
 
@@ -1125,6 +1496,8 @@ border-amber-300
 text-amber-800
 rounded-xl
 p-4
+print:hidden
+capture-hide
 ">
 
 This job is marked completed. Services, spare parts and technician
@@ -1136,9 +1509,10 @@ assignment can no longer be modified.
 
 
 
-{/* CUSTOMER / DELIVERY / JOB META */}
+{/* CUSTOMER / DELIVERY / JOB META - dashboard view. The print-only
+    replica above covers this content for print/PDF output. */}
 
-<div className="grid md:grid-cols-3 gap-5 mb-5">
+<div className="grid md:grid-cols-3 gap-5 mb-5 print:hidden capture-hide">
 
 
 <div className="bg-white p-5 rounded-xl shadow border">
@@ -1232,9 +1606,12 @@ value={new Date(job.created_at).toLocaleDateString()}
 
 
 
-{/* VEHICLE + TECHNICIAN + COMPLAINT */}
+{/* VEHICLE + TECHNICIAN + COMPLAINT - dashboard view. The print-only
+    replica above covers vehicle + type-of-work content for print/PDF;
+    the "Assigned Technician" panel itself doesn't appear on the
+    physical card, so it's dashboard-only. */}
 
-<div className="grid md:grid-cols-3 gap-5">
+<div className="grid md:grid-cols-3 gap-5 print:hidden capture-hide">
 
 
 <div className="bg-white p-5 rounded-xl shadow border md:col-span-2">
@@ -1470,9 +1847,10 @@ error &&
 
 
 
-{/* TYPE OF WORK / COMPLAINT */}
+{/* TYPE OF WORK / COMPLAINT - dashboard view, covered by the print-only
+    Type of Work table above. */}
 
-<div className="bg-white p-5 rounded-xl shadow border mt-5">
+<div className="bg-white p-5 rounded-xl shadow border mt-5 print:hidden capture-hide">
 
 
 <div className="flex items-center gap-3 mb-3">
@@ -1504,9 +1882,11 @@ Type of Work / Complaint
 
 
 
-{/* CAUSE / REMEDY - technician's handwritten (or typed) findings */}
+{/* CAUSE / REMEDY - technician's handwritten (or typed) findings.
+    These don't appear on the physical job card, so they're dropped
+    from print/PDF output, but remain fully editable on screen. */}
 
-<div className="grid md:grid-cols-2 gap-5 mt-5">
+<div className="grid md:grid-cols-2 gap-5 mt-5 print:hidden capture-hide">
 
 
 <div className="bg-white rounded-xl shadow border p-5">
@@ -2577,9 +2957,10 @@ Remove
 
 
 
-{/* TOOL CHECK BOX */}
+{/* TOOL CHECK BOX - dashboard view, replaced by the print-only version
+    above for print/PDF. */}
 
-<div className="bg-white rounded-xl shadow border p-5 mt-6">
+<div className="bg-white rounded-xl shadow border p-5 mt-6 print:hidden capture-hide">
 
 <h2 className="font-bold mb-3">
 
@@ -2614,9 +2995,10 @@ Tool Check Box
 
 
 
-{/* COMMENTS */}
+{/* COMMENTS - dashboard view, replaced by the print-only version above
+    for print/PDF. */}
 
-<div className="bg-white rounded-xl shadow border p-5 mt-5">
+<div className="bg-white rounded-xl shadow border p-5 mt-5 print:hidden capture-hide">
 
 <h2 className="font-bold mb-2">
 
@@ -2671,13 +3053,14 @@ KES {grandTotal}
 
 
 
-{/* SIGN-OFF */}
+{/* SIGN-OFF - matches the physical job card's signature strip, so it
+    stays visible in both the dashboard view and print/PDF output. */}
 
-<div className="grid md:grid-cols-3 gap-6 mt-6 pt-6 border-t text-sm">
+<div className="grid md:grid-cols-3 gap-6 mt-6 pt-6 border-t print:border-black text-sm">
 
 <div>
 
-<div className="border-b border-slate-400 h-10"></div>
+<div className="border-b border-slate-400 print:border-black h-10"></div>
 
 <p className="text-xs text-slate-400 mt-1">
 
@@ -2689,7 +3072,7 @@ Customer Signature
 
 <div>
 
-<div className="border-b border-slate-400 h-10"></div>
+<div className="border-b border-slate-400 print:border-black h-10"></div>
 
 <p className="text-xs text-slate-400 mt-1">
 
@@ -2701,7 +3084,7 @@ Advisor's Signature
 
 <div>
 
-<div className="border-b border-slate-400 h-10"></div>
+<div className="border-b border-slate-400 print:border-black h-10"></div>
 
 <p className="text-xs text-slate-400 mt-1">
 
