@@ -14,7 +14,7 @@ import {
  addJobPart,
  deleteJobPart,
  createServiceEstimate,
-
+setJobServiceCompletion,
 
 } from "../../api/serviceApi";
 
@@ -718,6 +718,32 @@ err.response?.data?.message ||
 
 
 }
+
+
+const handleToggleServiceCompletion = async (service) => {
+
+  if (isCompleted) return;
+
+  try {
+
+    await setJobServiceCompletion(service.id, !service.is_completed);
+
+    const res = await getJobServices(id);
+
+    setServices(res.data);
+
+  } catch (err) {
+
+    console.log(err);
+
+    alert(
+      err.response?.data?.message ||
+      "Failed updating service status"
+    );
+
+  }
+
+};
 
 
 // Called by SparePartSearchSelect when a part is picked (or cleared).
@@ -2508,17 +2534,31 @@ bg-slate-50
 <div>
 
 
-<h3 className="font-semibold text-lg">
+<h3 className="font-semibold text-lg flex items-center gap-2">
 
-{service.service_name}
-{
-service.is_custom &&
-<span className="italic text-gray-500 text-sm ml-1">
-(custom)
-</span>
-}
+  {service.service_name}
+  {service.is_custom && (
+    <span className="italic text-gray-500 text-sm ml-1">(custom)</span>
+  )}
+
+  {!service.is_completed && (
+    <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+      Pending
+    </span>
+  )}
 
 </h3>
+
+{!isCompleted && (
+  <label className="flex items-center gap-2 text-sm mt-1 text-slate-600 print:hidden capture-hide">
+    <input
+      type="checkbox"
+      checked={service.is_completed}
+      onChange={() => handleToggleServiceCompletion(service)}
+    />
+    Marked as done
+  </label>
+)}
 
 
 <p className="text-sm text-gray-500">

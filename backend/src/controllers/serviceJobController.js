@@ -1,7 +1,8 @@
 import {
 createServiceJob,
 getServiceJobs,
-getServiceJobById
+getServiceJobById,
+getDailyJobReport
 } from "../models/serviceJob.js";
 
 
@@ -106,5 +107,31 @@ message:"Failed fetching job"
 
 
 }
+
+};
+
+
+
+export const fetchDailyJobReport = async (req, res) => {
+
+  try {
+
+    const today = new Date().toISOString().split("T")[0];
+    const from = req.query.from || today;
+    const to = req.query.to || today;
+
+    const rows = await getDailyJobReport(from, to);
+
+    res.json(rows);
+
+  } catch (error) {
+
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed fetching daily job report"
+    });
+
+  }
 
 };

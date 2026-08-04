@@ -4,7 +4,7 @@ import {
   FaHome, FaCar, FaCogs, FaTools, FaTint,
   FaUsers, FaReceipt, FaBoxOpen, FaChartBar,
   FaCog, FaSignOutAlt, FaBars, FaTimes,
-  FaChevronDown, FaChevronUp, FaBell
+  FaChevronDown, FaChevronUp, FaBell, FaUserTie
 } from "react-icons/fa";
 import { hasPermission } from "../utils/permissions";
 
@@ -32,6 +32,12 @@ const AdminLayout = () => {
     }
     if (location.pathname.startsWith("/admin/customers")) {
       setOpenMenus((p) => ({ ...p, customers: true }));
+    }
+    if (location.pathname.startsWith("/admin/hr")) {
+      setOpenMenus((p) => ({
+        ...p,
+        hr: true,
+      }));
     }
   }, [location.pathname]);
 
@@ -191,8 +197,149 @@ const AdminLayout = () => {
             name:"Receipts",
             path:"/admin/services/receipts",
             permission:"services.receipts"
-        }
+        },
+        {
+          name: "Daily Job Report",
+          path: "/admin/services/reports/daily",
+          permission: "services.jobs"
+        },
         ]
+    },
+
+    {
+      name: "Human Resource",
+      icon: <FaUserTie size={16} />,
+      key: "hr",
+      permission: "departments.view",
+
+      subMenu: [
+        {
+          name: "Departments",
+          path: "/admin/hr/departments",
+          //permission: "departments.view",
+        },
+
+        {
+          name: "Branches",
+          path: "/admin/hr/branches",
+          //permission: "branches.view",
+        },
+
+        {
+          name: "Employees",
+          path: "/admin/hr/employees",
+         // permission: "employees.view",
+        },
+
+        {
+            name: "Leave Types",
+            path: "/admin/hr/leave-types",
+            // permission: "leave-types.view",
+        },
+        {
+          name: "Leave Balances",
+          path: "/admin/hr/leave-balances",
+        },
+        {
+            name: "Leave Requests",
+            path: "/admin/hr/leave-requests",
+           // icon: <FaPlaneDeparture />,
+        },
+        {
+            name: "Public Holidays",
+            path: "/admin/hr/public-holidays",
+            //icon: FaCalendarDay,
+        },
+        {
+            name: "Attendance",
+            path: "/admin/hr/attendance",
+            //icon: FaUserCheck,
+        },
+
+        {
+          name: "Salary History",
+          //icon: <FaMoneyBillWave />,
+          path: "/admin/hr/salary-history",
+        },
+
+        {
+            name: "Deduction Types",
+            path: "/admin/hr/deduction-types",
+            //icon: <FaMinusCircle />,
+        },
+
+        {
+            name: "Deduction Rates",
+            path: "/admin/hr/deduction-rate-versions",
+            //icon: <FaPercentage />,
+        },
+
+        {
+            name: "PAYE Tax Bands",
+            path: "/admin/hr/paye-tax-bands",
+            //icon: <FaMoneyCheckAlt />,
+        },
+
+        {
+            name: "PAYE Personal Relief",
+            path: "/admin/hr/paye-personal-relief",
+            //icon: <FaHandHoldingUsd />,
+        },
+
+        {
+            name: "Recurring Deductions",
+            path: "/admin/hr/recurring-deductions",
+            //icon: <FaMoneyCheckAlt />,
+        },
+
+        {
+            name: "Payroll Periods",
+            path: "/admin/hr/payroll-periods",
+            //icon: <FaCalendarAlt />,
+        },
+
+        {
+            name: "Payslips",
+            path: "/admin/hr/payslips",
+            //icon: <FaFileInvoiceDollar />,
+        },
+
+        {
+            name: "Payslip Earnings",
+            path: "/admin/hr/payslip-earnings",
+            //icon: <FaMoneyBillWave />,
+        },
+
+        {
+            name: "Payslip Deductions",
+            path: "/admin/hr/payslip-deductions",
+            //icon: <FaMinusCircle />,
+        },
+
+        {
+          name: "Leave Management",
+          path: "/admin/hr/leave",
+          //permission: "leave.view",
+        },
+
+        {
+          name: "Attendance",
+          path: "/admin/hr/attendance",
+          permission: "attendance.view",
+        },
+
+        {
+          name: "Payroll",
+          path: "/admin/hr/payroll",
+          permission: "payroll.view",
+        },
+
+        {
+          name: "Public Holidays",
+          path: "/admin/hr/holidays",
+          permission: "holidays.view",
+        },
+      ],
     },
 
     {
@@ -274,7 +421,17 @@ const AdminLayout = () => {
                   <button
                     onClick={() => toggleMenu(item.key)}
                     className={`flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm transition-colors
-                      ${isParentActive(`/admin/${item.key === "vehicleSales" ? "vehicles" : item.key === "spareParts" ? "spare-parts" : item.key}`)
+                      ${isParentActive(
+                        `/admin/${
+                          item.key === "vehicleSales"
+                            ? "vehicles"
+                            : item.key === "spareParts"
+                            ? "spare-parts"
+                            : item.key === "services"
+                            ? "services"
+                            : item.key
+                        }`
+                      )
                         ? "bg-blue-600 text-white"
                         : "text-slate-300 hover:bg-slate-800 hover:text-white"}`}
                   >

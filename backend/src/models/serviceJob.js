@@ -26,9 +26,6 @@ return insertResult.rows[0];
 };
 
 
-
-
-
 export const getServiceJobs = async()=>{
 
 
@@ -69,10 +66,6 @@ return result.rows;
 
 
 // GET SINGLE JOB
-// Same join pattern as getServiceEstimateById in serviceEstimate.js - one
-// round trip returns the job plus everything JobDetails needs to render
-// the customer/vehicle panels, instead of the frontend fetching every
-// job and finding this one client-side.
 export const getServiceJobById = async (id) => {
 
   const result = await pool.query(
@@ -118,4 +111,86 @@ export const getServiceJobById = async (id) => {
 
   return result.rows[0];
 
+};
+
+
+// DAILY JOB REPORT
+export const getDailyJobReport = async (from, to) => {
+
+  const result = await pool.query(
+    `
+    SELECT
+
+    sj.id,
+    sj.job_number,
+    sj.created_at,
+    sj.complaint,
+    sj.diagnosis,
+    sj.notes,
+    sj.status,
+
+    c.name  AS customer_name,
+    c.phone AS customer_phone,
+
+    cv.registration_number,
+    cv.make,
+    cv.model,
+    cv.mileage,
+
+    COALESCE(mech.mechanic_names, '')  AS technicians,
+    COALESCE(svc.service_names, '')    AS services,
+    COALESCE(parts.part_list, '')      AS parts_required,
+    COALESCE(pending.pending_names, '') AS pending_work
+
+    FROM service_jobs sj
+
+    JOIN customers c
+    ON sj.customer_id = c.id
+
+    JOIN customer_vehicles cv
+    ON sj.vehicle_id = cv.id
+
+    LEFT JOIN (
+      SELECT sa.job_id, STRING_AGG(DISTINCT m.name, ', ') AS mechanic_names
+      FROM service_assignments sa
+      JOIN mechanics m ON sa.mechanic_id = m.id
+      GROUP BY sa.job_id
+    ) mech ON mech.job_id = sj.id
+
+    LEFT JOIN (
+      SELECT js.job_id, STRING_AGG(COALESCE(sc.name, js.custom_name), ', ') AS service_names
+      FROM job_services js
+      LEFT JOIN service_catalog sc ON js.service_id = sc.id
+      GROUP BY js.job_id
+    ) svc ON svc.job_id = sj.id
+
+    LEFT JOIN (
+      SELECT jp.job_id,
+      STRING_AGG(
+        COALESCE(sp.name, jp.part_name) || ' (x' || jp.quantity || ')',
+        ', '
+      ) AS part_list
+      FROM job_parts jp
+      LEFT JOIN spareparts sp ON jp.sparepart_id = sp.id
+      GROUP BY jp.job_id
+    ) parts ON parts.job_id = sj.id
+
+    LEFT JOIN (
+      SELECT js.job_id,
+      STRING_AGG(COALESCE(sc.name, js.custom_name), ', ') AS pending_names
+      FROM job_services js
+      LEFT JOIN service_catalog sc ON js.service_id = sc.id
+      WHERE js.is_completed = false
+      GROUP BY js.job_id
+    ) pending ON pending.job_id = sj.id
+
+    WHERE sj.created_at::date BETWEEN $1 AND $2
+
+    ORDER BY sj.created_at ASC
+
+    `,
+    [from, to]
+  );
+
+  return result.rows;
 };

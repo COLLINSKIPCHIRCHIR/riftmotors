@@ -1,7 +1,8 @@
 import {
     createJobService,
     getJobServices,
-    deleteJobService
+    deleteJobService,
+    setJobServiceCompletion
 
 } from "../models/jobService.js";
 
@@ -73,5 +74,31 @@ export const fetchJobServices = async(req,res)=>{
 
     }
 
+
+};
+
+
+export const updateJobServiceCompletion = async (req, res) => {
+
+    try {
+
+        const { is_completed } = req.body;
+
+        const updated = await setJobServiceCompletion(
+            req.params.id,
+            is_completed
+        );
+
+        res.json(updated);
+
+    } catch (err) {
+
+        console.error(err);
+
+        res.status(err.statusCode || 500).json({
+            message: err.statusCode ? err.message : "Failed updating service status"
+        });
+
+    }
 
 };

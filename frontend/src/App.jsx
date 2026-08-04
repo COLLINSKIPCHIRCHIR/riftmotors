@@ -15,7 +15,7 @@ import SpareParts from "./pages/SpareParts";
 import Services from "./pages/Services";
 import CarWash from "./pages/Carwash";
 import SalesTransactions from "./pages/SalesTransactions";
-import Employees from "./pages/Employees";
+//import Employees from "./pages/Employees";
 import Inventory from "./pages/Inventory";
 import Reports from "./pages/Reports";
 
@@ -41,7 +41,7 @@ import CustomerVehicles from "./pages/services/CustomerVehicles";
 import ServiceCatalog from "./pages/services/ServiceCatalog";
 import JobDetails from "./pages/services/JobDetails";
 import VehicleDetails from "./pages/services/VehicleDetails";
-import CreateJob from "./pages/services/CreateJob";
+//import CreateJob from "./pages/services/CreateJob";
 import Mechanics from "./pages/services/Mechanics";
 import ServiceEstimateDetails from "./pages/services/ServiceEstimateDetails";
 import ServiceEstimates from "./pages/services/ServiceEstimates";
@@ -49,11 +49,34 @@ import ServiceInvoices from "./pages/services/ServiceInvoices";
 import ServiceInvoiceDetails from "./pages/services/ServiceInvoiceDetails";
 import ServiceReceipts from "./pages/services/ServiceReceipts";
 import ServiceReceiptDetails from "./pages/services/ServiceReceiptDetails";
+import DailyJobReport from "./pages/services/DailyJobReport";
 import RolesPermissions from "./pages/admin/RolesPermissions";
 import Users from "./pages/admin/Users";
 
 import CustomersList from "./pages/customers/CustomersList";
 import AddCustomer from "./pages/customers/AddCustomer";
+
+
+import Departments from "./pages/hr/departments/Departments";
+import Branches from "./pages/hr/branches/Branches";
+import Employees from "./pages/hr/employees/Employees";
+import EmployeeDetails from "./pages/hr/employees/EmployeeDetails";
+import LeaveTypes from "./pages/hr/leave-types/LeaveTypes";
+import LeaveBalances from "./pages/hr/leave-balances/LeaveBalances";
+import LeaveRequests from "./pages/hr/leave-requests/LeaveRequests";
+import PublicHolidays from "./pages/hr/public-holidays/PublicHolidays";
+import EmployeeAttendance from "./pages/hr/attendance/EmployeeAttendance";
+import EmployeeSalaryHistory from "./pages/hr/salary-history/EmployeeSalaryHistory";
+import DeductionTypes from "./pages/hr/deduction-types/DeductionTypes";
+import DeductionRateVersions from "./pages/hr/deduction-rate-versions/DeductionRateVersions";
+import PayeTaxBands from "./pages/hr/paye-tax-bands/PayeTaxBands";
+import PayePersonalRelief from "./pages/hr/paye-personal-relief/PayePersonalRelief";
+import EmployeeRecurringDeductions from "./pages/hr/recurring-deductions/EmployeeRecurringDeductions";
+import PayrollPeriods from "./pages/hr/payroll-periods/PayrollPeriods";
+import Payslips from "./pages/hr/payslips/Payslips";
+import PayslipEarnings from "./pages/hr/payslip-earnings/PayslipEarnings";
+import PayslipDeductions from "./pages/hr/payslip-deductions/PayslipDeductions";
+
 
 
 
@@ -117,7 +140,7 @@ function App() {
           {/* ✅ Services */}
           <Route path="services" element={<RequirePermission permission="services.view"><ServiceDashboard /></RequirePermission>} />
           <Route path="services/jobs" element={<RequirePermission permission="services.jobs"><ServiceJobs /></RequirePermission>} />
-          <Route path="services/jobs/create" element={<RequirePermission permission="services.jobs"><CreateJob /></RequirePermission>} />
+        
           <Route path="services/jobs/:id" element={<RequirePermission permission="services.jobs"><JobDetails /></RequirePermission>} />
           <Route path="services/vehicles" element={<RequirePermission permission="services.vehicles"><CustomerVehicles /></RequirePermission>} />
           <Route path="services/vehicles/:id" element={<RequirePermission permission="services.vehicles"><VehicleDetails /></RequirePermission>} />
@@ -129,6 +152,94 @@ function App() {
           <Route path="services/invoices/:id" element={<RequirePermission permission="services.invoices"><ServiceInvoiceDetails /></RequirePermission>} />
           <Route path="services/receipts" element={<RequirePermission permission="services.receipts"><ServiceReceipts /></RequirePermission>} />
           <Route path="services/receipts/:id" element={<RequirePermission permission="services.receipts"><ServiceReceiptDetails /></RequirePermission>} />
+          <Route path="services/reports/daily" element={<RequirePermission permission="services.jobs"><DailyJobReport /></RequirePermission>} />
+          <Route
+              path="hr/departments"
+              element={<Departments />}
+          />
+          <Route
+              path="hr/branches"
+              element={<Branches />}
+          />
+
+          <Route path="hr/employees" element={<Employees />} />
+
+          <Route path="hr/employees/:id" element={<EmployeeDetails />} />
+
+          <Route
+            path="hr/leave-types"
+            element={<LeaveTypes />}
+          />
+          <Route
+            path="hr/leave-balances"
+            element={<LeaveBalances />}
+          />
+
+          <Route
+            path="hr/leave-requests"
+            element={<LeaveRequests />}
+          />
+
+          <Route
+            path="hr/public-holidays"
+            element={<PublicHolidays />}
+          />
+
+          <Route
+              path="hr/attendance"
+              element={<EmployeeAttendance />}
+          />
+
+          <Route
+            path="hr/salary-history"
+            element={<EmployeeSalaryHistory />}
+          />
+
+          <Route
+              path="hr/deduction-types"
+              element={<DeductionTypes />}
+          />
+
+          <Route
+              path="hr/deduction-rate-versions"
+              element={<DeductionRateVersions />}
+          />
+
+          <Route
+              path="hr/paye-tax-bands"
+              element={<PayeTaxBands />}
+          />
+
+          <Route
+              path="hr/paye-personal-relief"
+              element={<PayePersonalRelief />}
+          />
+
+          <Route
+              path="hr/recurring-deductions"
+              element={<EmployeeRecurringDeductions />}
+          />
+
+          <Route
+              path="hr/payroll-periods"
+              element={<PayrollPeriods />}
+          />
+
+          <Route
+              path="hr/payslips"
+              element={<Payslips />}
+          />
+
+          <Route
+              path="/admin/hr/payslip-earnings"
+              element={<PayslipEarnings />}
+          />
+
+          <Route
+              path="/admin/hr/payslip-deductions"
+              element={<PayslipDeductions />}
+          />
+
 
           {/* ✅ Administration */}
           <Route path="roles" element={<RequirePermission permission="roles.view"><RolesPermissions /></RequirePermission>} />

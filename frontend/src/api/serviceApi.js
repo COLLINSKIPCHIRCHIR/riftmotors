@@ -14,7 +14,8 @@ export const getServiceJob = (id) =>
 export const createServiceJob = (data)=>
  API.post("/service-jobs",data);
 
-
+export const getDailyJobReport = (from, to) =>
+  API.get(`/service-jobs/reports/daily?from=${from}&to=${to}`);
 
 
 
@@ -67,7 +68,8 @@ export const getJobServices = (jobId)=>
 export const deleteJobService=(id)=>
 API.delete(`/job-services/${id}`);
 
-
+export const setJobServiceCompletion = (id, is_completed) =>
+  API.patch(`/job-services/${id}/completion`, { is_completed });
 
 
 // JOB PARTS

@@ -1,36 +1,20 @@
 import express from "express";
 
 import {
-addServiceJob,
-fetchServiceJobs,
-fetchServiceJobById
-
+  addServiceJob,
+  fetchServiceJobs,
+  fetchServiceJobById,
+  fetchDailyJobReport
 } from "../controllers/serviceJobController.js";
-
 
 const router = express.Router();
 
+router.post("/", addServiceJob);
+router.get("/", fetchServiceJobs);
 
+// must come before "/:id"
+router.get("/reports/daily", fetchDailyJobReport);
 
-router.post(
-"/",
-addServiceJob
-);
-
-
-
-router.get(
-"/",
-fetchServiceJobs
-);
-
-
-
-router.get(
-"/:id",
-fetchServiceJobById
-);
-
-
+router.get("/:id", fetchServiceJobById);
 
 export default router;
