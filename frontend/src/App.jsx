@@ -56,7 +56,7 @@ import Users from "./pages/admin/Users";
 import CustomersList from "./pages/customers/CustomersList";
 import AddCustomer from "./pages/customers/AddCustomer";
 
-
+/*
 import Departments from "./pages/hr/departments/Departments";
 import Branches from "./pages/hr/branches/Branches";
 import Employees from "./pages/hr/employees/Employees";
@@ -76,7 +76,7 @@ import PayrollPeriods from "./pages/hr/payroll-periods/PayrollPeriods";
 import Payslips from "./pages/hr/payslips/Payslips";
 import PayslipEarnings from "./pages/hr/payslip-earnings/PayslipEarnings";
 import PayslipDeductions from "./pages/hr/payslip-deductions/PayslipDeductions";
-
+*/
 
 
 
@@ -153,6 +153,7 @@ function App() {
           <Route path="services/receipts" element={<RequirePermission permission="services.receipts"><ServiceReceipts /></RequirePermission>} />
           <Route path="services/receipts/:id" element={<RequirePermission permission="services.receipts"><ServiceReceiptDetails /></RequirePermission>} />
           <Route path="services/reports/daily" element={<RequirePermission permission="services.jobs"><DailyJobReport /></RequirePermission>} />
+          {/*
           <Route
               path="hr/departments"
               element={<Departments />}
@@ -238,7 +239,7 @@ function App() {
           <Route
               path="/admin/hr/payslip-deductions"
               element={<PayslipDeductions />}
-          />
+          />*/}
 
 
           {/* ✅ Administration */}
@@ -248,7 +249,6 @@ function App() {
           {/* ✅ Misc */}
           <Route path="car-wash" element={<RequirePermission permission="carwash.view"><CarWash /></RequirePermission>} />
           <Route path="sales" element={<RequirePermission permission="sales.view"><SalesTransactions /></RequirePermission>} />
-          <Route path="employees" element={<Employees />} />
           <Route path="reports" element={<RequirePermission permission="reports.view"><Reports /></RequirePermission>} />
         </Route>
 
