@@ -15,6 +15,8 @@ import {
  deleteJobPart,
  createServiceEstimate,
 setJobServiceCompletion,
+updateJobService,
+  updateJobPart,
 
 } from "../../api/serviceApi";
 
@@ -183,6 +185,17 @@ const [showEstimateModal,setShowEstimateModal]=useState(false);
 const [causeNotes,setCauseNotes]=useState("");
 
 const [remedyNotes,setRemedyNotes]=useState("");
+
+// Edit-in-place state — separate from add-new state so editing an
+// existing row never clobbers what's half-typed in the "add" form.
+const [editingServiceId, setEditingServiceId] = useState(null);
+const [editServiceQty, setEditServiceQty] = useState("");
+const [editServicePrice, setEditServicePrice] = useState("");
+const [editServiceName, setEditServiceName] = useState("");
+
+const [editingPartId, setEditingPartId] = useState(null);
+const [editPartQty, setEditPartQty] = useState("");
+const [editPartPrice, setEditPartPrice] = useState("");
 
 useEffect(()=>{
 
@@ -687,6 +700,67 @@ err.response?.data?.message ||
 }
 
 
+
+const startEditService = (service) => {
+  if (isCompleted) return;
+  setEditingServiceId(service.id);
+  setEditServiceQty(service.quantity);
+  setEditServicePrice(service.price);
+  setEditServiceName(service.is_custom ? service.service_name : "");
+};
+
+const cancelEditService = () => {
+  setEditingServiceId(null);
+  setEditServiceQty("");
+  setEditServicePrice("");
+  setEditServiceName("");
+};
+
+const handleSaveEditService = async (service) => {
+  try {
+    await updateJobService(service.id, {
+      quantity: editServiceQty,
+      price: editServicePrice,
+      custom_name: service.is_custom ? editServiceName : undefined,
+    });
+
+    const res = await getJobServices(id);
+    setServices(res.data);
+    setEditingServiceId(null);
+  } catch (err) {
+    console.log(err);
+    alert(err.response?.data?.message || "Failed updating service");
+  }
+};
+
+const startEditPart = (part) => {
+  if (isCompleted) return;
+  setEditingPartId(part.id);
+  setEditPartQty(part.quantity);
+  setEditPartPrice(part.unit_price ?? "");
+};
+
+const cancelEditPart = () => {
+  setEditingPartId(null);
+};
+
+const handleSaveEditPart = async (part) => {
+  try {
+    await updateJobPart(part.id, {
+      quantity: editPartQty,
+      unit_price: part.customer_supplied ? undefined : editPartPrice,
+    });
+
+    const res = await getJobParts(id);
+    setParts(res.data);
+    setEditingPartId(null);
+  } catch (err) {
+    console.log(err);
+    alert(err.response?.data?.message || "Failed updating part");
+  }
+};
+
+
 const handleDeleteService=async(serviceId)=>{
 
 if(isCompleted) return;
@@ -811,16 +885,15 @@ setCustomPartPrice("");
 
 
 const isInventoryPriceInvalid =
-!selectedPart ||
-partUnitPrice === "" ||
-Number(partUnitPrice) <= 0 ||
-Number(partUnitPrice) < Number(selectedPart.buying_price);
+  !selectedPart ||
+  (partUnitPrice !== "" &&
+    (Number(partUnitPrice) <= 0 ||
+      Number(partUnitPrice) < Number(selectedPart.buying_price)));
 
 
 const isCustomPartInvalid =
-!customPartName.trim() ||
-!customPartPrice ||
-Number(customPartPrice) <= 0;
+  !customPartName.trim() ||
+  (customPartPrice !== "" && Number(customPartPrice) <= 0);
 
 
 const isAddPartDisabled =
@@ -898,13 +971,10 @@ return;
 
 }
 
-if(!customPartPrice || Number(customPartPrice) <= 0){
-
-alert("Enter a selling price for this part");
-
-return;
-
-}
+if (customPartPrice !== "" && Number(customPartPrice) <= 0) {
+    alert("Price must be greater than 0");
+    return;
+  }
 
 try{
 
@@ -918,7 +988,7 @@ part_name:customPartName.trim(),
 
 part_number:customPartNumber.trim() || null,
 
-unit_price:customPartPrice,
+unit_price: customPartPrice === "" ? undefined : customPartPrice,
 
 quantity:partQuantity
 
@@ -953,24 +1023,17 @@ return;
 }
 
 // --- INVENTORY-LINKED (existing flow) ---
-if(!selectedPart) return;
+if (!selectedPart) return;
 
-if(!partUnitPrice || Number(partUnitPrice) <= 0){
-
-alert("Enter a selling price for this part");
-
-return;
-
-}
-
-if(Number(partUnitPrice) < Number(selectedPart.buying_price)){
-
-alert(
-`Selling price cannot be below buying price (KES ${selectedPart.buying_price})`
-);
-
-return;
-
+if (partUnitPrice !== "") {
+  if (Number(partUnitPrice) <= 0) {
+    alert("Enter a valid selling price for this part");
+    return;
+  }
+  if (Number(partUnitPrice) < Number(selectedPart.buying_price)) {
+    alert(`Selling price cannot be below buying price (KES ${selectedPart.buying_price})`);
+    return;
+  }
 }
 
 try{
@@ -984,7 +1047,7 @@ sparepart_id:selectedPart.id,
 
 quantity:partQuantity,
 
-unit_price:partUnitPrice
+unit_price: partUnitPrice === "" ? undefined : partUnitPrice
 
 });
 
@@ -2510,132 +2573,94 @@ No services added
 
 
 services.map(service=>(
+  <div key={service.id} className="border rounded-xl p-4 mb-3 bg-slate-50">
 
+    {editingServiceId === service.id ? (
+      <div className="flex flex-col gap-2">
+        {service.is_custom && (
+          <input
+            type="text"
+            value={editServiceName}
+            onChange={(e)=>setEditServiceName(e.target.value)}
+            placeholder="Service name"
+            className="border rounded-lg p-2"
+          />
+        )}
+        <div className="flex gap-2">
+          <input
+            type="number"
+            min="1"
+            value={editServiceQty}
+            disabled={service.pricing_type !== "unit" && !service.is_custom}
+            onChange={(e)=>setEditServiceQty(e.target.value)}
+            placeholder="Quantity"
+            className="border rounded-lg p-2 w-1/2"
+          />
+          <input
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={editServicePrice}
+            onChange={(e)=>setEditServicePrice(e.target.value)}
+            placeholder="Price (KES)"
+            className="border rounded-lg p-2 w-1/2"
+          />
+        </div>
+        <div className="flex gap-2">
+          <button onClick={()=>handleSaveEditService(service)} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm">
+            Save
+          </button>
+          <button onClick={cancelEditService} className="text-slate-500 text-sm">
+            Cancel
+          </button>
+        </div>
+      </div>
+    ) : (
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="font-semibold text-lg flex items-center gap-2">
+            {service.service_name}
+            {service.is_custom && <span className="italic text-gray-500 text-sm ml-1">(custom)</span>}
+            {!service.is_completed && (
+              <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Pending</span>
+            )}
+            {service.price == null && (
+              <span className="text-xs font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Awaiting price</span>
+            )}
+          </h3>
 
-<div
+          {!isCompleted && (
+            <label className="flex items-center gap-2 text-sm mt-1 text-slate-600 print:hidden capture-hide">
+              <input type="checkbox" checked={service.is_completed} onChange={()=>handleToggleServiceCompletion(service)} />
+              Marked as done
+            </label>
+          )}
 
-key={service.id}
+          <p className="text-sm text-gray-500">Quantity: {service.quantity}</p>
+          <p className="text-sm text-gray-500">
+            {service.price == null ? "Price not yet set" :
+              service.is_custom ? `Price: KES ${service.price}` :
+              service.pricing_type === "unit" ? `KES ${service.price} per ${service.unit}` :
+              service.pricing_type === "variable" ? `Assessed price: KES ${service.price}` :
+              `Fixed price: KES ${service.price}`}
+          </p>
+        </div>
 
-className="
-border
-rounded-xl
-p-4
-mb-3
-flex
-justify-between
-items-center
-bg-slate-50
-"
+        <div className="text-right">
+          <p className="font-bold text-blue-600">
+            KES {service.price != null ? Number(service.price) * Number(service.quantity) : 0}
+          </p>
 
-
->
-
-
-<div>
-
-
-<h3 className="font-semibold text-lg flex items-center gap-2">
-
-  {service.service_name}
-  {service.is_custom && (
-    <span className="italic text-gray-500 text-sm ml-1">(custom)</span>
-  )}
-
-  {!service.is_completed && (
-    <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-      Pending
-    </span>
-  )}
-
-</h3>
-
-{!isCompleted && (
-  <label className="flex items-center gap-2 text-sm mt-1 text-slate-600 print:hidden capture-hide">
-    <input
-      type="checkbox"
-      checked={service.is_completed}
-      onChange={() => handleToggleServiceCompletion(service)}
-    />
-    Marked as done
-  </label>
-)}
-
-
-<p className="text-sm text-gray-500">
-
-Quantity:
-{service.quantity}
-
-</p>
-
-
-<p className="text-sm text-gray-500">
-
-{
-service.is_custom
-? `Price: KES ${service.price}`
-: service.pricing_type === "unit"
-? `KES ${service.price} per ${service.unit}`
-: service.pricing_type === "variable"
-? `Assessed price: KES ${service.price}`
-: `Fixed price: KES ${service.price}`
-}
-
-</p>
-
-
-</div>
-
-
-
-<div className="text-right">
-
-
-<p className="font-bold text-blue-600">
-
-KES {
-
-Number(service.price)
-*
-Number(service.quantity)
-
-}
-
-</p>
-
-
-{
-
-!isCompleted &&
-
-<button
-
-onClick={()=>handleDeleteService(service.id)}
-
-className="
-text-red-500
-text-sm
-mt-2
-print:hidden
-capture-hide
-"
-
->
-
-Remove
-
-</button>
-
-}
-
-
-</div>
-
-
-
-</div>
-
-
+          {!isCompleted && (
+            <div className="flex gap-3 justify-end mt-2 print:hidden capture-hide">
+              <button onClick={()=>startEditService(service)} className="text-blue-600 text-sm">Edit</button>
+              <button onClick={()=>handleDeleteService(service.id)} className="text-red-500 text-sm">Remove</button>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+  </div>
 ))
 
 }
@@ -2986,128 +3011,75 @@ Add Part
 {
 
 parts.map(part=>(
+  <div key={part.id} className="border rounded-xl p-4 mb-3">
 
+    {editingPartId === part.id ? (
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-2">
+          <input
+            type="number"
+            min="1"
+            value={editPartQty}
+            onChange={(e)=>setEditPartQty(e.target.value)}
+            placeholder="Quantity"
+            className="border rounded-lg p-2 w-1/2"
+          />
+          {!part.customer_supplied && (
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={editPartPrice}
+              onChange={(e)=>setEditPartPrice(e.target.value)}
+              placeholder="Unit price (KES)"
+              className="border rounded-lg p-2 w-1/2"
+            />
+          )}
+        </div>
+        <div className="flex gap-2">
+          <button onClick={()=>handleSaveEditPart(part)} className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm">
+            Save
+          </button>
+          <button onClick={cancelEditPart} className="text-slate-500 text-sm">
+            Cancel
+          </button>
+        </div>
+      </div>
+    ) : (
+      <div className="flex justify-between">
+        <div>
+          <p className="font-semibold">
+            {part.name}
+            {part.part_number && <span className="text-xs text-gray-400 ml-1">({part.part_number})</span>}
+            {part.customer_supplied && <span className="italic text-gray-500 text-sm ml-1">(customer supplied)</span>}
+            {part.is_custom && <span className="italic text-gray-500 text-sm ml-1">(custom)</span>}
+            {!part.customer_supplied && part.unit_price == null && (
+              <span className="text-xs font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded-full ml-1">Awaiting price</span>
+            )}
+          </p>
+          <p className="text-sm text-gray-500">Qty: {part.quantity}</p>
+          <p className="text-sm text-gray-500">
+            {part.customer_supplied ? "No charge" :
+              part.unit_price == null ? "Price not yet set" :
+              `Unit price: KES ${part.unit_price}`}
+          </p>
+          {!part.customer_supplied && !part.is_custom && part.available_stock != null && part.quantity > part.available_stock && (
+            <p className="text-red-500 text-sm">Shortage: {part.quantity - part.available_stock} items</p>
+          )}
+        </div>
 
-<div
-
-key={part.id}
-
-className="
-border rounded-xl p-4 mb-3
-flex justify-between
-"
-
-
->
-
-
-<div>
-
-<p className="font-semibold">
-
-{part.name}
-{
-part.part_number &&
-<span className="text-xs text-gray-400 ml-1">
-({part.part_number})
-</span>
-}
-{
-part.customer_supplied &&
-<span className="italic text-gray-500 text-sm ml-1">
-(customer supplied)
-</span>
-}
-{
-part.is_custom &&
-<span className="italic text-gray-500 text-sm ml-1">
-(custom)
-</span>
-}
-
-</p>
-
-
-<p className="text-sm text-gray-500">
-
-Qty: {part.quantity}
-
-</p>
-
-
-<p className="text-sm text-gray-500">
-
-{
-part.customer_supplied
-? "No charge"
-: `Unit price: KES ${part.unit_price}`
-}
-
-</p>
-
-{
-!part.customer_supplied &&
-!part.is_custom &&
-part.available_stock != null &&
-part.quantity > part.available_stock &&
-
-<p className="text-red-500 text-sm">
-
-Shortage:
-{part.quantity - part.available_stock}
-
-items
-
-</p>
-
-}
-
-
-</div>
-
-
-<div className="text-right">
-
-
-<p className="font-bold">
-
-KES {part.total_price}
-
-</p>
-
-
-{
-
-!isCompleted &&
-
-<button
-
-onClick={()=>handleDeletePart(part.id)}
-
-className="
-text-red-500
-text-sm
-mt-2
-print:hidden
-capture-hide
-"
-
->
-
-Remove
-
-</button>
-
-}
-
-
-</div>
-
-
-
-</div>
-
-
+        <div className="text-right">
+          <p className="font-bold">KES {part.total_price}</p>
+          {!isCompleted && (
+            <div className="flex gap-3 justify-end mt-2 print:hidden capture-hide">
+              <button onClick={()=>startEditPart(part)} className="text-blue-600 text-sm">Edit</button>
+              <button onClick={()=>handleDeletePart(part.id)} className="text-red-500 text-sm">Remove</button>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+  </div>
 ))
 
 

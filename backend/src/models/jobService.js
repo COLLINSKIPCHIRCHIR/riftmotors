@@ -13,6 +13,8 @@ export const createJobService = async (data) => {
 
     const completed = is_completed === undefined ? true : Boolean(is_completed);
 
+    const hasPrice = price !== undefined && price !== null && price !== "";
+
     // --- CUSTOM / NOT-IN-CATALOG SERVICE ---
     if (is_custom) {
         if (!custom_name || !custom_name.trim()) {
@@ -20,11 +22,14 @@ export const createJobService = async (data) => {
             err.statusCode = 400;
             throw err;
         }
-        if (price === undefined || price === null || price === "") {
-            const err = new Error("Enter a price for the custom service");
+
+        if (hasPrice && Number(price) <= 0) {
+            const err = new Error("Enter a valid price for the custom service");
             err.statusCode = 400;
             throw err;
         }
+
+        const finalPrice = hasPrice ? price : null;
 
         const result = await pool.query(
             `
@@ -33,7 +38,7 @@ export const createJobService = async (data) => {
             VALUES ($1, NULL, $2, true, $3, $4, $5)
             RETURNING *
             `,
-            [job_id, custom_name.trim(), quantity || 1, price, completed]
+            [job_id, custom_name.trim(), quantity || 1, finalPrice, completed]
         );
 
         return result.rows[0];
@@ -55,14 +60,20 @@ export const createJobService = async (data) => {
 
     const pricing_type = catalogService.pricing_type;
 
-    if (pricing_type === "variable" && (price === undefined || price === null || price === "")) {
-        const err = new Error("This service requires a manually entered price after inspection");
+    // Variable-priced services no longer require a price up front —
+    // they can be added as "awaiting price" and priced later.
+    if (hasPrice && Number(price) <= 0) {
+        const err = new Error("Enter a valid price for this service");
         err.statusCode = 400;
         throw err;
     }
 
     quantity = pricing_type === "unit" ? (quantity || 1) : 1;
-    const finalPrice = pricing_type === "variable" ? price : (price ?? catalogService.price);
+
+    const finalPrice =
+        pricing_type === "variable"
+            ? (hasPrice ? price : null)
+            : (hasPrice ? price : catalogService.price);
 
     const result = await pool.query(
         `
@@ -154,4 +165,77 @@ export const deleteJobService = async (id) => {
     );
 
     return result.rows[0];
+};
+
+
+export const updateJobService = async (id, data) => {
+  const existing = await pool.query(
+    `SELECT js.job_id, js.is_custom, js.service_id, sc.pricing_type
+     FROM job_services js
+     LEFT JOIN service_catalog sc ON js.service_id = sc.id
+     WHERE js.id=$1`,
+    [id]
+  );
+
+  if (!existing.rows[0]) {
+    const err = new Error("Job service not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  await ensureJobEditable(existing.rows[0].job_id);
+
+  const { quantity, price, custom_name } = data;
+  const row = existing.rows[0];
+
+  // Custom service: allow renaming, quantity, price.
+  if (row.is_custom) {
+    const finalPrice = price === undefined || price === null || price === "" ? null : Number(price);
+
+    if (finalPrice !== null && finalPrice <= 0) {
+      const err = new Error("Enter a valid price");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const result = await pool.query(
+      `
+      UPDATE job_services
+      SET custom_name = COALESCE($1, custom_name),
+          quantity = COALESCE($2, quantity),
+          price = $3
+      WHERE id=$4
+      RETURNING *
+      `,
+      [custom_name ? custom_name.trim() : null, quantity || null, finalPrice, id]
+    );
+    return result.rows[0];
+  }
+
+  // Catalog-linked: fixed/unit services normally keep the catalog price,
+  // but we still allow overriding it here (e.g. a one-off discount) and
+  // always allow setting price on a "variable" service that was added
+  // with no price yet.
+  const finalPrice = price === undefined || price === null || price === "" ? null : Number(price);
+
+  if (row.pricing_type === "variable" && (finalPrice === null || finalPrice <= 0)) {
+    const err = new Error("Enter a valid assessed price for this service");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const qty = row.pricing_type === "unit" ? (quantity || 1) : 1;
+
+  const result = await pool.query(
+    `
+    UPDATE job_services
+    SET quantity = $1,
+        price = COALESCE($2, price)
+    WHERE id=$3
+    RETURNING *
+    `,
+    [qty, finalPrice, id]
+  );
+
+  return result.rows[0];
 };

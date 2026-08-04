@@ -71,6 +71,8 @@ API.delete(`/job-services/${id}`);
 export const setJobServiceCompletion = (id, is_completed) =>
   API.patch(`/job-services/${id}/completion`, { is_completed });
 
+export const updateJobService = (id, data) =>
+  API.put(`/job-services/${id}`, data);
 
 // JOB PARTS
 
@@ -84,6 +86,8 @@ export const getJobParts = (jobId)=>
 export const deleteJobPart = (id)=>
  API.delete(`/job-parts/${id}`);
 
+export const updateJobPart = (id, data) =>
+  API.put(`/job-parts/${id}`, data);
 
 export const getSpareParts = (params = {}) =>
   API.get("/spareparts", { params });

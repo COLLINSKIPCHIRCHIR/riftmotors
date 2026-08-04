@@ -5,8 +5,8 @@ import {
     addJobService,
     fetchJobServices,
     removeJobService,
-    updateJobServiceCompletion
-
+    updateJobServiceCompletion,
+    editJobService
 } from "../controllers/jobServiceController.js";
 
 const router = express.Router();
@@ -16,6 +16,8 @@ router.get("/job/:job_id", fetchJobServices);
 
 // mark a service done / pending
 router.patch("/:id/completion", updateJobServiceCompletion);
+
+router.put("/:id", editJobService);
 
 router.delete("/:id", removeJobService);
 

@@ -40,6 +40,8 @@ export const addJobPart = async (data) => {
 
   // CUSTOM / NOT-IN-INVENTORY PART: still billable, no stock link, no
   // buying-price floor to check against since there's no inventory row.
+  // Price is OPTIONAL at creation — advisor can add the part now with
+  // no price, accountant fills it in later via updateJobPart.
   if (is_custom) {
     if (!part_name || !part_name.trim()) {
       const err = new Error("Enter the part name");
@@ -47,16 +49,17 @@ export const addJobPart = async (data) => {
       throw err;
     }
 
-    const finalPrice = Number(unit_price);
+    const qty = Number(quantity) || 1;
+    const hasPrice = unit_price !== undefined && unit_price !== null && unit_price !== "";
+    const finalPrice = hasPrice ? Number(unit_price) : null;
 
-    if (!finalPrice || finalPrice <= 0) {
+    if (hasPrice && finalPrice <= 0) {
       const err = new Error("Enter a valid selling price for this part");
       err.statusCode = 400;
       throw err;
     }
 
-    const qty = Number(quantity) || 1;
-    const total_price = qty * finalPrice;
+    const total_price = finalPrice != null ? qty * finalPrice : 0;
 
     const result = await pool.query(
       `
@@ -71,7 +74,10 @@ export const addJobPart = async (data) => {
     return result.rows[0];
   }
 
-  // EXISTING INVENTORY-LINKED FLOW — unchanged
+  // EXISTING INVENTORY-LINKED FLOW — price is now OPTIONAL at creation
+  // too. If provided, still enforced against the buying-price floor.
+  // If omitted, the part is added with unit_price=NULL / total_price=0
+  // ("awaiting price") until edited later.
   const stockResult = await pool.query(
     `SELECT quantity, buying_price FROM spareparts WHERE id=$1`,
     [sparepart_id]
@@ -85,23 +91,26 @@ export const addJobPart = async (data) => {
 
   const { buying_price } = stockResult.rows[0];
 
-  const finalPrice = Number(unit_price);
+  const hasPrice = unit_price !== undefined && unit_price !== null && unit_price !== "";
+  const finalPrice = hasPrice ? Number(unit_price) : null;
 
-  if (!finalPrice || finalPrice <= 0) {
-    const err = new Error("A valid selling price is required");
-    err.statusCode = 400;
-    throw err;
+  if (hasPrice) {
+    if (finalPrice <= 0) {
+      const err = new Error("A valid selling price is required");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (finalPrice < Number(buying_price)) {
+      const err = new Error(
+        `Selling price (KES ${finalPrice}) cannot be below buying price (KES ${buying_price})`
+      );
+      err.statusCode = 400;
+      throw err;
+    }
   }
 
-  if (finalPrice < Number(buying_price)) {
-    const err = new Error(
-      `Selling price (KES ${finalPrice}) cannot be below buying price (KES ${buying_price})`
-    );
-    err.statusCode = 400;
-    throw err;
-  }
-
-  const total_price = quantity * finalPrice;
+  const total_price = finalPrice != null ? quantity * finalPrice : 0;
 
   const result = await pool.query(
     `
