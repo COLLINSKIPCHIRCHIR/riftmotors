@@ -144,15 +144,39 @@ const ServiceEstimateDetails =()=>{
           el.style.display = "none";
         });
 
-        // Force vertical centering + breathing room for every cell,
-        // during capture only. Inline styles win over any class, so
-        // this is immune to how the browser happened to lay out the
-        // live page and to any Tailwind class differences.
+        // Force vertical centering, during capture only. Inline styles
+        // win over any class, so this is immune to how the browser
+        // happened to lay out the live page and to any Tailwind class
+        // differences.
         clonedDoc.querySelectorAll("table td, table th").forEach((el) => {
           el.style.verticalAlign = "middle";
           el.style.lineHeight = "1.6";
-          el.style.paddingTop = "4px";
-          el.style.paddingBottom = "4px";
+        });
+
+        // Match font sizes to the exact @media print rules in index.css,
+        // since html2canvas screenshots the live on-screen DOM and has
+        // no awareness of @media print at all — without this override,
+        // the PDF always renders at the smaller on-screen Tailwind sizes
+        // (e.g. text-[9px]/text-[10px]) instead of the larger sizes
+        // reserved for print output, which is why the PDF font looked
+        // small compared to the native browser Print button.
+        if (clonedContainer) {
+          clonedContainer.style.fontSize = "11px";
+        }
+        clonedDoc.querySelectorAll("table th").forEach((el) => {
+          el.style.fontSize = "11px";
+          el.style.fontWeight = "700";
+          el.style.padding = "5px 6px";
+        });
+        clonedDoc.querySelectorAll("table td").forEach((el) => {
+          el.style.fontSize = "10px";
+          el.style.padding = "4px 6px";
+        });
+        clonedDoc.querySelectorAll(".doc-title h2").forEach((el) => {
+          el.style.fontSize = "18px";
+          el.style.fontWeight = "800";
+          el.style.letterSpacing = "4px";
+          el.style.color = "#000";
         });
 
         // Lighten table borders for capture only. At `scale: 3`,
