@@ -197,6 +197,9 @@ const [editingPartId, setEditingPartId] = useState(null);
 const [editPartQty, setEditPartQty] = useState("");
 const [editPartPrice, setEditPartPrice] = useState("");
 
+
+const user = JSON.parse(localStorage.getItem("user") || "{}");
+
 useEffect(()=>{
 
 
@@ -1417,7 +1420,7 @@ last
 
 <PrintCell label="Date" value={new Date(job.created_at).toLocaleDateString()}/>
 
-<PrintCell label="Service Advisor" value={job.service_advisor}/>
+<PrintCell label="Service Advisor" value={job.service_advisor}  value={user?.username}/>
 
 <PrintCell label="Order Number" value={job.order_number}/>
 
@@ -1809,7 +1812,7 @@ value={new Date(job.created_at).toLocaleDateString()}
 
 />
 
-<DetailField label="Service Advisor" value={job.service_advisor}/>
+<DetailField label="Service Advisor" value={job.service_advisor}  value={user?.username}/>
 
 <DetailField label="Order Number" value={job.order_number}/>
 

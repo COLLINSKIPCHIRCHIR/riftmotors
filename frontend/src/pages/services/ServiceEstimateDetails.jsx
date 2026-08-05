@@ -75,53 +75,107 @@ const ServiceEstimateDetails =()=>{
   // returns it as a Blob.
   //
   // `onclone` runs against a temporary clone of the DOM that html2canvas
-  // is about to rasterize. We use it for two things:
+  // is about to rasterize. We use it for three things:
   //   1. Strip everything marked `.capture-hide` — the live discount
   //      editing controls, the action buttons, and (conditionally, via
   //      the `hasDiscount` flag below) the whole Discount column when
   //      it's unused. This is separate from `print:hidden`, which only
   //      affects the browser's native window.print() and has no effect
   //      on html2canvas.
-  //   2. Record the top/bottom of every table row, in the SAME layout
-  //      that will actually be rasterized (i.e. after the capture-hide
-  //      elements above are removed). We use these boundaries below so a
-  //      page break never lands in the middle of a row.
+  //   2. Force clean, vertically-centered text in every cell. On screen,
+  //      `align-top` looks fine because the browser keeps short-line text
+  //      high in the cell naturally, but once html2canvas rasterizes the
+  //      DOM into a fixed-height row, the very tight `leading-tight`
+  //      line-height combined with 1px borders can leave glyphs hugging
+  //      the bottom border. Setting `verticalAlign` inline (it overrides
+  //      any class) plus a looser line-height and a touch more padding
+  //      fixes this only for the exported clone — it never touches how
+  //      the page looks on screen or under window.print().
+  //   3. Record the top/bottom of every table row, in the SAME layout
+  //      that will actually be rasterized (i.e. after 1 and 2 above have
+  //      been applied). We use these boundaries below so a page break
+  //      never lands in the middle of a row.
+  // Fixed pixel width used for every PDF capture, regardless of the
+  // actual browser window size or zoom level on the machine doing the
+  // download. The print container is responsive (`max-w-5xl mx-auto`),
+  // so without this, `scrollWidth` reflects whatever width it happened
+  // to render at on that specific screen — a narrower window/zoom wraps
+  // text onto more lines, making the content taller and pushing it onto
+  // a second PDF page, while a wider window fits it on one. Pinning the
+  // capture to one fixed width makes the layout — and therefore the
+  // page count — identical on every machine. 1024px matches Tailwind's
+  // max-w-5xl (64rem @ 16px root).
+  const PDF_CAPTURE_WIDTH_PX = 1024;
+
   const generatePdfBlob = async () => {
     const rowBoundaries = [];
 
+    // Fonts loading late (webfont swap) shift text metrics slightly
+    // between machines depending on network/cache state, which can also
+    // nudge content across a page boundary. Waiting for them to be fully
+    // loaded before measuring/capturing keeps that deterministic too.
+    if (document.fonts && document.fonts.ready) {
+      await document.fonts.ready;
+    }
+
     // Pin the capture to the top of the container regardless of scroll
-    // position, and lock the render viewport to the container's real
-    // size so a narrow window doesn't reflow the layout before capture.
+    // position, and lock the render viewport to a fixed width (see
+    // PDF_CAPTURE_WIDTH_PX above) so the layout never depends on the
+    // host browser's actual window size.
     const canvas = await html2canvas(printRef.current, {
       scale: 3,
       useCORS: true,
       scrollX: 0,
       scrollY: 0,
-      windowWidth: printRef.current.scrollWidth,
+      windowWidth: PDF_CAPTURE_WIDTH_PX,
       windowHeight: printRef.current.scrollHeight,
       onclone: (clonedDoc) => {
+        // Force the print container itself to the same fixed width,
+        // overriding its responsive max-w-5xl/mx-auto behavior so it
+        // can't shrink to fit a narrower virtual viewport.
+        const clonedContainer = clonedDoc.querySelector(".print-document");
+        if (clonedContainer) {
+          clonedContainer.style.width = `${PDF_CAPTURE_WIDTH_PX}px`;
+          clonedContainer.style.maxWidth = `${PDF_CAPTURE_WIDTH_PX}px`;
+          clonedContainer.style.margin = "0";
+        }
+
         clonedDoc.querySelectorAll(".capture-hide").forEach((el) => {
           el.style.display = "none";
         });
 
-        // The on-screen rows use very tight line-height (leading-tight,
-        // 9-10px text) against 1px borders. html2canvas rounds text
-        // baselines slightly differently than the browser does, so at
-        // that tightness the border ends up sitting on top of the
-        // descenders of the text — it looks like the border line is
-        // slicing through the letters. Loosening line-height and adding
-        // a touch of vertical padding, only in this capture clone, gives
-        // the text breathing room without changing how the page looks
-        // on screen or under window.print().
+        // Force vertical centering + breathing room for every cell,
+        // during capture only. Inline styles win over any class, so
+        // this is immune to how the browser happened to lay out the
+        // live page and to any Tailwind class differences.
         clonedDoc.querySelectorAll("table td, table th").forEach((el) => {
-          el.style.lineHeight = "1.5";
-          el.style.paddingTop = "3px";
-          el.style.paddingBottom = "3px";
+          el.style.verticalAlign = "middle";
+          el.style.lineHeight = "1.6";
+          el.style.paddingTop = "4px";
+          el.style.paddingBottom = "4px";
         });
 
-        // After hiding capture-hide elements, layout has settled to
-        // match what will actually be drawn into the canvas. Record
-        // every row's top/bottom relative to the print container.
+        // Lighten table borders for capture only. At `scale: 3`,
+        // html2canvas rasterizes a 1px `border-black` (#000) with enough
+        // anti-aliasing that it reads as noticeably bolder/heavier in the
+        // exported PNG than the same border does on screen or under
+        // native window.print(). Swapping to a mid-gray and collapsing
+        // borders (so adjacent cells don't double up their edges into an
+        // even thicker line) fixes this without touching how the page
+        // looks on screen or in the native Print flow.
+        clonedDoc.querySelectorAll("table").forEach((el) => {
+          el.style.borderCollapse = "collapse";
+        });
+        clonedDoc
+          .querySelectorAll("table, table td, table th, table tr")
+          .forEach((el) => {
+            el.style.borderColor = "#555555";
+          });
+
+        // After hiding capture-hide elements and normalizing cell
+        // alignment, layout has settled to match what will actually be
+        // drawn into the canvas. Record every row's top/bottom relative
+        // to the print container.
         const container = clonedDoc.querySelector(".print-document");
         if (container) {
           const containerTop = container.getBoundingClientRect().top;
@@ -323,46 +377,46 @@ const ServiceEstimateDetails =()=>{
           <table className="w-full border border-black text-[10px] leading-[13px]">
             <tbody>
               <tr>
-                <td className="border border-black px-1 py-0.5 font-bold w-[10%]">REF:</td>
-                <td className="border border-black px-1 py-0.5" colSpan={2}>
+                <td className="border border-black px-1 py-0.5 font-bold w-[10%] align-middle">REF:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>
                   {estimate.estimate_number || `EST-${estimate.id}`}
                 </td>
-                <td className="border border-black px-1 py-0.5 font-bold w-[10%]">Date:</td>
-                <td className="border border-black px-1 py-0.5">{new Date(estimate.created_at).toLocaleDateString()}</td>
+                <td className="border border-black px-1 py-0.5 font-bold w-[10%] align-middle">Date:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">{new Date(estimate.created_at).toLocaleDateString()}</td>
               </tr>
               <tr>
-                <td className="border border-black px-1 py-0.5 font-bold">Bill To:</td>
-                <td className="border border-black px-1 py-0.5" colSpan={2}>{field(estimate.customer_name)}</td>
-                <td className="border border-black px-1 py-0.5 font-bold">KRA Pin:</td>
-                <td className="border border-black px-1 py-0.5">{field(estimate.customer_kra_pin)}</td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Bill To:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{field(estimate.customer_name)}</td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">KRA Pin:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">{field(estimate.customer_kra_pin)}</td>
               </tr>
               <tr>
-                <td className="border border-black px-1 py-0.5 font-bold">Address:</td>
-                <td className="border border-black px-1 py-0.5" colSpan={2}>{field(estimate.customer_address)}</td>
-                <td className="border border-black px-1 py-0.5 font-bold">Reg No:</td>
-                <td className="border border-black px-1 py-0.5">{field(estimate.registration_number)}</td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Address:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{field(estimate.customer_address)}</td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Reg No:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">{field(estimate.registration_number)}</td>
               </tr>
               <tr>
-                <td className="border border-black px-1 py-0.5 font-bold">Mobile:</td>
-                <td className="border border-black px-1 py-0.5" colSpan={2}>{field(estimate.customer_phone)}</td>
-                <td className="border border-black px-1 py-0.5 font-bold">Model:</td>
-                <td className="border border-black px-1 py-0.5">{field(estimate.vehicle_make)} {field(estimate.vehicle_model)}</td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Mobile:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{field(estimate.customer_phone)}</td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Model:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">{field(estimate.vehicle_make)} {field(estimate.vehicle_model)}</td>
               </tr>
               <tr>
-                <td className="border border-black px-1 py-0.5 font-bold">Status:</td>
-                <td className="border border-black px-1 py-0.5" colSpan={2}>{estimate.status}</td>
-                <td className="border border-black px-1 py-0.5 font-bold">Vin No:</td>
-                <td className="border border-black px-1 py-0.5">{field(estimate.vin_no)}</td>
-              </tr>
-              <tr>
-                <td className="border border-black px-1 py-0.5" colSpan={3}></td>
-                <td className="border border-black px-1 py-0.5 font-bold">Engine:</td>
-                <td className="border border-black px-1 py-0.5">{field(estimate.engine_number)}</td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Status:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{estimate.status}</td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Vin No:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">{field(estimate.vin_no)}</td>
               </tr>
               <tr>
                 <td className="border border-black px-1 py-0.5" colSpan={3}></td>
-                <td className="border border-black px-1 py-0.5 font-bold">Mileage:</td>
-                <td className="border border-black px-1 py-0.5">
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Engine:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">{field(estimate.engine_number)}</td>
+              </tr>
+              <tr>
+                <td className="border border-black px-1 py-0.5" colSpan={3}></td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Mileage:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">
                   {estimate.mileage === null || estimate.mileage === undefined || estimate.mileage === ""
                     ? "N/A"
                     : formatNumber(estimate.mileage)}
@@ -413,8 +467,14 @@ const ServiceEstimateDetails =()=>{
               screen it always stays visible so a discount can be entered.
               Customer-supplied parts show "-" for price/total instead of
               0.00, and never get a discount editor since there's nothing
-              to discount. */}
-          <table className="w-full border border-black text-[9px] leading-tight mt-2">
+              to discount.
+
+              Font bumped from 9px to 10px and cells switched from
+              align-top to align-middle (both on screen and, redundantly
+              but safely, forced again in the html2canvas onclone above)
+              so the exported PDF is legible and text sits centered in
+              each row rather than crowding the bottom border. */}
+          <table className="w-full border border-black text-[10px] leading-normal mt-2">
             <colgroup>
               <col className="w-[34%]" />
               <col className="w-[12%]" />
@@ -425,14 +485,14 @@ const ServiceEstimateDetails =()=>{
             </colgroup>
             <thead className="bg-gray-100">
               <tr>
-                <th className="p-0.5 text-left border border-black">Description</th>
-                <th className="p-0.5 text-left border border-black">Type</th>
-                <th className="p-0.5 border border-black">Qty</th>
-                <th className="p-0.5 border border-black">Price (KES)</th>
-                <th className={`p-0.5 border border-black ${hasDiscount ? "" : "print:hidden capture-hide"}`}>
+                <th className="p-1 text-left border border-black align-middle">Description</th>
+                <th className="p-1 text-left border border-black align-middle">Type</th>
+                <th className="p-1 border border-black align-middle">Qty</th>
+                <th className="p-1 border border-black align-middle">Price (KES)</th>
+                <th className={`p-1 border border-black align-middle ${hasDiscount ? "" : "print:hidden capture-hide"}`}>
                   Discount (KES)
                 </th>
-                <th className="p-0.5 border border-black">Total (KES)</th>
+                <th className="p-1 border border-black align-middle">Total (KES)</th>
               </tr>
             </thead>
             <tbody>
@@ -441,19 +501,19 @@ const ServiceEstimateDetails =()=>{
                 const canEdit = estimate.status === "pending";
                 return (
                 <tr key={item.id}>
-                  <td className="p-0.5 border border-black align-top">
+                  <td className="p-1 border border-black align-middle">
                     {item.description}
                     {item.customer_supplied &&
                       <span className="italic text-gray-500 ml-1">(customer supplied)</span>
                     }
                   </td>
-                  <td className="p-0.5 border border-black align-top">{item.item_type}</td>
-                  <td className="p-0.5 border border-black text-center align-top">{item.quantity}</td>
-                  <td className="p-0.5 border border-black text-right align-top">
+                  <td className="p-1 border border-black align-middle">{item.item_type}</td>
+                  <td className="p-1 border border-black text-center align-middle">{item.quantity}</td>
+                  <td className="p-1 border border-black text-right align-middle">
                     {item.customer_supplied ? "-" : formatMoney(item.unit_price)}
                   </td>
 
-                  <td className={`p-0.5 border border-black align-top ${hasDiscount ? "" : "print:hidden capture-hide"}`}>
+                  <td className={`p-1 border border-black align-middle ${hasDiscount ? "" : "print:hidden capture-hide"}`}>
                     {/* Printed/shared/downloaded view: just the amount */}
                     <div className="text-right">
                       {item.customer_supplied ? "-" : (discount > 0 ? formatMoney(discount) : "-")}
@@ -528,7 +588,7 @@ const ServiceEstimateDetails =()=>{
                     )}
                   </td>
 
-                  <td className="p-0.5 border border-black align-top text-right font-bold">
+                  <td className="p-1 border border-black align-middle text-right font-bold">
                     {item.customer_supplied ? "-" : formatMoney(item.total_price)}
                   </td>
                 </tr>
@@ -543,13 +603,13 @@ const ServiceEstimateDetails =()=>{
                   discounted), and Total lands in the same column as
                   estimate.subtotal further down. */}
               <tr className="bg-gray-100 font-bold">
-                <td colSpan={2} className="p-0.5 border border-black text-right">Totals</td>
-                <td className="p-0.5 border border-black text-center">{formatNumber(totalQty)}</td>
-                <td className="p-0.5 border border-black text-right">{formatMoney(Number(estimate.subtotal) + totalDiscount)}</td>
-                <td className={`p-0.5 border border-black text-right ${hasDiscount ? "" : "print:hidden capture-hide"}`}>
+                <td colSpan={2} className="p-1 border border-black text-right align-middle">Totals</td>
+                <td className="p-1 border border-black text-center align-middle">{formatNumber(totalQty)}</td>
+                <td className="p-1 border border-black text-right align-middle">{formatMoney(Number(estimate.subtotal) + totalDiscount)}</td>
+                <td className={`p-1 border border-black text-right align-middle ${hasDiscount ? "" : "print:hidden capture-hide"}`}>
                   {formatMoney(totalDiscount)}
                 </td>
-                <td className="p-0.5 border border-black text-right">{formatMoney(estimate.subtotal)}</td>
+                <td className="p-1 border border-black text-right align-middle">{formatMoney(estimate.subtotal)}</td>
               </tr>
             </tbody>
           </table>
@@ -562,13 +622,13 @@ const ServiceEstimateDetails =()=>{
             <table className="border border-black w-[55%]">
               <tbody>
                 <tr>
-                  <td className="border border-black px-1 py-0.5 font-bold" colSpan={2}>Payment To:</td>
+                  <td className="border border-black px-1 py-0.5 font-bold align-middle" colSpan={2}>Payment To:</td>
                 </tr>
-                <tr><td className="border border-black px-1 py-0.5" colSpan={2}>NCBA Bank, Nakuru Branch</td></tr>
-                <tr><td className="border border-black px-1 py-0.5" colSpan={2}>A/C Name: Rift Motors Ltd</td></tr>
-                <tr><td className="border border-black px-1 py-0.5" colSpan={2}>A/C No: 3364820034, or through</td></tr>
-                <tr><td className="border border-black px-1 py-0.5" colSpan={2}>Mpesa Paybill No: 532602</td></tr>
-                <tr><td className="border border-black px-1 py-0.5" colSpan={2}>A/C No: RIFT MOTORS</td></tr>
+                <tr><td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>NCBA Bank, Nakuru Branch</td></tr>
+                <tr><td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>A/C Name: Rift Motors Ltd</td></tr>
+                <tr><td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>A/C No: 3364820034, or through</td></tr>
+                <tr><td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>Mpesa Paybill No: 532602</td></tr>
+                <tr><td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>A/C No: RIFT MOTORS</td></tr>
               </tbody>
             </table>
 
@@ -577,26 +637,26 @@ const ServiceEstimateDetails =()=>{
                 {totalDiscount > 0 && (
                   <>
                     <tr>
-                      <td className="border border-black px-1 py-0.5">Total</td>
-                      <td className="border border-black px-1 py-0.5 text-right">{formatMoney(Number(estimate.subtotal) + totalDiscount)}</td>
+                      <td className="border border-black px-1 py-0.5 align-middle">Total</td>
+                      <td className="border border-black px-1 py-0.5 text-right align-middle">{formatMoney(Number(estimate.subtotal) + totalDiscount)}</td>
                     </tr>
                     <tr>
-                      <td className="border border-black px-1 py-0.5">Discount</td>
-                      <td className="border border-black px-1 py-0.5 text-right">-{formatMoney(totalDiscount)}</td>
+                      <td className="border border-black px-1 py-0.5 align-middle">Discount</td>
+                      <td className="border border-black px-1 py-0.5 text-right align-middle">-{formatMoney(totalDiscount)}</td>
                     </tr>
                   </>
                 )}
                 <tr>
-                  <td className="border border-black px-1 py-0.5">Sub Total</td>
-                  <td className="border border-black px-1 py-0.5 text-right">{formatMoney(estimate.subtotal)}</td>
+                  <td className="border border-black px-1 py-0.5 align-middle">Sub Total</td>
+                  <td className="border border-black px-1 py-0.5 text-right align-middle">{formatMoney(estimate.subtotal)}</td>
                 </tr>
                 <tr>
-                  <td className="border border-black px-1 py-0.5">Vat ({estimate.tax_rate}%)</td>
-                  <td className="border border-black px-1 py-0.5 text-right">{formatMoney(estimate.tax_amount)}</td>
+                  <td className="border border-black px-1 py-0.5 align-middle">Vat ({estimate.tax_rate}%)</td>
+                  <td className="border border-black px-1 py-0.5 text-right align-middle">{formatMoney(estimate.tax_amount)}</td>
                 </tr>
                 <tr>
-                  <td className="border border-black px-1 py-0.5 font-bold">Total Amount</td>
-                  <td className="border border-black px-1 py-0.5 text-right font-bold">{formatMoney(estimate.total)}</td>
+                  <td className="border border-black px-1 py-0.5 font-bold align-middle">Total Amount</td>
+                  <td className="border border-black px-1 py-0.5 text-right font-bold align-middle">{formatMoney(estimate.total)}</td>
                 </tr>
               </tbody>
             </table>
