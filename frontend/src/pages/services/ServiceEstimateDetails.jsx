@@ -71,29 +71,123 @@ const ServiceEstimateDetails =()=>{
     }
   }
 
-  // Renders the printable area into a PDF and returns it as a Blob.
-  // `onclone` strips anything marked `.capture-hide` (the live discount
-  // editing controls) from the CLONED document before html2canvas draws
-  // it, so the exported file only ever shows the discount amount — never
-  // the input boxes or Apply buttons, even though those are visible on
-  // screen. This is separate from `print:hidden`, which only affects the
-  // browser's native window.print() and has no effect on html2canvas.
+  // Renders the printable area into a (possibly multi-page) PDF and
+  // returns it as a Blob.
+  //
+  // `onclone` runs against a temporary clone of the DOM that html2canvas
+  // is about to rasterize. We use it for two things:
+  //   1. Strip everything marked `.capture-hide` — the live discount
+  //      editing controls, the action buttons, and (conditionally, via
+  //      the `hasDiscount` flag below) the whole Discount column when
+  //      it's unused. This is separate from `print:hidden`, which only
+  //      affects the browser's native window.print() and has no effect
+  //      on html2canvas.
+  //   2. Record the top/bottom of every table row, in the SAME layout
+  //      that will actually be rasterized (i.e. after the capture-hide
+  //      elements above are removed). We use these boundaries below so a
+  //      page break never lands in the middle of a row.
   const generatePdfBlob = async () => {
+    const rowBoundaries = [];
+
+    // Pin the capture to the top of the container regardless of scroll
+    // position, and lock the render viewport to the container's real
+    // size so a narrow window doesn't reflow the layout before capture.
     const canvas = await html2canvas(printRef.current, {
-      scale: 2,
+      scale: 3,
+      useCORS: true,
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: printRef.current.scrollWidth,
+      windowHeight: printRef.current.scrollHeight,
       onclone: (clonedDoc) => {
         clonedDoc.querySelectorAll(".capture-hide").forEach((el) => {
           el.style.display = "none";
         });
+
+        // The on-screen rows use very tight line-height (leading-tight,
+        // 9-10px text) against 1px borders. html2canvas rounds text
+        // baselines slightly differently than the browser does, so at
+        // that tightness the border ends up sitting on top of the
+        // descenders of the text — it looks like the border line is
+        // slicing through the letters. Loosening line-height and adding
+        // a touch of vertical padding, only in this capture clone, gives
+        // the text breathing room without changing how the page looks
+        // on screen or under window.print().
+        clonedDoc.querySelectorAll("table td, table th").forEach((el) => {
+          el.style.lineHeight = "1.5";
+          el.style.paddingTop = "3px";
+          el.style.paddingBottom = "3px";
+        });
+
+        // After hiding capture-hide elements, layout has settled to
+        // match what will actually be drawn into the canvas. Record
+        // every row's top/bottom relative to the print container.
+        const container = clonedDoc.querySelector(".print-document");
+        if (container) {
+          const containerTop = container.getBoundingClientRect().top;
+          container.querySelectorAll("tr").forEach((tr) => {
+            const r = tr.getBoundingClientRect();
+            rowBoundaries.push({
+              top: r.top - containerTop,
+              bottom: r.bottom - containerTop,
+            });
+          });
+        }
       },
     });
-    const imgData = canvas.toDataURL("image/png");
 
     const pdf = new jsPDF("p", "mm", "a4");
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = (canvas.height * pageWidth) / canvas.width;
+    const pageWidthMM = pdf.internal.pageSize.getWidth();
+    const pageHeightMM = pdf.internal.pageSize.getHeight();
 
-    pdf.addImage(imgData, "PNG", 0, 0, pageWidth, pageHeight);
+    const SCALE = 3; // must match the `scale` option passed to html2canvas above
+    const pxPerMM = canvas.width / pageWidthMM;
+    const pageHeightPx = pageHeightMM * pxPerMM;
+
+    const rowBottoms = rowBoundaries
+      .map((r) => r.bottom * SCALE)
+      .sort((a, b) => a - b);
+
+    let currentY = 0;
+    let pageIndex = 0;
+
+    while (currentY < canvas.height - 1) {
+      const idealEnd = Math.min(currentY + pageHeightPx, canvas.height);
+      let sliceEnd = idealEnd;
+
+      if (idealEnd < canvas.height) {
+        // Snap the break to the bottom of the last row that fully fits,
+        // so we never cut a row in half across a page boundary.
+        const safeBreak = rowBottoms
+          .filter((b) => b > currentY && b <= idealEnd)
+          .pop();
+        if (safeBreak) sliceEnd = safeBreak;
+      }
+
+      const sliceHeight = Math.round(sliceEnd - currentY);
+      if (sliceHeight <= 0) break;
+
+      const sliceCanvas = document.createElement("canvas");
+      sliceCanvas.width = canvas.width;
+      sliceCanvas.height = sliceHeight;
+      sliceCanvas
+        .getContext("2d")
+        .drawImage(
+          canvas,
+          0, currentY, canvas.width, sliceHeight,
+          0, 0, canvas.width, sliceHeight
+        );
+
+      const imgData = sliceCanvas.toDataURL("image/png");
+      const imgHeightMM = sliceHeight / pxPerMM;
+
+      if (pageIndex > 0) pdf.addPage();
+      pdf.addImage(imgData, "PNG", 0, 0, pageWidthMM, imgHeightMM);
+
+      currentY = sliceEnd;
+      pageIndex += 1;
+    }
+
     return pdf.output("blob");
   };
 
@@ -151,6 +245,12 @@ const ServiceEstimateDetails =()=>{
     (sum, item) => sum + lineDiscount(item),
     0
   );
+
+  // Whether any discount has actually been applied. Drives whether the
+  // Discount column shows up at all in print/PDF/Share output — the
+  // column (and its editing controls) always stays visible on screen so
+  // a discount can be entered in the first place.
+  const hasDiscount = totalDiscount > 0;
 
   // Sum of every line's quantity — feeds the Qty column in the items-table
   // totals row so the estimate is self-explanatory without cross-checking
@@ -271,8 +371,11 @@ const ServiceEstimateDetails =()=>{
             </tbody>
           </table>
 
-          {/* ACTIONS */}
-          <div className="flex justify-end gap-3 my-3 print:hidden">
+          {/* ACTIONS — only ever meant for on-screen use. print:hidden keeps
+              it out of the native browser Print, and capture-hide (stripped
+              in the html2canvas onclone above) keeps it out of the
+              Download PDF / Share captures too. */}
+          <div className="flex justify-end gap-3 my-3 print:hidden capture-hide">
             <button
               onClick={handleConvertInvoice}
               disabled={estimate.status !== "pending"}
@@ -298,11 +401,16 @@ const ServiceEstimateDetails =()=>{
             </div>
           )}
 
-          {/* ITEMS — Discount now gets its own column so the Total column
-              stays a single clean number. Editing controls only render on
-              screen for pending estimates, and are stripped out of the
-              PDF/Share capture via the capture-hide + onclone combo above,
-              on top of print:hidden for the native browser Print button.
+          {/* ITEMS — Discount has its own column so the Total column stays
+              a single clean number. Editing controls only render on screen
+              for pending estimates, and are stripped out of the PDF/Share
+              capture via the capture-hide + onclone combo above, on top of
+              print:hidden for the native browser Print button. The whole
+              Discount column (header, col width, and each cell) is also
+              conditionally hidden — via the same print:hidden + capture-hide
+              pairing, driven by `hasDiscount` — in print/PDF/Share when no
+              discount has been applied to anything on the estimate; on
+              screen it always stays visible so a discount can be entered.
               Customer-supplied parts show "-" for price/total instead of
               0.00, and never get a discount editor since there's nothing
               to discount. */}
@@ -312,7 +420,7 @@ const ServiceEstimateDetails =()=>{
               <col className="w-[12%]" />
               <col className="w-[8%]" />
               <col className="w-[15%]" />
-              <col className="w-[15%]" />
+              <col className={`w-[15%] ${hasDiscount ? "" : "print:hidden capture-hide"}`} />
               <col className="w-[16%]" />
             </colgroup>
             <thead className="bg-gray-100">
@@ -321,7 +429,9 @@ const ServiceEstimateDetails =()=>{
                 <th className="p-0.5 text-left border border-black">Type</th>
                 <th className="p-0.5 border border-black">Qty</th>
                 <th className="p-0.5 border border-black">Price (KES)</th>
-                <th className="p-0.5 border border-black">Discount (KES)</th>
+                <th className={`p-0.5 border border-black ${hasDiscount ? "" : "print:hidden capture-hide"}`}>
+                  Discount (KES)
+                </th>
                 <th className="p-0.5 border border-black">Total (KES)</th>
               </tr>
             </thead>
@@ -343,7 +453,7 @@ const ServiceEstimateDetails =()=>{
                     {item.customer_supplied ? "-" : formatMoney(item.unit_price)}
                   </td>
 
-                  <td className="p-0.5 border border-black align-top">
+                  <td className={`p-0.5 border border-black align-top ${hasDiscount ? "" : "print:hidden capture-hide"}`}>
                     {/* Printed/shared/downloaded view: just the amount */}
                     <div className="text-right">
                       {item.customer_supplied ? "-" : (discount > 0 ? formatMoney(discount) : "-")}
@@ -428,14 +538,17 @@ const ServiceEstimateDetails =()=>{
                   Discount / Total columns as the line items above, so the
                   estimate is self-explanatory on its own: Qty column sums
                   every line's quantity, Price column shows the pre-discount
-                  items total, Discount column shows what was taken off (or
-                  "-" when there's none), and Total lands in the same column
-                  as estimate.subtotal further down. */}
+                  items total, Discount column shows what was taken off
+                  (hidden entirely in print/PDF/Share when nothing was
+                  discounted), and Total lands in the same column as
+                  estimate.subtotal further down. */}
               <tr className="bg-gray-100 font-bold">
                 <td colSpan={2} className="p-0.5 border border-black text-right">Totals</td>
                 <td className="p-0.5 border border-black text-center">{formatNumber(totalQty)}</td>
                 <td className="p-0.5 border border-black text-right">{formatMoney(Number(estimate.subtotal) + totalDiscount)}</td>
-                <td className="p-0.5 border border-black text-right">{totalDiscount > 0 ? formatMoney(totalDiscount) : "-"}</td>
+                <td className={`p-0.5 border border-black text-right ${hasDiscount ? "" : "print:hidden capture-hide"}`}>
+                  {formatMoney(totalDiscount)}
+                </td>
                 <td className="p-0.5 border border-black text-right">{formatMoney(estimate.subtotal)}</td>
               </tr>
             </tbody>
