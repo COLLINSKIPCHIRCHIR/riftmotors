@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import API from "../../api/api";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { FaPlus, FaSearch, FaTrash } from "react-icons/fa";
+import { FaPlus, FaSearch, FaTrash , FaEdit } from "react-icons/fa";
 
 export default function CustomersList() {
   const [customers, setCustomers] = useState([]);
@@ -101,13 +101,22 @@ export default function CustomersList() {
                   <td className="px-6 py-3 text-sm text-slate-600">{c.email || "—"}</td>
                   <td className="px-6 py-3 text-sm text-slate-600">{c.address || "—"}</td>
                   <td className="px-6 py-3">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => navigate(`/admin/customers/edit/${c.id}`)}
+                      className="text-blue-500 hover:text-blue-700 p-1.5 hover:bg-blue-50 rounded-lg transition"
+                    >
+                      <FaEdit size={13} />
+                    </button>
+
                     <button
                       onClick={() => handleDelete(c.id)}
                       className="text-red-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded-lg transition"
                     >
                       <FaTrash size={13} />
                     </button>
-                  </td>
+                  </div>
+                </td>
                 </tr>
               ))}
             </tbody>
