@@ -56,7 +56,7 @@ import Users from "./pages/admin/Users";
 import CustomersList from "./pages/customers/CustomersList";
 import AddCustomer from "./pages/customers/AddCustomer";
 
-
+/*
 import Departments from "./pages/hr/departments/Departments";
 import Branches from "./pages/hr/branches/Branches";
 import Employees from "./pages/hr/employees/Employees";
@@ -76,7 +76,7 @@ import PayrollPeriods from "./pages/hr/payroll-periods/PayrollPeriods";
 import Payslips from "./pages/hr/payslips/Payslips";
 import PayslipEarnings from "./pages/hr/payslip-earnings/PayslipEarnings";
 import PayslipDeductions from "./pages/hr/payslip-deductions/PayslipDeductions";
-
+*/
 
 
 function App() {
