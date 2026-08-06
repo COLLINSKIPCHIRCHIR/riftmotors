@@ -1424,7 +1424,11 @@ last
 
 <PrintCell label="Order Number" value={job.order_number}/>
 
-<PrintCell label="" value="" last/>
+<PrintCell
+  label="Technician Assigned"
+  value={assignment.length > 0 ? assignment.map(a=>a.name).join(", ") : ""}
+  last
+/>
 
 </div>
 
