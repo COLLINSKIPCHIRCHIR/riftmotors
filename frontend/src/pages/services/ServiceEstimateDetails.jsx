@@ -105,7 +105,7 @@ const ServiceEstimateDetails =()=>{
   // capture to one fixed width makes the layout — and therefore the
   // page count — identical on every machine. 1024px matches Tailwind's
   // max-w-5xl (64rem @ 16px root).
-  const PDF_CAPTURE_WIDTH_PX = 1024;
+  const PDF_CAPTURE_WIDTH_PX = 1100;
 
   const generatePdfBlob = async () => {
     const rowBoundaries = [];
@@ -123,7 +123,7 @@ const ServiceEstimateDetails =()=>{
     // PDF_CAPTURE_WIDTH_PX above) so the layout never depends on the
     // host browser's actual window size.
     const canvas = await html2canvas(printRef.current, {
-      scale: 3,
+      scale: 2,
       useCORS: true,
       scrollX: 0,
       scrollY: 0,
@@ -160,23 +160,38 @@ const ServiceEstimateDetails =()=>{
         // (e.g. text-[9px]/text-[10px]) instead of the larger sizes
         // reserved for print output, which is why the PDF font looked
         // small compared to the native browser Print button.
+        //
+        // Bumped a notch further (and table cells given real font-weight)
+        // so the downloaded PDF reads bolder/bigger than plain print output.
         if (clonedContainer) {
-          clonedContainer.style.fontSize = "11px";
+          clonedContainer.style.fontSize = "14px";
         }
+
         clonedDoc.querySelectorAll("table th").forEach((el) => {
-          el.style.fontSize = "11px";
-          el.style.fontWeight = "700";
-          el.style.padding = "5px 6px";
+          el.style.fontSize = "14px";
+          el.style.fontWeight = "800";
+          el.style.padding = "6px 7px";
         });
+
         clonedDoc.querySelectorAll("table td").forEach((el) => {
-          el.style.fontSize = "10px";
-          el.style.padding = "4px 6px";
+          el.style.fontSize = "13px";
+          el.style.fontWeight = "600";
+          el.style.padding = "5px 7px";
+        });
+        clonedDoc.querySelectorAll(".doc-title").forEach((el) => {
+          // The h2 below jumps from 14px to 28px, so the container needs
+          // real padding (not the on-screen py-1 = 4px) to fit the taller
+          // line without spilling into the hr above or the table below.
+          el.style.paddingTop = "10px";
+          el.style.paddingBottom = "10px";
         });
         clonedDoc.querySelectorAll(".doc-title h2").forEach((el) => {
-          el.style.fontSize = "18px";
+          el.style.fontSize = "28px"; // was 18px
           el.style.fontWeight = "800";
           el.style.letterSpacing = "4px";
           el.style.color = "#000";
+          el.style.lineHeight = "1.4"; // was inheriting the tight on-screen line-height
+          el.style.margin = "0";
         });
 
         // Lighten table borders for capture only. At `scale: 3`,
@@ -218,7 +233,17 @@ const ServiceEstimateDetails =()=>{
     const pageWidthMM = pdf.internal.pageSize.getWidth();
     const pageHeightMM = pdf.internal.pageSize.getHeight();
 
-    const SCALE = 3; // must match the `scale` option passed to html2canvas above
+    // Declared up front (before the pagination loop) since both the
+    // slice-height math and the addImage call below depend on them.
+    // Previously `usableWidth` was declared with `const` further down,
+    // inside the loop, but was referenced above that declaration on the
+    // first iteration — a temporal-dead-zone ReferenceError that made
+    // generatePdfBlob() throw and download/share fail silently behind
+    // the "Could not generate PDF" / "Sharing failed" alerts.
+    const margin = 6;
+    const usableWidth = pageWidthMM - margin * 2;
+
+    const SCALE = 2; // must match the `scale` option passed to html2canvas above
     const pxPerMM = canvas.width / pageWidthMM;
     const pageHeightPx = pageHeightMM * pxPerMM;
 
@@ -257,10 +282,18 @@ const ServiceEstimateDetails =()=>{
         );
 
       const imgData = sliceCanvas.toDataURL("image/png");
-      const imgHeightMM = sliceHeight / pxPerMM;
+      const imgHeightMM = (sliceHeight * usableWidth) / canvas.width;
 
       if (pageIndex > 0) pdf.addPage();
-      pdf.addImage(imgData, "PNG", 0, 0, pageWidthMM, imgHeightMM);
+
+      pdf.addImage(
+          imgData,
+          "PNG",
+          margin,
+          margin,
+          usableWidth,
+          imgHeightMM
+      );
 
       currentY = sliceEnd;
       pageIndex += 1;
@@ -340,7 +373,7 @@ const ServiceEstimateDetails =()=>{
 
   return (
     <div className="print-container p-6 bg-gray-100 min-h-screen">
-      <div ref={printRef} className="max-w-5xl mx-auto bg-white print-document border border-black p-3 text-[10px] leading-[13px]">
+      <div ref={printRef} className="max-w-5xl mx-auto bg-white print-document border border-black p-2 text-[10px] leading-[13px]">
 
         {/* OUTER FRAME — wraps everything except the brand logos */}
         <div className="border-2 border-black p-3">
@@ -675,7 +708,7 @@ const ServiceEstimateDetails =()=>{
                   <td className="border border-black px-1 py-0.5 text-right align-middle">{formatMoney(estimate.subtotal)}</td>
                 </tr>
                 <tr>
-                  <td className="border border-black px-1 py-0.5 align-middle">Vat ({estimate.tax_rate}%)</td>
+                  <td className="border border-black px-1 py-0.5 align-middle">Vat </td>
                   <td className="border border-black px-1 py-0.5 text-right align-middle">{formatMoney(estimate.tax_amount)}</td>
                 </tr>
                 <tr>
