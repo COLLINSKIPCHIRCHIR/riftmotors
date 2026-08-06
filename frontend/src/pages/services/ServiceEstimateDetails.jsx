@@ -168,14 +168,14 @@ const ServiceEstimateDetails =()=>{
         }
 
         clonedDoc.querySelectorAll("table th").forEach((el) => {
-          el.style.fontSize = "14px";
+          el.style.fontSize = "16px";
           el.style.fontWeight = "800";
           el.style.padding = "6px 7px";
         });
 
         clonedDoc.querySelectorAll("table td").forEach((el) => {
-          el.style.fontSize = "13px";
-          el.style.fontWeight = "600";
+          el.style.fontSize = "15px";
+          el.style.fontWeight = "700";
           el.style.padding = "5px 7px";
         });
         clonedDoc.querySelectorAll(".doc-title").forEach((el) => {
