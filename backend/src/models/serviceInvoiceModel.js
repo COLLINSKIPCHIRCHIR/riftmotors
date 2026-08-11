@@ -140,30 +140,33 @@ export const convertServiceEstimateToInvoice = async (estimateId) => {
     const total = estimate.total;
 
     const invoiceRes = await queryWithDiagnostics(
-      client,
-      "insert invoice",
-      `
-      INSERT INTO service_invoices
-      (invoice_number, estimate_id, job_id, customer_name, customer_phone,
-       subtotal, discount_type, discount_value, discount, tax_rate, tax_amount, total)
-      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-      RETURNING *
-      `,
-      [
-        invoiceNumber,
-        estimateId,
-        estimate.job_id,
-        estimate.customer_name,
-        estimate.customer_phone,
-        estimate.subtotal,
-        estimate.discount_type,
-        estimate.discount,
-        estimate.discount,
-        taxRate,
-        taxAmount,
-        total
-      ]
-    );
+  client,
+  "insert invoice",
+  `
+  INSERT INTO service_invoices
+  (invoice_number, estimate_id, job_id, customer_name, customer_phone,
+   driver_name, driver_phone,
+   subtotal, discount_type, discount_value, discount, tax_rate, tax_amount, total)
+  VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+  RETURNING *
+  `,
+  [
+    invoiceNumber,
+    estimateId,
+    estimate.job_id,
+    estimate.customer_name,
+    estimate.customer_phone,
+    estimate.driver_name,
+    estimate.driver_phone,
+    estimate.subtotal,
+    estimate.discount_type,
+    estimate.discount,
+    estimate.discount,
+    taxRate,
+    taxAmount,
+    total
+  ]
+);
 
     const invoiceId = invoiceRes.rows[0].id;
 

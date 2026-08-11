@@ -6,6 +6,8 @@ const {
     job_number,
     customer_id,
     vehicle_id,
+    driver_name,
+    driver_phone,
     complaint,
     diagnosis,
     notes,
@@ -15,11 +17,11 @@ const {
 const insertResult = await pool.query(
     `
     INSERT INTO service_jobs
-    (job_number, customer_id, vehicle_id, complaint, diagnosis, notes, created_by)
-    VALUES($1,$2,$3,$4,$5,$6,$7)
+    (job_number, customer_id, vehicle_id, driver_name, driver_phone, complaint, diagnosis, notes, created_by)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
     RETURNING *
     `,
-    [job_number, customer_id, vehicle_id, complaint, diagnosis || null, notes || null, created_by || 1]
+    [job_number, customer_id, vehicle_id, driver_name || null, driver_phone || null, complaint, diagnosis || null, notes || null, created_by || 1]
 );
 
 return insertResult.rows[0];

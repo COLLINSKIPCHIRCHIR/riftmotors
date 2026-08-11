@@ -145,6 +145,8 @@ export const createServiceEstimate = async (
   SELECT
   sj.id,
   sj.job_number,
+  sj.driver_name,
+  sj.driver_phone,
   c.name AS customer_name,
   c.phone AS customer_phone
   FROM service_jobs sj
@@ -293,54 +295,46 @@ const parts = await client.query(
 
 
     const estimate = await client.query(
+  `
+  INSERT INTO service_estimates
 
-      `
-      INSERT INTO service_estimates
+  (
+  job_id,
+  estimate_number,
+  customer_name,
+  customer_phone,
+  driver_name,
+  driver_phone,
+  subtotal,
+  discount_type,
+  discount,
+  tax_rate,
+  tax_amount,
+  total,
+  status
 
-      (
-      job_id,
-      estimate_number,
-      customer_name,
-      customer_phone,
-      subtotal,
-      discount_type,
-      discount,
-      tax_rate,
-      tax_amount,
-      total,
-      status
+  )
 
-      )
+  VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'pending')
 
-      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pending')
+  RETURNING *
+  `,
 
-
-      RETURNING *
-
-      `,
-
-      [
-
-        job_id,
-
-        estimate_number,
-
-        job.customer_name,
-
-        job.customer_phone,
-
-        subtotal,
-
-        discount_type,
-
-        discount,
-        tax_rate,
-        taxAmount,
-        total
-
-      ]
-
-    );
+  [
+    job_id,
+    estimate_number,
+    job.customer_name,
+    job.customer_phone,
+    job.driver_name,
+    job.driver_phone,
+    subtotal,
+    discount_type,
+    discount,
+    tax_rate,
+    taxAmount,
+    total
+  ]
+);
 
 
 

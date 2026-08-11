@@ -30,6 +30,8 @@ const [form,setForm]=useState({
 
 job_number:"",
 vehicle_id:"",
+driver_name:"",
+driver_phone:"",
 complaint:"",
 notes:""
 
@@ -151,6 +153,9 @@ vehicles.find(v=>v.id==form.vehicle_id)?.customer_id,
 vehicle_id:
 form.vehicle_id,
 
+driver_name: form.driver_name.trim() || null,
+driver_phone: form.driver_phone.trim() || null,
+
 
 complaint:
 form.complaint,
@@ -183,6 +188,8 @@ setForm({
 
 job_number:"",
 vehicle_id:"",
+driver_name:"",
+driver_phone:"",
 complaint:"",
 notes:""
 
@@ -584,7 +591,29 @@ value={v.id}
 </select>
 
 
+<label className="text-sm">
+  Driver Name (if different from billing customer)
+</label>
+<input
+  type="text"
+  name="driver_name"
+  value={form.driver_name}
+  onChange={handleChange}
+  placeholder="e.g. John Mwangi"
+  className="w-full border rounded-lg p-2 mb-4"
+/>
 
+<label className="text-sm">
+  Driver Phone
+</label>
+<input
+  type="text"
+  name="driver_phone"
+  value={form.driver_phone}
+  onChange={handleChange}
+  placeholder="e.g. 0712345678"
+  className="w-full border rounded-lg p-2 mb-4"
+/>
 
 
 

@@ -73,27 +73,205 @@ const ServiceInvoiceDetails = () => {
   navigate(`/admin/services/receipts/${res.data.receipt.id}`);
 };
 
-  // Renders the printable area into a PDF and returns it as a Blob.
-  // The invoice has no live editing controls, but we keep the same
-  // capture-hide + onclone pattern used in ServiceEstimateDetails so the
-  // two components stay consistent and any future on-screen-only controls
-  // added here are automatically excluded from exports too.
+  // Renders the printable area into a (possibly multi-page) PDF and
+  // returns it as a Blob. Mirrors ServiceEstimateDetails's generatePdfBlob
+  // exactly, so estimates and invoices behave and look identical once
+  // downloaded/shared, including once an estimate is converted into one
+  // of these:
+  //   1. `.capture-hide` elements (live action buttons/inputs) are
+  //      stripped from the clone before rasterizing — separate from
+  //      `print:hidden`, which only affects the native browser Print
+  //      and has no effect on html2canvas.
+  //   2. Every cell is forced to vertically center with a looser
+  //      line-height, since html2canvas rasterizes the DOM into a
+  //      fixed-height row and tight line-height + 1px borders can leave
+  //      glyphs hugging the bottom border.
+  //   3. Row top/bottom boundaries are recorded, in the SAME layout that
+  //      will actually be rasterized (after 1 and 2 above), so page
+  //      breaks below never land in the middle of a row.
+  const PDF_CAPTURE_WIDTH_PX = 1100;
+
   const generatePdfBlob = async () => {
+    const rowBoundaries = [];
+
+    // Fonts loading late (webfont swap) shift text metrics slightly
+    // between machines depending on network/cache state, which can also
+    // nudge content across a page boundary. Waiting for them to be fully
+    // loaded before measuring/capturing keeps that deterministic.
+    if (document.fonts && document.fonts.ready) {
+      await document.fonts.ready;
+    }
+
+    // Pin the capture to the top of the container regardless of scroll
+    // position, and lock the render viewport to a fixed width so the
+    // layout never depends on the host browser's actual window size —
+    // otherwise a narrower window/zoom wraps text onto more lines,
+    // pushing content onto an extra page, while a wider window fits it
+    // on one.
     const canvas = await html2canvas(printRef.current, {
       scale: 2,
+      useCORS: true,
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: PDF_CAPTURE_WIDTH_PX,
+      windowHeight: printRef.current.scrollHeight,
       onclone: (clonedDoc) => {
+        // Force the print container itself to the same fixed width,
+        // overriding its responsive max-w-5xl/mx-auto behavior so it
+        // can't shrink to fit a narrower virtual viewport.
+        const clonedContainer = clonedDoc.querySelector(".print-document");
+        if (clonedContainer) {
+          clonedContainer.style.width = `${PDF_CAPTURE_WIDTH_PX}px`;
+          clonedContainer.style.maxWidth = `${PDF_CAPTURE_WIDTH_PX}px`;
+          clonedContainer.style.margin = "0";
+        }
+
         clonedDoc.querySelectorAll(".capture-hide").forEach((el) => {
           el.style.display = "none";
         });
+
+        // Force vertical centering, during capture only. Inline styles
+        // win over any class, so this is immune to how the browser
+        // happened to lay out the live page.
+        clonedDoc.querySelectorAll("table td, table th").forEach((el) => {
+          el.style.verticalAlign = "middle";
+          el.style.lineHeight = "1.6";
+        });
+
+        // PDF-only text sizing — bolder and bigger than the on-screen /
+        // native-print sizes, without touching either of those.
+        if (clonedContainer) {
+          clonedContainer.style.fontSize = "14px";
+        }
+
+        clonedDoc.querySelectorAll("table th").forEach((el) => {
+          el.style.fontSize = "16px";
+          el.style.fontWeight = "800";
+          el.style.padding = "6px 7px";
+        });
+
+        clonedDoc.querySelectorAll("table td").forEach((el) => {
+          el.style.fontSize = "15px";
+          el.style.fontWeight = "700";
+          el.style.padding = "5px 7px";
+        });
+
+        clonedDoc.querySelectorAll(".doc-title").forEach((el) => {
+          // The h2 below jumps from 14px to 28px, so the container needs
+          // real padding (not the on-screen py-1 = 4px) to fit the taller
+          // line without spilling into the hr above or the table below.
+          el.style.paddingTop = "10px";
+          el.style.paddingBottom = "10px";
+        });
+        clonedDoc.querySelectorAll(".doc-title h2").forEach((el) => {
+          el.style.fontSize = "28px"; // was 18px
+          el.style.fontWeight = "800";
+          el.style.letterSpacing = "4px";
+          el.style.color = "#000";
+          el.style.lineHeight = "1.4";
+          el.style.margin = "0";
+        });
+
+        // Lighten table borders for capture only. At `scale: 2`,
+        // html2canvas rasterizes a 1px `border-black` (#000) with enough
+        // anti-aliasing that it reads as noticeably bolder/heavier in the
+        // exported PNG than the same border does on screen or under
+        // native window.print(). Swapping to a mid-gray and collapsing
+        // borders (so adjacent cells don't double up their edges into an
+        // even thicker line) fixes this without touching how the page
+        // looks on screen or in the native Print flow.
+        clonedDoc.querySelectorAll("table").forEach((el) => {
+          el.style.borderCollapse = "collapse";
+        });
+        clonedDoc
+          .querySelectorAll("table, table td, table th, table tr")
+          .forEach((el) => {
+            el.style.borderColor = "#555555";
+          });
+
+        // After hiding capture-hide elements and normalizing cell
+        // alignment, layout has settled to match what will actually be
+        // drawn into the canvas. Record every row's top/bottom relative
+        // to the print container.
+        const container = clonedDoc.querySelector(".print-document");
+        if (container) {
+          const containerTop = container.getBoundingClientRect().top;
+          container.querySelectorAll("tr").forEach((tr) => {
+            const r = tr.getBoundingClientRect();
+            rowBoundaries.push({
+              top: r.top - containerTop,
+              bottom: r.bottom - containerTop,
+            });
+          });
+        }
       },
     });
-    const imgData = canvas.toDataURL("image/png");
 
     const pdf = new jsPDF("p", "mm", "a4");
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = (canvas.height * pageWidth) / canvas.width;
+    const pageWidthMM = pdf.internal.pageSize.getWidth();
+    const pageHeightMM = pdf.internal.pageSize.getHeight();
 
-    pdf.addImage(imgData, "PNG", 0, 0, pageWidth, pageHeight);
+    // Declared up front, before the pagination loop, since both the
+    // slice-height math and the addImage call depend on them.
+    const margin = 6;
+    const usableWidth = pageWidthMM - margin * 2;
+
+    const SCALE = 2; // must match the `scale` option passed to html2canvas above
+    const pxPerMM = canvas.width / pageWidthMM;
+    const pageHeightPx = pageHeightMM * pxPerMM;
+
+    const rowBottoms = rowBoundaries
+      .map((r) => r.bottom * SCALE)
+      .sort((a, b) => a - b);
+
+    let currentY = 0;
+    let pageIndex = 0;
+
+    while (currentY < canvas.height - 1) {
+      const idealEnd = Math.min(currentY + pageHeightPx, canvas.height);
+      let sliceEnd = idealEnd;
+
+      if (idealEnd < canvas.height) {
+        // Snap the break to the bottom of the last row that fully fits,
+        // so we never cut a row in half across a page boundary.
+        const safeBreak = rowBottoms
+          .filter((b) => b > currentY && b <= idealEnd)
+          .pop();
+        if (safeBreak) sliceEnd = safeBreak;
+      }
+
+      const sliceHeight = Math.round(sliceEnd - currentY);
+      if (sliceHeight <= 0) break;
+
+      const sliceCanvas = document.createElement("canvas");
+      sliceCanvas.width = canvas.width;
+      sliceCanvas.height = sliceHeight;
+      sliceCanvas
+        .getContext("2d")
+        .drawImage(
+          canvas,
+          0, currentY, canvas.width, sliceHeight,
+          0, 0, canvas.width, sliceHeight
+        );
+
+      const imgData = sliceCanvas.toDataURL("image/png");
+      const imgHeightMM = (sliceHeight * usableWidth) / canvas.width;
+
+      if (pageIndex > 0) pdf.addPage();
+
+      pdf.addImage(
+          imgData,
+          "PNG",
+          margin,
+          margin,
+          usableWidth,
+          imgHeightMM
+      );
+
+      currentY = sliceEnd;
+      pageIndex += 1;
+    }
+
     return pdf.output("blob");
   };
 
@@ -213,44 +391,52 @@ const ServiceInvoiceDetails = () => {
           <table className="w-full border border-black text-[10px] leading-[13px]">
             <tbody>
               <tr>
-                <td className="border border-black px-1 py-0.5 font-bold w-[10%]">REF:</td>
-                <td className="border border-black px-1 py-0.5" colSpan={2}>{field(invoice.invoice_number)}</td>
-                <td className="border border-black px-1 py-0.5 font-bold w-[10%]">Date:</td>
-                <td className="border border-black px-1 py-0.5">{new Date(invoice.created_at).toLocaleDateString()}</td>
+                <td className="border border-black px-1 py-0.5 font-bold w-[10%] align-middle">REF:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{field(invoice.invoice_number)}</td>
+                <td className="border border-black px-1 py-0.5 font-bold w-[10%] align-middle">Date:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">{new Date(invoice.created_at).toLocaleDateString()}</td>
               </tr>
               <tr>
-                <td className="border border-black px-1 py-0.5 font-bold">Bill To:</td>
-                <td className="border border-black px-1 py-0.5" colSpan={2}>{field(invoice.customer_name)}</td>
-                <td className="border border-black px-1 py-0.5 font-bold">KRA Pin:</td>
-                <td className="border border-black px-1 py-0.5">{field(invoice.customer_kra_pin)}</td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Bill To:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{field(invoice.customer_name)}</td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">KRA Pin:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">{field(invoice.customer_kra_pin)}</td>
+              </tr>
+              {invoice.driver_name && (
+                <tr>
+                  <td className="border border-black px-1 py-0.5 font-bold align-middle">Customer:</td>
+                  <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{invoice.driver_name}</td>
+                  <td className="border border-black px-1 py-0.5 font-bold align-middle">Phone:</td>
+                  <td className="border border-black px-1 py-0.5 align-middle">{field(invoice.driver_phone)}</td>
+                </tr>
+              )}
+              <tr>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Address:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{field(invoice.customer_address)}</td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Reg No:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">{field(invoice.registration_number)}</td>
               </tr>
               <tr>
-                <td className="border border-black px-1 py-0.5 font-bold">Address:</td>
-                <td className="border border-black px-1 py-0.5" colSpan={2}>{field(invoice.customer_address)}</td>
-                <td className="border border-black px-1 py-0.5 font-bold">Reg No:</td>
-                <td className="border border-black px-1 py-0.5">{field(invoice.registration_number)}</td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Mobile:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{field(invoice.customer_phone)}</td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Model:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">{field(invoice.vehicle_make)} {field(invoice.vehicle_model)}</td>
               </tr>
               <tr>
-                <td className="border border-black px-1 py-0.5 font-bold">Mobile:</td>
-                <td className="border border-black px-1 py-0.5" colSpan={2}>{field(invoice.customer_phone)}</td>
-                <td className="border border-black px-1 py-0.5 font-bold">Model:</td>
-                <td className="border border-black px-1 py-0.5">{field(invoice.vehicle_make)} {field(invoice.vehicle_model)}</td>
-              </tr>
-              <tr>
-                <td className="border border-black px-1 py-0.5 font-bold">Status:</td>
-                <td className="border border-black px-1 py-0.5" colSpan={2}>{invoice.status}</td>
-                <td className="border border-black px-1 py-0.5 font-bold">Vin No:</td>
-                <td className="border border-black px-1 py-0.5">{field(invoice.vin_no)}</td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Status:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{invoice.status}</td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Vin No:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">{field(invoice.vin_no)}</td>
               </tr>
               <tr>
                 <td className="border border-black px-1 py-0.5" colSpan={3}></td>
-                <td className="border border-black px-1 py-0.5 font-bold">Engine:</td>
-                <td className="border border-black px-1 py-0.5">{field(invoice.engine_number)}</td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Engine:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">{field(invoice.engine_number)}</td>
               </tr>
               <tr>
                 <td className="border border-black px-1 py-0.5" colSpan={3}></td>
-                <td className="border border-black px-1 py-0.5 font-bold">Mileage:</td>
-                <td className="border border-black px-1 py-0.5">
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Mileage:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">
                   {invoice.mileage === null || invoice.mileage === undefined || invoice.mileage === ""
                     ? "N/A"
                     : formatNumber(invoice.mileage)}
@@ -259,8 +445,11 @@ const ServiceInvoiceDetails = () => {
             </tbody>
           </table>
 
-          {/* ACTIONS */}
-          <div className="flex justify-end gap-3 my-3 print:hidden flex-wrap">
+          {/* ACTIONS — on-screen only. print:hidden keeps it out of the
+              native browser Print, and capture-hide (stripped in the
+              html2canvas onclone above) keeps it out of Download PDF /
+              Share too. */}
+          <div className="flex justify-end gap-3 my-3 print:hidden capture-hide flex-wrap">
 
             {invoice.status!=="paid" && (
             <>
@@ -305,8 +494,12 @@ const ServiceInvoiceDetails = () => {
           </div>
 
           {/* ITEMS — Discount gets its own column, same as the estimate,
-              so a converted estimate looks like the same document family. */}
-          <table className="w-full border border-black text-[9px] leading-tight mt-2">
+              so a converted estimate looks like the same document family.
+              Cells switched from align-top to align-middle so text sits
+              centered in each row (matches ServiceEstimateDetails) rather
+              than crowding the bottom border once the PDF font is bumped
+              up in the onclone override above. */}
+          <table className="w-full border border-black text-[10px] leading-normal mt-2">
             <colgroup>
               <col className="w-[34%]" />
               <col className="w-[12%]" />
@@ -317,12 +510,12 @@ const ServiceInvoiceDetails = () => {
             </colgroup>
             <thead className="bg-gray-100">
               <tr>
-                <th className="p-0.5 text-left border border-black">Description</th>
-                <th className="p-0.5 text-left border border-black">Type</th>
-                <th className="p-0.5 border border-black">Qty</th>
-                <th className="p-0.5 border border-black">Price (KES)</th>
-                <th className="p-0.5 border border-black">Discount (KES)</th>
-                <th className="p-0.5 border border-black">Total (KES)</th>
+                <th className="p-1 text-left border border-black align-middle">Description</th>
+                <th className="p-1 text-left border border-black align-middle">Type</th>
+                <th className="p-1 border border-black align-middle">Qty</th>
+                <th className="p-1 border border-black align-middle">Price (KES)</th>
+                <th className="p-1 border border-black align-middle">Discount (KES)</th>
+                <th className="p-1 border border-black align-middle">Total (KES)</th>
               </tr>
             </thead>
             <tbody>
@@ -330,21 +523,21 @@ const ServiceInvoiceDetails = () => {
                 const discount = lineDiscount(item);
                 return (
                 <tr key={item.id}>
-                  <td className="p-0.5 border border-black align-top">
+                  <td className="p-1 border border-black align-middle">
                     {item.description}
                     {item.customer_supplied &&
                       <span className="italic text-gray-500 ml-1">(customer supplied)</span>
                     }
                   </td>
-                  <td className="p-0.5 border border-black align-top">{item.item_type}</td>
-                  <td className="p-0.5 border border-black text-center align-top">{item.quantity}</td>
-                  <td className="p-0.5 border border-black text-right align-top">
+                  <td className="p-1 border border-black align-middle">{item.item_type}</td>
+                  <td className="p-1 border border-black text-center align-middle">{item.quantity}</td>
+                  <td className="p-1 border border-black text-right align-middle">
                     {item.customer_supplied ? "-" : formatMoney(item.unit_price)}
                   </td>
-                  <td className="p-0.5 border border-black text-right align-top">
+                  <td className="p-1 border border-black text-right align-middle">
                     {item.customer_supplied ? "-" : (discount > 0 ? formatMoney(discount) : "-")}
                   </td>
-                  <td className="p-0.5 border border-black align-top text-right font-bold">
+                  <td className="p-1 border border-black align-middle text-right font-bold">
                     {item.customer_supplied ? "-" : formatMoney(item.total_price)}
                   </td>
                 </tr>
@@ -358,11 +551,11 @@ const ServiceInvoiceDetails = () => {
                   "-" when there's none), and Total lands in the same column
                   as invoice.subtotal further down. */}
               <tr className="bg-gray-100 font-bold">
-                <td colSpan={2} className="p-0.5 border border-black text-right">Totals</td>
-                <td className="p-0.5 border border-black text-center">{formatNumber(totalQty)}</td>
-                <td className="p-0.5 border border-black text-right">{formatMoney(Number(invoice.subtotal) + totalDiscount)}</td>
-                <td className="p-0.5 border border-black text-right">{totalDiscount > 0 ? formatMoney(totalDiscount) : "-"}</td>
-                <td className="p-0.5 border border-black text-right">{formatMoney(invoice.subtotal)}</td>
+                <td colSpan={2} className="p-1 border border-black text-right align-middle">Totals</td>
+                <td className="p-1 border border-black text-center align-middle">{formatNumber(totalQty)}</td>
+                <td className="p-1 border border-black text-right align-middle">{formatMoney(Number(invoice.subtotal) + totalDiscount)}</td>
+                <td className="p-1 border border-black text-right align-middle">{totalDiscount > 0 ? formatMoney(totalDiscount) : "-"}</td>
+                <td className="p-1 border border-black text-right align-middle">{formatMoney(invoice.subtotal)}</td>
               </tr>
             </tbody>
           </table>
@@ -373,13 +566,13 @@ const ServiceInvoiceDetails = () => {
             <table className="border border-black w-[55%]">
               <tbody>
                 <tr>
-                  <td className="border border-black px-1 py-0.5 font-bold" colSpan={2}>Payment To:</td>
+                  <td className="border border-black px-1 py-0.5 font-bold align-middle" colSpan={2}>Payment To:</td>
                 </tr>
-                <tr><td className="border border-black px-1 py-0.5" colSpan={2}>NCBA Bank, Nakuru Branch</td></tr>
-                <tr><td className="border border-black px-1 py-0.5" colSpan={2}>A/C Name: Rift Motors Ltd</td></tr>
-                <tr><td className="border border-black px-1 py-0.5" colSpan={2}>A/C No: 3364820034, or through</td></tr>
-                <tr><td className="border border-black px-1 py-0.5" colSpan={2}>Mpesa Paybill No: 532602</td></tr>
-                <tr><td className="border border-black px-1 py-0.5" colSpan={2}>A/C No: RIFT MOTORS</td></tr>
+                <tr><td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>NCBA Bank, Nakuru Branch</td></tr>
+                <tr><td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>A/C Name: Rift Motors Ltd</td></tr>
+                <tr><td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>A/C No: 3364820034, or through</td></tr>
+                <tr><td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>Mpesa Paybill No: 532602</td></tr>
+                <tr><td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>A/C No: RIFT MOTORS</td></tr>
               </tbody>
             </table>
 
@@ -388,26 +581,26 @@ const ServiceInvoiceDetails = () => {
                 {totalDiscount > 0 && (
                   <>
                     <tr>
-                      <td className="border border-black px-1 py-0.5">Total</td>
-                      <td className="border border-black px-1 py-0.5 text-right">{formatMoney(Number(invoice.subtotal) + totalDiscount)}</td>
+                      <td className="border border-black px-1 py-0.5 align-middle">Total</td>
+                      <td className="border border-black px-1 py-0.5 text-right align-middle">{formatMoney(Number(invoice.subtotal) + totalDiscount)}</td>
                     </tr>
                     <tr>
-                      <td className="border border-black px-1 py-0.5">Discount</td>
-                      <td className="border border-black px-1 py-0.5 text-right">-{formatMoney(totalDiscount)}</td>
+                      <td className="border border-black px-1 py-0.5 align-middle">Discount</td>
+                      <td className="border border-black px-1 py-0.5 text-right align-middle">-{formatMoney(totalDiscount)}</td>
                     </tr>
                   </>
                 )}
                 <tr>
-                  <td className="border border-black px-1 py-0.5">Sub Total</td>
-                  <td className="border border-black px-1 py-0.5 text-right">{formatMoney(invoice.subtotal)}</td>
+                  <td className="border border-black px-1 py-0.5 align-middle">Sub Total</td>
+                  <td className="border border-black px-1 py-0.5 text-right align-middle">{formatMoney(invoice.subtotal)}</td>
                 </tr>
                 <tr>
-                  <td className="border border-black px-1 py-0.5">Vat ({invoice.tax_rate}%)</td>
-                  <td className="border border-black px-1 py-0.5 text-right">{formatMoney(invoice.tax_amount)}</td>
+                  <td className="border border-black px-1 py-0.5 align-middle">Vat ({invoice.tax_rate}%)</td>
+                  <td className="border border-black px-1 py-0.5 text-right align-middle">{formatMoney(invoice.tax_amount)}</td>
                 </tr>
                 <tr>
-                  <td className="border border-black px-1 py-0.5 font-bold">Total Amount</td>
-                  <td className="border border-black px-1 py-0.5 text-right font-bold">{formatMoney(invoice.total)}</td>
+                  <td className="border border-black px-1 py-0.5 font-bold align-middle">Total Amount</td>
+                  <td className="border border-black px-1 py-0.5 text-right font-bold align-middle">{formatMoney(invoice.total)}</td>
                 </tr>
               </tbody>
             </table>

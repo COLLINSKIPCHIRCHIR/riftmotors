@@ -447,6 +447,14 @@ const ServiceEstimateDetails =()=>{
                 <td className="border border-black px-1 py-0.5 font-bold align-middle">KRA Pin:</td>
                 <td className="border border-black px-1 py-0.5 align-middle">{field(estimate.customer_kra_pin)}</td>
               </tr>
+              {estimate.driver_name && (
+                <tr>
+                  <td className="border border-black px-1 py-0.5 font-bold align-middle">Customer:</td>
+                  <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{estimate.driver_name}</td>
+                  <td className="border border-black px-1 py-0.5 font-bold align-middle">Phone:</td>
+                  <td className="border border-black px-1 py-0.5 align-middle">{field(estimate.driver_phone)}</td>
+                </tr>
+              )}
               <tr>
                 <td className="border border-black px-1 py-0.5 font-bold align-middle">Address:</td>
                 <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{field(estimate.customer_address)}</td>
