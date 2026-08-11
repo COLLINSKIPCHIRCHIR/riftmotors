@@ -320,6 +320,12 @@ const ServiceInvoiceDetails = () => {
     0
   );
 
+  // Whether any discount has actually been applied. Drives whether the
+  // Discount column shows up at all in print/PDF/Share output — mirrors
+  // ServiceEstimateDetails so a converted estimate keeps the same
+  // behaviour post-conversion. On screen the column always stays visible.
+  const hasDiscount = totalDiscount > 0;
+
   // Sum of every line's quantity — feeds the Qty column in the items-table
   // totals row so the invoice is self-explanatory without cross-checking
   // the summary box further down the page.
@@ -397,14 +403,21 @@ const ServiceInvoiceDetails = () => {
                 <td className="border border-black px-1 py-0.5 align-middle">{new Date(invoice.created_at).toLocaleDateString()}</td>
               </tr>
               <tr>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Customer:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={4}>
+                  {field(invoice.customer_name)}
+                </td>
+              </tr>
+
+              <tr>
                 <td className="border border-black px-1 py-0.5 font-bold align-middle">Bill To:</td>
-                <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{field(invoice.customer_name)}</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{field(invoice.bill_to_name || invoice.customer_name)}</td>
                 <td className="border border-black px-1 py-0.5 font-bold align-middle">KRA Pin:</td>
-                <td className="border border-black px-1 py-0.5 align-middle">{field(invoice.customer_kra_pin)}</td>
+                <td className="border border-black px-1 py-0.5 align-middle">{field(invoice.bill_to_kra_pin || invoice.customer_kra_pin)}</td>
               </tr>
               {invoice.driver_name && (
                 <tr>
-                  <td className="border border-black px-1 py-0.5 font-bold align-middle">Customer:</td>
+                  <td className="border border-black px-1 py-0.5 font-bold align-middle">Contact Person:</td>
                   <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{invoice.driver_name}</td>
                   <td className="border border-black px-1 py-0.5 font-bold align-middle">Phone:</td>
                   <td className="border border-black px-1 py-0.5 align-middle">{field(invoice.driver_phone)}</td>
@@ -493,19 +506,24 @@ const ServiceInvoiceDetails = () => {
             >Share</button>
           </div>
 
-          {/* ITEMS — Discount gets its own column, same as the estimate,
-              so a converted estimate looks like the same document family.
-              Cells switched from align-top to align-middle so text sits
-              centered in each row (matches ServiceEstimateDetails) rather
-              than crowding the bottom border once the PDF font is bumped
-              up in the onclone override above. */}
+          {/* ITEMS — Discount has its own column so the Total column stays
+              a single clean number. The whole Discount column (colgroup
+              entry, header, and each cell) is conditionally hidden — via
+              print:hidden + capture-hide, driven by `hasDiscount` — in
+              print/PDF/Share when no discount was applied to anything on
+              the invoice; on screen it always stays visible, matching
+              ServiceEstimateDetails's behaviour exactly (including after
+              an estimate with no discount is converted into an invoice).
+              Cells use align-middle so text sits centered in each row
+              rather than crowding the bottom border once the PDF font is
+              bumped up in the onclone override above. */}
           <table className="w-full border border-black text-[10px] leading-normal mt-2">
             <colgroup>
               <col className="w-[34%]" />
               <col className="w-[12%]" />
               <col className="w-[8%]" />
               <col className="w-[15%]" />
-              <col className="w-[15%]" />
+              <col className={`w-[15%] ${hasDiscount ? "" : "print:hidden capture-hide"}`} />
               <col className="w-[16%]" />
             </colgroup>
             <thead className="bg-gray-100">
@@ -514,7 +532,9 @@ const ServiceInvoiceDetails = () => {
                 <th className="p-1 text-left border border-black align-middle">Type</th>
                 <th className="p-1 border border-black align-middle">Qty</th>
                 <th className="p-1 border border-black align-middle">Price (KES)</th>
-                <th className="p-1 border border-black align-middle">Discount (KES)</th>
+                <th className={`p-1 border border-black align-middle ${hasDiscount ? "" : "print:hidden capture-hide"}`}>
+                  Discount (KES)
+                </th>
                 <th className="p-1 border border-black align-middle">Total (KES)</th>
               </tr>
             </thead>
@@ -534,7 +554,7 @@ const ServiceInvoiceDetails = () => {
                   <td className="p-1 border border-black text-right align-middle">
                     {item.customer_supplied ? "-" : formatMoney(item.unit_price)}
                   </td>
-                  <td className="p-1 border border-black text-right align-middle">
+                  <td className={`p-1 border border-black text-right align-middle ${hasDiscount ? "" : "print:hidden capture-hide"}`}>
                     {item.customer_supplied ? "-" : (discount > 0 ? formatMoney(discount) : "-")}
                   </td>
                   <td className="p-1 border border-black align-middle text-right font-bold">
@@ -547,14 +567,17 @@ const ServiceInvoiceDetails = () => {
                   Discount / Total columns as the line items above, so the
                   invoice is self-explanatory on its own: Qty column sums
                   every line's quantity, Price column shows the pre-discount
-                  items total, Discount column shows what was taken off (or
-                  "-" when there's none), and Total lands in the same column
-                  as invoice.subtotal further down. */}
+                  items total, Discount column shows what was taken off
+                  (hidden entirely in print/PDF/Share when nothing was
+                  discounted, same as the estimate), and Total lands in the
+                  same column as invoice.subtotal further down. */}
               <tr className="bg-gray-100 font-bold">
                 <td colSpan={2} className="p-1 border border-black text-right align-middle">Totals</td>
                 <td className="p-1 border border-black text-center align-middle">{formatNumber(totalQty)}</td>
                 <td className="p-1 border border-black text-right align-middle">{formatMoney(Number(invoice.subtotal) + totalDiscount)}</td>
-                <td className="p-1 border border-black text-right align-middle">{totalDiscount > 0 ? formatMoney(totalDiscount) : "-"}</td>
+                <td className={`p-1 border border-black text-right align-middle ${hasDiscount ? "" : "print:hidden capture-hide"}`}>
+                  {formatMoney(totalDiscount)}
+                </td>
                 <td className="p-1 border border-black text-right align-middle">{formatMoney(invoice.subtotal)}</td>
               </tr>
             </tbody>

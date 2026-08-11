@@ -27,16 +27,15 @@ const [saving,setSaving]=useState(false);
 
 
 const [form,setForm]=useState({
-
-job_number:"",
-vehicle_id:"",
-driver_name:"",
-driver_phone:"",
-complaint:"",
-notes:""
-
+  job_number:"",
+  vehicle_id:"",
+  driver_name:"",
+  driver_phone:"",
+  bill_to_name:"",
+  bill_to_kra_pin:"",
+  complaint:"",
+  notes:""
 });
-
 
 
 
@@ -140,38 +139,17 @@ try{
 
 
 const data={
-
-
-job_number:
-form.job_number.trim(),
-
-
-customer_id:
-vehicles.find(v=>v.id==form.vehicle_id)?.customer_id,
-
-
-vehicle_id:
-form.vehicle_id,
-
-driver_name: form.driver_name.trim() || null,
-driver_phone: form.driver_phone.trim() || null,
-
-
-complaint:
-form.complaint,
-
-
-notes:
-form.notes,
-
-
-status:"Pending",
-
-
-created_by:
-1
-
-
+  job_number: form.job_number.trim(),
+  customer_id: vehicles.find(v=>v.id==form.vehicle_id)?.customer_id,
+  vehicle_id: form.vehicle_id,
+  driver_name: form.driver_name.trim() || null,
+  driver_phone: form.driver_phone.trim() || null,
+  bill_to_name: form.bill_to_name.trim() || null,
+  bill_to_kra_pin: form.bill_to_kra_pin.trim() || null,
+  complaint: form.complaint,
+  notes: form.notes,
+  status:"Pending",
+  created_by: 1
 };
 
 
@@ -185,14 +163,14 @@ setShowModal(false);
 
 
 setForm({
-
-job_number:"",
-vehicle_id:"",
-driver_name:"",
-driver_phone:"",
-complaint:"",
-notes:""
-
+  job_number:"",
+  vehicle_id:"",
+  driver_name:"",
+  driver_phone:"",
+  bill_to_name:"",
+  bill_to_kra_pin:"",
+  complaint:"",
+  notes:""
 });
 
 
@@ -473,14 +451,16 @@ z-50
 
 
 <div
-className="
-bg-white
-w-full
-max-w-lg
-rounded-xl
-p-6
-shadow-xl
-"
+  className="
+  bg-white
+  w-full
+  max-w-lg
+  rounded-xl
+  p-6
+  shadow-xl
+  max-h-[90vh]
+  overflow-y-auto
+  "
 >
 
 
@@ -615,6 +595,30 @@ value={v.id}
   className="w-full border rounded-lg p-2 mb-4"
 />
 
+
+<label className="text-sm">
+  Bill To (only if someone else is paying — e.g. a company or department)
+</label>
+<input
+  type="text"
+  name="bill_to_name"
+  value={form.bill_to_name}
+  onChange={handleChange}
+  placeholder="e.g. National Police Service HQ"
+  className="w-full border rounded-lg p-2 mb-4"
+/>
+
+<label className="text-sm">
+  Bill To KRA Pin
+</label>
+<input
+  type="text"
+  name="bill_to_kra_pin"
+  value={form.bill_to_kra_pin}
+  onChange={handleChange}
+  placeholder="e.g. P051234567X"
+  className="w-full border rounded-lg p-2 mb-4"
+/>
 
 
 

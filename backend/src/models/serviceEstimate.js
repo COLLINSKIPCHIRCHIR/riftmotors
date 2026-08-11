@@ -143,15 +143,18 @@ export const createServiceEstimate = async (
     const jobResult = await client.query(
   `
   SELECT
-  sj.id,
-  sj.job_number,
-  sj.driver_name,
-  sj.driver_phone,
-  c.name AS customer_name,
-  c.phone AS customer_phone
-  FROM service_jobs sj
-  LEFT JOIN customers c ON sj.customer_id = c.id
-  WHERE sj.id=$1
+sj.id,
+sj.job_number,
+sj.driver_name,
+sj.driver_phone,
+sj.bill_to_name,
+sj.bill_to_kra_pin,
+c.name AS customer_name,
+c.phone AS customer_phone,
+c.kra_pin AS customer_kra_pin
+FROM service_jobs sj
+LEFT JOIN customers c ON sj.customer_id = c.id
+WHERE sj.id=$1
   `,
   [job_id]
 );
@@ -166,6 +169,9 @@ export const createServiceEstimate = async (
 
 
     const job = jobResult.rows[0];
+
+    const billToName = job.bill_to_name || job.customer_name;
+    const billToKraPin = job.bill_to_kra_pin || job.customer_kra_pin;
 
     // Estimate number always mirrors the job number so the two documents
     // are traceable at a glance (JOB-000123 -> EST-000123). If this job
@@ -297,27 +303,25 @@ const parts = await client.query(
     const estimate = await client.query(
   `
   INSERT INTO service_estimates
-
-  (
-  job_id,
-  estimate_number,
-  customer_name,
-  customer_phone,
-  driver_name,
-  driver_phone,
-  subtotal,
-  discount_type,
-  discount,
-  tax_rate,
-  tax_amount,
-  total,
-  status
-
-  )
-
-  VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'pending')
-
-  RETURNING *
+(
+job_id,
+estimate_number,
+customer_name,
+customer_phone,
+driver_name,
+driver_phone,
+bill_to_name,
+bill_to_kra_pin,
+subtotal,
+discount_type,
+discount,
+tax_rate,
+tax_amount,
+total,
+status
+)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'pending')
+RETURNING *
   `,
 
   [
@@ -327,6 +331,8 @@ const parts = await client.query(
     job.customer_phone,
     job.driver_name,
     job.driver_phone,
+    billToName,
+    billToKraPin,
     subtotal,
     discount_type,
     discount,
