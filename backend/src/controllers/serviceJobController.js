@@ -2,7 +2,8 @@ import {
 createServiceJob,
 getServiceJobs,
 getServiceJobById,
-getDailyJobReport
+getDailyJobReport,
+updateServiceJob
 } from "../models/serviceJob.js";
 
 
@@ -130,6 +131,33 @@ export const fetchDailyJobReport = async (req, res) => {
 
     res.status(500).json({
       message: "Failed fetching daily job report"
+    });
+
+  }
+
+};
+
+
+export const editServiceJob = async (req, res) => {
+
+  try {
+
+    const job = await updateServiceJob(req.params.id, req.body);
+
+    if (!job) {
+      return res.status(400).json({
+        message: "No valid fields to update"
+      });
+    }
+
+    res.json(job);
+
+  } catch (error) {
+
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed updating job"
     });
 
   }

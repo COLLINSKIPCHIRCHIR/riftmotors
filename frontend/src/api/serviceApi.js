@@ -17,6 +17,9 @@ export const createServiceJob = (data)=>
 export const getDailyJobReport = (from, to) =>
   API.get(`/service-jobs/reports/daily?from=${from}&to=${to}`);
 
+export const updateServiceJob = (id, data) =>
+ API.put(`/service-jobs/${id}`, data);
+
 
 
 // CUSTOMER VEHICLES

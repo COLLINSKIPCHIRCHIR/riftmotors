@@ -4,7 +4,8 @@ import {
   addServiceJob,
   fetchServiceJobs,
   fetchServiceJobById,
-  fetchDailyJobReport
+  fetchDailyJobReport,
+  editServiceJob
 } from "../controllers/serviceJobController.js";
 
 const router = express.Router();
@@ -16,5 +17,7 @@ router.get("/", fetchServiceJobs);
 router.get("/reports/daily", fetchDailyJobReport);
 
 router.get("/:id", fetchServiceJobById);
+
+router.put("/:id", editServiceJob);
 
 export default router;

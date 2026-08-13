@@ -17,6 +17,7 @@ import {
 setJobServiceCompletion,
 updateJobService,
   updateJobPart,
+  updateServiceJob,
 
 } from "../../api/serviceApi";
 
@@ -704,6 +705,10 @@ err.response?.data?.message ||
 
 
 
+
+
+
+
 const startEditService = (service) => {
   if (isCompleted) return;
   setEditingServiceId(service.id);
@@ -860,6 +865,28 @@ setPartPriceError("");
 }
 
 }
+
+
+
+const handleUpdateComplaint = async (text) => {
+
+  if (isCompleted || text === job.complaint) return;
+
+  try {
+
+    const res = await updateServiceJob(id, { complaint: text });
+
+    setJob(res.data);
+
+  } catch (err) {
+
+    console.log(err);
+
+    alert(err.response?.data?.message || "Failed updating complaint");
+
+  }
+
+};
 
 
 // Switching between inventory/customer/custom clears out whatever was
@@ -2095,11 +2122,14 @@ Type of Work / Complaint
 
 
 
-<p className="whitespace-pre-wrap">
-
-{job.complaint || "No complaint"}
-
-</p>
+<div
+  contentEditable={!isCompleted}
+  suppressContentEditableWarning
+  onBlur={(e) => handleUpdateComplaint(e.currentTarget.textContent)}
+  className="whitespace-pre-wrap p-2 rounded-lg border border-slate-300 text-sm min-h-[40px]"
+>
+  {job.complaint || ""}
+</div>
 
 
 

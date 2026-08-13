@@ -210,3 +210,42 @@ export const getDailyJobReport = async (from, to) => {
 
   return result.rows;
 };
+
+
+export const updateServiceJob = async (id, data) => {
+
+  const allowedFields = [
+    "complaint",
+    "diagnosis",
+    "notes",
+    "driver_name",
+    "driver_phone",
+    "bill_to_name",
+    "bill_to_kra_pin"
+  ];
+
+  const fields = Object.keys(data).filter(key => allowedFields.includes(key));
+
+  if (fields.length === 0) {
+    return null;
+  }
+
+  const setClause = fields
+    .map((field, i) => `${field} = $${i + 1}`)
+    .join(", ");
+
+  const values = fields.map(field => data[field]);
+
+  const result = await pool.query(
+    `
+    UPDATE service_jobs
+    SET ${setClause}
+    WHERE id = $${fields.length + 1}
+    RETURNING *
+    `,
+    [...values, id]
+  );
+
+  return result.rows[0];
+
+};
