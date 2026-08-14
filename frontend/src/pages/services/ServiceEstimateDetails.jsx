@@ -551,8 +551,7 @@ const ServiceEstimateDetails =()=>{
               each row rather than crowding the bottom border. */}
           <table className="w-full border border-black text-[10px] leading-normal mt-2">
             <colgroup>
-              <col className="w-[34%]" />
-              <col className="w-[12%]" />
+              <col className="w-[46%]" />
               <col className="w-[8%]" />
               <col className="w-[15%]" />
               <col className={`w-[15%] ${hasDiscount ? "" : "print:hidden capture-hide"}`} />
@@ -561,7 +560,6 @@ const ServiceEstimateDetails =()=>{
             <thead className="bg-gray-100">
               <tr>
                 <th className="p-1 text-left border border-black align-middle">Description</th>
-                <th className="p-1 text-left border border-black align-middle">Type</th>
                 <th className="p-1 border border-black align-middle">Qty</th>
                 <th className="p-1 border border-black align-middle">Price (KES)</th>
                 <th className={`p-1 border border-black align-middle ${hasDiscount ? "" : "print:hidden capture-hide"}`}>
@@ -582,7 +580,6 @@ const ServiceEstimateDetails =()=>{
                       <span className="italic text-gray-500 ml-1">(customer supplied)</span>
                     }
                   </td>
-                  <td className="p-1 border border-black align-middle">{item.item_type}</td>
                   <td className="p-1 border border-black text-center align-middle">{item.quantity}</td>
                   <td className="p-1 border border-black text-right align-middle">
                     {item.customer_supplied ? "-" : formatMoney(item.unit_price)}
@@ -678,7 +675,7 @@ const ServiceEstimateDetails =()=>{
                   discounted), and Total lands in the same column as
                   estimate.subtotal further down. */}
               <tr className="bg-gray-100 font-bold">
-                <td colSpan={2} className="p-1 border border-black text-right align-middle">Totals</td>
+                <td className="p-1 border border-black text-right align-middle">Totals</td>
                 <td className="p-1 border border-black text-center align-middle">{formatNumber(totalQty)}</td>
                 <td className="p-1 border border-black text-right align-middle">{formatMoney(Number(estimate.subtotal) + totalDiscount)}</td>
                 <td className={`p-1 border border-black text-right align-middle ${hasDiscount ? "" : "print:hidden capture-hide"}`}>

@@ -44,7 +44,6 @@ return insertResult.rows[0];
 
 export const getServiceJobs = async()=>{
 
-
 const result = await pool.query(`
 
 SELECT 
@@ -71,7 +70,16 @@ JOIN customer_vehicles cv
 ON sj.vehicle_id = cv.id
 
 
-ORDER BY sj.created_at DESC
+ORDER BY
+
+CASE WHEN sj.job_number ~ '^[0-9]+' THEN 0 ELSE 1 END,
+
+CASE WHEN sj.job_number ~ '^[0-9]+'
+     THEN substring(sj.job_number from '^[0-9]+')::bigint
+     ELSE NULL
+END DESC NULLS LAST,
+
+sj.job_number DESC
 
 `);
 
