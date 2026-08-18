@@ -34,6 +34,10 @@ import Suppliers from "./pages/spareparts/Suppliers";
 import StockHistory from "./pages/spareparts/StockHistory";
 import CreatePurchase from "./pages/spareparts/CreatePurchase";
 import EditSparePart from "./pages/spareparts/EditSparePart";
+import PurchaseList from "./pages/spareparts/PurchaseList";
+import PurchaseDetails from "./pages/spareparts/PurchaseDetails";
+import ReceiveGoods from "./pages/spareparts/ReceiveGoods";
+
 
 import ServiceDashboard from "./pages/services/ServiceDashboard";
 import ServiceJobs from "./pages/services/ServiceJobs";
@@ -56,7 +60,7 @@ import Users from "./pages/admin/Users";
 import CustomersList from "./pages/customers/CustomersList";
 import AddCustomer from "./pages/customers/AddCustomer";
 
-/*
+
 import Departments from "./pages/hr/departments/Departments";
 import Branches from "./pages/hr/branches/Branches";
 import Employees from "./pages/hr/employees/Employees";
@@ -72,11 +76,15 @@ import DeductionRateVersions from "./pages/hr/deduction-rate-versions/DeductionR
 import PayeTaxBands from "./pages/hr/paye-tax-bands/PayeTaxBands";
 import PayePersonalRelief from "./pages/hr/paye-personal-relief/PayePersonalRelief";
 import EmployeeRecurringDeductions from "./pages/hr/recurring-deductions/EmployeeRecurringDeductions";
-import PayrollPeriods from "./pages/hr/payroll-periods/PayrollPeriods";
 import Payslips from "./pages/hr/payslips/Payslips";
 import PayslipEarnings from "./pages/hr/payslip-earnings/PayslipEarnings";
 import PayslipDeductions from "./pages/hr/payslip-deductions/PayslipDeductions";
-*/
+import PayrollPeriods from "./pages/hr/payroll/PayrollPeriods";
+import PayrollRun from "./pages/hr/payroll/PayrollRun";
+import PayslipsList from "./pages/hr/payroll/PayslipsList";
+import PayslipDetail from "./pages/hr/payroll/PayslipDetail";
+
+
 
 
 function App() {
@@ -136,6 +144,10 @@ function App() {
           <Route path="spare-parts/invoices/:id" element={<RequirePermission permission="spareparts.invoices"><InvoiceDetails /></RequirePermission>} />
           <Route path="spare-parts/receipts" element={<RequirePermission permission="spareparts.receipts"><SpareReceipts /></RequirePermission>} />
           <Route path="spare-parts/receipts/:id" element={<RequirePermission permission="spareparts.receipts"><ViewReceipt /></RequirePermission>} />
+          <Route path="spare-parts/purchases" element={<RequirePermission permission="spareparts.purchase"><PurchaseList /></RequirePermission>} />
+          <Route path="spare-parts/purchases/create" element={<RequirePermission permission="spareparts.purchase"><CreatePurchase /></RequirePermission>} />
+          <Route path="spare-parts/purchases/:id" element={<RequirePermission permission="spareparts.purchase"><PurchaseDetails /></RequirePermission>} />
+          <Route path="spare-parts/purchases/:id/receive" element={<RequirePermission permission="spareparts.purchase"><ReceiveGoods /></RequirePermission>} />
 
           {/* ✅ Services */}
           <Route path="services" element={<RequirePermission permission="services.view"><ServiceDashboard /></RequirePermission>} />
@@ -154,7 +166,7 @@ function App() {
           <Route path="services/receipts/:id" element={<RequirePermission permission="services.receipts"><ServiceReceiptDetails /></RequirePermission>} />
           <Route path="services/reports/daily" element={<RequirePermission permission="services.jobs"><DailyJobReport /></RequirePermission>} />
           
-          {/*<Route
+          <Route
               path="hr/departments"
               element={<Departments />}
           />
@@ -220,12 +232,6 @@ function App() {
               path="hr/recurring-deductions"
               element={<EmployeeRecurringDeductions />}
           />
-
-          <Route
-              path="hr/payroll-periods"
-              element={<PayrollPeriods />}
-          />
-
           <Route
               path="hr/payslips"
               element={<Payslips />}
@@ -239,7 +245,12 @@ function App() {
           <Route
               path="/admin/hr/payslip-deductions"
               element={<PayslipDeductions />}
-          />*/}
+          />
+
+          <Route path="hr/payroll-periods" element={<PayrollPeriods />} />
+          <Route path="hr/payroll/:id" element={<PayrollRun />} />
+          <Route path="hr/payslips" element={<PayslipsList />} />
+          <Route path="hr/payslips/:id" element={<PayslipDetail />} />
 
 
           {/* ✅ Administration */}

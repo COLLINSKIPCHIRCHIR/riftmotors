@@ -96,3 +96,108 @@ ALTER TABLE service_receipt_items
   ALTER TABLE spare_invoice_items ALTER COLUMN quantity TYPE NUMERIC(10,2) USING quantity::numeric(10,2);
 
   ALTER TABLE spare_estimate_items ALTER COLUMN quantity TYPE NUMERIC(10,2) USING quantity::numeric(10,2);
+
+
+
+  ///////////////////////////////
+  ALTER TABLE job_services ADD COLUMN created_at TIMESTAMP DEFAULT NOW();
+ALTER TABLE job_parts ADD COLUMN created_at TIMESTAMP DEFAULT NOW();
+
+
+///////////////////////////////
+ALTER TABLE job_parts
+  ALTER COLUMN sparepart_id DROP NOT NULL,
+  ADD COLUMN customer_supplied BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN part_name VARCHAR(255);
+
+ALTER TABLE job_parts
+  ADD CONSTRAINT job_parts_source_check CHECK (
+    (customer_supplied = false AND sparepart_id IS NOT NULL AND part_name IS NULL)
+    OR
+    (customer_supplied = true  AND sparepart_id IS NULL     AND part_name IS NOT NULL)
+  );
+
+ALTER TABLE service_estimate_items
+  ADD COLUMN customer_supplied BOOLEAN NOT NULL DEFAULT false;
+
+  ALTER TABLE service_invoice_items
+  ADD COLUMN customer_supplied BOOLEAN NOT NULL DEFAULT false;
+
+///////////////////////////////////////////////////////////////7,31,2026
+  -- parts: allow a manual entry that still carries a price
+ALTER TABLE job_parts
+  ADD COLUMN part_number TEXT,
+  ADD COLUMN is_custom BOOLEAN NOT NULL DEFAULT false;
+-- sparepart_id is presumably already nullable since customer_supplied works today
+
+-- services: allow a manual entry with no catalog row
+ALTER TABLE job_services
+  ALTER COLUMN service_id DROP NOT NULL,
+  ADD COLUMN custom_name TEXT,
+  ADD COLUMN is_custom BOOLEAN NOT NULL DEFAULT false;
+
+
+  ALTER TABLE service_estimates ADD COLUMN estimate_number VARCHAR(20);
+
+  ALTER TABLE job_parts DROP CONSTRAINT job_parts_source_check;
+
+ALTER TABLE job_parts ADD CONSTRAINT job_parts_source_check CHECK (
+  (sparepart_id IS NOT NULL AND customer_supplied = false AND is_custom = false)
+  OR
+  (sparepart_id IS NULL AND customer_supplied = true AND is_custom = false)
+  OR
+  (sparepart_id IS NULL AND customer_supplied = false AND is_custom = true)
+);
+
+ALTER TABLE service_estimate_items
+  ALTER COLUMN service_id DROP NOT NULL,
+  ADD COLUMN IF NOT EXISTS is_custom BOOLEAN NOT NULL DEFAULT false;
+
+
+  ////////////////////////////////////////8/3/2026
+  ALTER TABLE service_jobs ALTER COLUMN job_number DROP DEFAULT;
+ALTER TABLE service_jobs ADD CONSTRAINT service_jobs_job_number_key UNIQUE (job_number);
+
+
+///////8/4/2026
+ALTER TABLE job_services
+ADD COLUMN is_completed BOOLEAN NOT NULL DEFAULT true;
+
+-- Backfill: assume services on already-completed jobs are done,
+-- and anything still pending/in_progress needs review by your team.
+-- Since we can't know the true historical state, mark everything
+-- under a job that's not yet "completed" as needing a manual check.
+UPDATE job_services js
+SET is_completed = false
+FROM service_jobs sj
+WHERE js.job_id = sj.id
+AND sj.status != 'completed';
+
+
+
+/////
+-- allow parts to be added without a price yet
+ALTER TABLE job_parts ALTER COLUMN unit_price DROP NOT NULL;
+
+
+///////////// 8/11/2026
+ALTER TABLE service_jobs ADD COLUMN driver_name VARCHAR(255);
+ALTER TABLE service_jobs ADD COLUMN driver_phone VARCHAR(50);
+
+ALTER TABLE service_estimates ADD COLUMN driver_name VARCHAR(255);
+ALTER TABLE service_estimates ADD COLUMN driver_phone VARCHAR(50);
+
+
+ALTER TABLE service_invoices ADD COLUMN driver_name VARCHAR(255);
+ALTER TABLE service_invoices ADD COLUMN driver_phone VARCHAR(50);
+
+
+////
+ALTER TABLE service_jobs ADD COLUMN bill_to_name VARCHAR(255);
+ALTER TABLE service_jobs ADD COLUMN bill_to_kra_pin VARCHAR(50);
+
+ALTER TABLE service_estimates ADD COLUMN bill_to_name VARCHAR(255);
+ALTER TABLE service_estimates ADD COLUMN bill_to_kra_pin VARCHAR(50);
+
+ALTER TABLE service_invoices ADD COLUMN bill_to_name VARCHAR(255);
+ALTER TABLE service_invoices ADD COLUMN bill_to_kra_pin VARCHAR(50);

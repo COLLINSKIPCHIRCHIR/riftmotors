@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS employee_skills (
+    id SERIAL PRIMARY KEY,
+
+    employee_id INT REFERENCES employees(id) ON DELETE CASCADE,
+
+    skill_name VARCHAR(100),
+
+    proficiency_level VARCHAR(30),
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

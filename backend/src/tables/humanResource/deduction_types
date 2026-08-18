@@ -1,0 +1,17 @@
+CREATE TABLE IF NOT EXISTS deduction_types (
+    id SERIAL PRIMARY KEY,
+
+    code VARCHAR(30) UNIQUE,
+
+    name VARCHAR(100),
+
+    calculation_method VARCHAR(20),
+
+    reduces_taxable_income BOOLEAN DEFAULT FALSE,
+
+    is_statutory BOOLEAN DEFAULT TRUE,
+
+    is_active BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

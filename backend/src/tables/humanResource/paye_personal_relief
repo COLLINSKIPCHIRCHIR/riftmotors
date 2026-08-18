@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS paye_personal_relief (
+    id SERIAL PRIMARY KEY,
+
+    effective_from DATE,
+
+    effective_to DATE,
+
+    monthly_relief_amount NUMERIC(12,2),
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

@@ -1,0 +1,40 @@
+CREATE TABLE IF NOT EXISTS branches (
+    id SERIAL PRIMARY KEY,
+
+    name VARCHAR(150) NOT NULL,
+    phone VARCHAR(50),
+    email VARCHAR(150),
+    address TEXT,
+
+    manager_id INT REFERENCES users(id),
+
+    is_active BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE branches
+ADD COLUMN branch_code VARCHAR(20) UNIQUE;
+
+ALTER TABLE branches
+ADD COLUMN is_head_office BOOLEAN DEFAULT FALSE;
+
+
+INSERT INTO permissions (name, module, description)
+VALUES
+('branches.view','branches','View branches'),
+('branches.create','branches','Create branches'),
+('branches.edit','branches','Edit branches'),
+('branches.delete','branches','Delete branches');
+
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT
+    r.id,
+    p.id
+FROM roles r
+JOIN permissions p
+ON p.module = 'branches'
+WHERE r.name IN ('Boss', 'admin')
+ON CONFLICT (role_id, permission_id) DO NOTHING;

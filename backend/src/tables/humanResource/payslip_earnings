@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS payslip_earnings (
+    id SERIAL PRIMARY KEY,
+
+    payslip_id INT REFERENCES payslips(id) ON DELETE CASCADE,
+
+    description VARCHAR(150),
+
+    amount NUMERIC(12,2)
+);

@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS employee_allowances (
+    id SERIAL PRIMARY KEY,
+
+    employee_id INT NOT NULL REFERENCES employees(id),
+
+    name VARCHAR(100),
+
+    amount NUMERIC(12,2),
+
+    is_taxable BOOLEAN DEFAULT TRUE,
+
+    is_active BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE employee_allowances
+ADD COLUMN effective_from DATE NOT NULL DEFAULT CURRENT_DATE,
+ADD COLUMN effective_to DATE NULL;

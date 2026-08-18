@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS employee_documents (
+    id SERIAL PRIMARY KEY,
+
+    employee_id INT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+
+    document_type VARCHAR(100),
+
+    file_name VARCHAR(255),
+
+    file_path TEXT,
+
+    uploaded_by INT REFERENCES users(id),
+
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

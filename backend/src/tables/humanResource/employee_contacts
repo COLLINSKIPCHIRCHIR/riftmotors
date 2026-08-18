@@ -1,0 +1,19 @@
+CREATE TABLE IF NOT EXISTS employee_contacts (
+    id SERIAL PRIMARY KEY,
+
+    employee_id INT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+
+    name VARCHAR(150) NOT NULL,
+
+    relationship VARCHAR(100),
+
+    phone VARCHAR(50),
+
+    email VARCHAR(150),
+
+    address TEXT,
+
+    is_primary BOOLEAN DEFAULT FALSE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

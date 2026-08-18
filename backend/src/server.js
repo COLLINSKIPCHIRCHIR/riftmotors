@@ -30,7 +30,30 @@ import serviceInvoiceRoutes from "./routes/serviceInvoiceRoutes.js";
 import serviceReceiptRoutes from "./routes/serviceReceiptRoutes.js";
 import roleRoutes from "./routes/roleRoutes.js";
 import permissionRoutes from "./routes/permissionRoutes.js";
-
+import departmentRoutes from "./routes/departmentRoutes.js";
+import branchRoutes from "./routes/branchRoutes.js";
+import employeeRoutes from "./routes/employeeRoutes.js";
+import employeeContactRoutes from "./routes/employeeContactRoutes.js";
+import employeeDocumentRoutes from "./routes/employeeDocumentRoutes.js";
+import employeeSkillRoutes from "./routes/employeeSkillRoutes.js";
+import employeeNoteRoutes from "./routes/employeeNoteRoutes.js";
+import leaveTypeRoutes from "./routes/leaveTypeRoutes.js";
+import leaveBalanceRoutes from "./routes/leaveBalanceRoutes.js";
+import leaveRequestRoutes from "./routes/leaveRequestRoutes.js";
+import publicHolidayRoutes from "./routes/publicHolidayRoutes.js";
+import employeeAttendanceRoutes from "./routes/employeeAttendanceRoutes.js";
+import employeeSalaryHistoryRoutes from "./routes/employeeSalaryHistoryRoutes.js";
+import employeeAllowanceRoutes from "./routes/employeeAllowanceRoutes.js";
+import deductionTypeRoutes from "./routes/deductionTypeRoutes.js";
+import deductionRateVersionRoutes from "./routes/deductionRateVersionRoutes.js";
+import payeTaxBandRoutes from "./routes/payeTaxBandRoutes.js";
+import payePersonalReliefRoutes from "./routes/payePersonalReliefRoutes.js";
+import employeeRecurringDeductionRoutes from "./routes/employeeRecurringDeductionRoutes.js";
+import payrollPeriodRoutes from "./routes/payrollPeriodRoutes.js";
+import payslipRoutes from "./routes/payslipRoutes.js";
+import payslipEarningRoutes from "./routes/payslipEarningRoutes.js";
+import payslipDeductionRoutes from "./routes/payslipDeductionRoutes.js";
+import payrollProcessingRoutes from "./routes/payrollProcessingRoutes.js";
 
 
 import { createSpareSalesTables } from "./models/spareSalesModel.js";
@@ -177,6 +200,123 @@ app.use(
 app.use(
     "/api/permissions",
     permissionRoutes
+);
+
+app.use(
+  "/api/departments",
+  departmentRoutes
+);
+
+app.use(
+  "/api/branches",
+  branchRoutes
+);
+
+app.use("/api/employees", employeeRoutes);
+
+app.use(
+  "/api/employee-contacts",
+  employeeContactRoutes
+);
+
+app.use(
+  "/api/employee-documents",
+  employeeDocumentRoutes
+);
+
+app.use(
+  "/api/employee-skills",
+  employeeSkillRoutes
+);
+
+app.use(
+  "/api/employee-notes",
+  employeeNoteRoutes
+);
+
+app.use(
+  "/api/leave-types",
+  leaveTypeRoutes
+);
+
+app.use(
+  "/api/leave-balances",
+  leaveBalanceRoutes
+);
+
+app.use(
+  "/api/leave-requests",
+  leaveRequestRoutes
+);
+
+app.use(
+  "/api/public-holidays",
+  publicHolidayRoutes
+);
+
+app.use(
+  "/api/employee-attendance",
+  employeeAttendanceRoutes
+);
+
+app.use(
+  "/api/employee-salary-history",
+  employeeSalaryHistoryRoutes
+);
+
+app.use(
+  "/api/employee-allowances",
+  employeeAllowanceRoutes
+);
+
+app.use(
+  "/api/deduction-types",
+  deductionTypeRoutes
+);
+
+app.use(
+  "/api/deduction-rate-versions",
+  deductionRateVersionRoutes
+);
+
+app.use(
+  "/api/paye-tax-bands",
+  payeTaxBandRoutes
+);
+
+app.use(
+  "/api/paye-personal-relief",
+  payePersonalReliefRoutes
+);
+
+app.use(
+  "/api/employee-recurring-deductions",
+  employeeRecurringDeductionRoutes
+);
+
+app.use(
+  "/api/payroll-periods",
+  payrollPeriodRoutes
+);
+
+app.use(
+  "/api/payslips",
+  payslipRoutes
+);
+
+app.use(
+  "/api/payslip-earnings",
+  payslipEarningRoutes
+);
+
+app.use(
+  "/api/payslip-deductions",
+  payslipDeductionRoutes
+);
+
+app.use(
+  "/api/payroll-processing",
+  payrollProcessingRoutes
 );
 
 app.use(errorHandler);

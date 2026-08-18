@@ -6,6 +6,50 @@ export default function Customers() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [editingCustomer, setEditingCustomer] = useState(null);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    address: "",
+    kra_pin: "",
+  }); 
+
+
+  const handleEdit = (customer) => {
+  setEditingCustomer(customer);
+
+  setFormData({
+    name: customer.name || "",
+    phone: customer.phone || "",
+    email: customer.email || "",
+    address: customer.address || "",
+    kra_pin: customer.kra_pin || "",
+  });
+};
+
+
+const handleChange = (e) => {
+  setFormData({
+    ...formData,
+    [e.target.name]: e.target.value,
+  });
+};
+
+const handleUpdate = async () => {
+  try {
+    await API.put(`/customers/${editingCustomer.id}`, formData);
+
+    setEditingCustomer(null);
+
+    fetchCustomers();
+  } catch (err) {
+    console.error(err);
+    alert("Failed to update customer");
+  }
+};
+
   const fetchCustomers = async () => {
     try {
       const res = await API.get("/customers");

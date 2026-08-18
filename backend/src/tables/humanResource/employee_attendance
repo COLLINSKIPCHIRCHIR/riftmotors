@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS employee_attendance (
+    id SERIAL PRIMARY KEY,
+
+    employee_id INT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+
+    attendance_date DATE NOT NULL,
+
+    clock_in TIMESTAMP,
+
+    clock_out TIMESTAMP,
+
+    worked_hours NUMERIC(6,2),
+
+    overtime_hours NUMERIC(6,2) DEFAULT 0,
+
+    status VARCHAR(30) DEFAULT 'Present',
+
+    remarks TEXT,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

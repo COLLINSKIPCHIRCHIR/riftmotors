@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS public_holidays (
+    id SERIAL PRIMARY KEY,
+
+    holiday_name VARCHAR(150) NOT NULL,
+
+    holiday_date DATE NOT NULL,
+
+    is_recurring BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

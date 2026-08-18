@@ -1,0 +1,60 @@
+CREATE TABLE IF NOT EXISTS employees (
+    id SERIAL PRIMARY KEY,
+
+    employee_number VARCHAR(50) UNIQUE NOT NULL,
+
+    user_id INT REFERENCES users(id),
+
+    branch_id INT REFERENCES branches(id),
+
+    department_id INT REFERENCES departments(id),
+
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+
+    gender VARCHAR(20),
+
+    date_of_birth DATE,
+
+    national_id VARCHAR(50) UNIQUE,
+
+    kra_pin VARCHAR(50),
+
+    nssf_number VARCHAR(50),
+
+    shif_number VARCHAR(50),
+
+    phone VARCHAR(50),
+
+    email VARCHAR(150),
+
+    address TEXT,
+
+    county VARCHAR(100),
+
+    job_title VARCHAR(150),
+
+    employment_type VARCHAR(30) DEFAULT 'Permanent',
+
+    employment_date DATE NOT NULL,
+
+    probation_end_date DATE,
+
+    termination_date DATE,
+
+    employment_status VARCHAR(30) DEFAULT 'Active',
+
+    payment_frequency VARCHAR(30) DEFAULT 'Monthly',
+
+    bank_name VARCHAR(150),
+
+    bank_account_number VARCHAR(100),
+
+    photo_url TEXT,
+
+    is_active BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

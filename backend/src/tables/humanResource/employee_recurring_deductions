@@ -1,0 +1,19 @@
+CREATE TABLE IF NOT EXISTS employee_recurring_deductions (
+    id SERIAL PRIMARY KEY,
+
+    employee_id INT REFERENCES employees(id),
+
+    deduction_type_id INT REFERENCES deduction_types(id),
+
+    name VARCHAR(100),
+
+    amount NUMERIC(12,2),
+
+    start_date DATE,
+
+    end_date DATE,
+
+    is_active BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

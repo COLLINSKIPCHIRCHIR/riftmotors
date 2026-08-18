@@ -1427,17 +1427,11 @@ last
 
 
 <div className="border-r border-black">
-
-<PrintCell label="Date of 1st Reg" value={job.date_of_first_registration}/>
-
-<PrintCell label="Selling Dealer" value={job.selling_dealer}/>
-
-<PrintCell label="Contact" value={job.customer_name}/>
-
-<PrintCell label="Telephone Number" value={job.customer_phone}/>
-
-<PrintCell label="Time Promised" value={job.time_promised} last/>
-
+  <PrintCell label="Date of 1st Reg" value={job.date_of_first_registration}/>
+  <PrintCell label="Selling Dealer" value={job.selling_dealer}/>
+  <PrintCell label="Contact Person" value={job.driver_name || job.customer_name}/>
+  <PrintCell label="Telephone Number" value={job.driver_phone || job.customer_phone}/>
+  <PrintCell label="Time Promised" value={job.time_promised} last/>
 </div>
 
 

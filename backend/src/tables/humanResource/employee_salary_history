@@ -1,0 +1,17 @@
+CREATE TABLE IF NOT EXISTS employee_salary_history (
+    id SERIAL PRIMARY KEY,
+
+    employee_id INT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+
+    basic_salary NUMERIC(12,2) NOT NULL,
+
+    effective_from DATE NOT NULL,
+
+    effective_to DATE,
+
+    reason TEXT,
+
+    changed_by INT REFERENCES users(id),
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

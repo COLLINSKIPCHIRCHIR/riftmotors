@@ -1,0 +1,29 @@
+CREATE TABLE IF NOT EXISTS departments (
+    id SERIAL PRIMARY KEY,
+
+    name VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+
+    is_active BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+INSERT INTO permissions (name, module, description)
+VALUES
+('departments.view', 'departments', 'View departments'),
+('departments.create', 'departments', 'Create departments'),
+('departments.edit', 'departments', 'Edit departments'),
+('departments.delete', 'departments', 'Delete departments');
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT
+    r.id,
+    p.id
+FROM roles r
+JOIN permissions p
+ON p.module = 'departments'
+WHERE r.name IN ('Boss', 'admin')
+ON CONFLICT (role_id, permission_id) DO NOTHING;

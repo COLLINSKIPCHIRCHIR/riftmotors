@@ -1,0 +1,17 @@
+CREATE TABLE IF NOT EXISTS payroll_periods (
+    id SERIAL PRIMARY KEY,
+
+    period_label VARCHAR(50),
+
+    start_date DATE,
+
+    end_date DATE,
+
+    status VARCHAR(20) DEFAULT 'Open',
+
+    processed_at TIMESTAMP,
+
+    processed_by INT REFERENCES users(id),
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

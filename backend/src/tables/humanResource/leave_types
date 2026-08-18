@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS leave_types (
+    id SERIAL PRIMARY KEY,
+
+    name VARCHAR(100) UNIQUE NOT NULL,
+
+    default_days_per_year NUMERIC(6,2),
+
+    is_paid BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

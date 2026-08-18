@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS paye_tax_bands (
+    id SERIAL PRIMARY KEY,
+
+    effective_from DATE,
+
+    effective_to DATE,
+
+    band_order INT,
+
+    lower_limit NUMERIC(12,2),
+
+    upper_limit NUMERIC(12,2),
+
+    rate_percentage NUMERIC(6,2),
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE paye_tax_bands
+ADD CONSTRAINT unique_paye_band
+UNIQUE (effective_from, band_order);

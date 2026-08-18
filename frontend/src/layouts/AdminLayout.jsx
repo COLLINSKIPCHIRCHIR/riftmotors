@@ -140,7 +140,12 @@ const AdminLayout = () => {
           permission: "spareparts.receipts",
         },
         {
-          name: "Purchases",
+          name: "Purchase Orders",
+          path: "/admin/spare-parts/purchases",
+          permission: "spareparts.purchase",
+        },
+        {
+          name: "Create LPO",
           path: "/admin/spare-parts/purchases/create",
           permission: "spareparts.purchase",
         },
@@ -206,139 +211,34 @@ const AdminLayout = () => {
         ]
     },
 
-    {
+   {
       name: "Human Resource",
       icon: <FaUserTie size={16} />,
       key: "hr",
-      permission: "departments.view",
 
       subMenu: [
-        {
-          name: "Departments",
-          path: "/admin/hr/departments",
-          //permission: "departments.view",
-        },
+        { name: "Departments", path: "/admin/hr/departments" },
+        { name: "Branches", path: "/admin/hr/branches" },
+        { name: "Employees", path: "/admin/hr/employees" },
 
-        {
-          name: "Branches",
-          path: "/admin/hr/branches",
-          //permission: "branches.view",
-        },
+        { name: "Leave Types", path: "/admin/hr/leave-types" },
+        { name: "Leave Balances", path: "/admin/hr/leave-balances" },
+        { name: "Leave Requests", path: "/admin/hr/leave-requests" },
+        { name: "Public Holidays", path: "/admin/hr/public-holidays" },
+        { name: "Attendance", path: "/admin/hr/attendance" },
 
-        {
-          name: "Employees",
-          path: "/admin/hr/employees",
-         // permission: "employees.view",
-        },
+        { name: "Salary History", path: "/admin/hr/salary-history" },
+        { name: "Employee Allowances", path: "/admin/hr/employee-allowances" },
 
-        {
-            name: "Leave Types",
-            path: "/admin/hr/leave-types",
-            // permission: "leave-types.view",
-        },
-        {
-          name: "Leave Balances",
-          path: "/admin/hr/leave-balances",
-        },
-        {
-            name: "Leave Requests",
-            path: "/admin/hr/leave-requests",
-           // icon: <FaPlaneDeparture />,
-        },
-        {
-            name: "Public Holidays",
-            path: "/admin/hr/public-holidays",
-            //icon: FaCalendarDay,
-        },
-        {
-            name: "Attendance",
-            path: "/admin/hr/attendance",
-            //icon: FaUserCheck,
-        },
+        { name: "Deduction Types", path: "/admin/hr/deduction-types" },
+        { name: "Deduction Rates", path: "/admin/hr/deduction-rate-versions" },
+        { name: "Recurring Deductions", path: "/admin/hr/recurring-deductions" },
 
-        {
-          name: "Salary History",
-          //icon: <FaMoneyBillWave />,
-          path: "/admin/hr/salary-history",
-        },
+        { name: "PAYE Tax Bands", path: "/admin/hr/paye-tax-bands" },
+        { name: "PAYE Personal Relief", path: "/admin/hr/paye-personal-relief" },
 
-        {
-            name: "Deduction Types",
-            path: "/admin/hr/deduction-types",
-            //icon: <FaMinusCircle />,
-        },
-
-        {
-            name: "Deduction Rates",
-            path: "/admin/hr/deduction-rate-versions",
-            //icon: <FaPercentage />,
-        },
-
-        {
-            name: "PAYE Tax Bands",
-            path: "/admin/hr/paye-tax-bands",
-            //icon: <FaMoneyCheckAlt />,
-        },
-
-        {
-            name: "PAYE Personal Relief",
-            path: "/admin/hr/paye-personal-relief",
-            //icon: <FaHandHoldingUsd />,
-        },
-
-        {
-            name: "Recurring Deductions",
-            path: "/admin/hr/recurring-deductions",
-            //icon: <FaMoneyCheckAlt />,
-        },
-
-        {
-            name: "Payroll Periods",
-            path: "/admin/hr/payroll-periods",
-            //icon: <FaCalendarAlt />,
-        },
-
-        {
-            name: "Payslips",
-            path: "/admin/hr/payslips",
-            //icon: <FaFileInvoiceDollar />,
-        },
-
-        {
-            name: "Payslip Earnings",
-            path: "/admin/hr/payslip-earnings",
-            //icon: <FaMoneyBillWave />,
-        },
-
-        {
-            name: "Payslip Deductions",
-            path: "/admin/hr/payslip-deductions",
-            //icon: <FaMinusCircle />,
-        },
-
-        {
-          name: "Leave Management",
-          path: "/admin/hr/leave",
-          //permission: "leave.view",
-        },
-
-        {
-          name: "Attendance",
-          path: "/admin/hr/attendance",
-          permission: "attendance.view",
-        },
-
-        {
-          name: "Payroll",
-          path: "/admin/hr/payroll",
-          permission: "payroll.view",
-        },
-
-        {
-          name: "Public Holidays",
-          path: "/admin/hr/holidays",
-          permission: "holidays.view",
-        },
+        { name: "Payroll Periods", path: "/admin/hr/payroll-periods" },
+        { name: "Payslips", path: "/admin/hr/payslips" },
       ],
     },
 

@@ -1,0 +1,29 @@
+CREATE TABLE IF NOT EXISTS deduction_rate_versions (
+    id SERIAL PRIMARY KEY,
+
+    deduction_type_id INT REFERENCES deduction_types(id),
+
+    tier_label VARCHAR(30),
+
+    effective_from DATE,
+
+    effective_to DATE,
+
+    rate_percentage NUMERIC(6,3),
+
+    fixed_amount NUMERIC(12,2),
+
+    minimum_amount NUMERIC(12,2),
+
+    maximum_amount NUMERIC(12,2),
+
+    lower_limit NUMERIC(12,2),
+
+    upper_limit NUMERIC(12,2),
+
+    notes TEXT,
+
+    created_by INT REFERENCES users(id),
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
