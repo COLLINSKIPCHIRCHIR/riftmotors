@@ -222,24 +222,24 @@ const AdminLayout = () => {
     { name: "Branches", path: "/admin/hr/branches", permission: "branches.view" },
     { name: "Employees", path: "/admin/hr/employees", permission: "employees.view" },
 
-    { name: "Leave Types", path: "/admin/hr/leave-types", permission: "leave.types.manage" },
-    { name: "Leave Balances", path: "/admin/hr/leave-balances", permission: "leave.balances.manage" },
-    { name: "Leave Requests", path: "/admin/hr/leave-requests", permission: "leave.requests.view" },
-    { name: "Public Holidays", path: "/admin/hr/public-holidays", permission: "holidays.view" },
-    { name: "Attendance", path: "/admin/hr/attendance", permission: "attendance.view" },
+    { name: "Leave Types", path: "/admin/hr/leave-types"  },
+    { name: "Leave Balances", path: "/admin/hr/leave-balances" },
+    { name: "Leave Requests", path: "/admin/hr/leave-requests" },
+    { name: "Public Holidays", path: "/admin/hr/public-holidays" },
+    { name: "Attendance", path: "/admin/hr/attendance" },
 
-    { name: "Salary History", path: "/admin/hr/salary-history", permission: "salary.view" },
-    { name: "Employee Allowances", path: "/admin/hr/employee-allowances", permission: "salary.view" },
+    { name: "Salary History", path: "/admin/hr/salary-history" },
+    { name: "Employee Allowances", path: "/admin/hr/employee-allowances" },
 
-    { name: "Deduction Types", path: "/admin/hr/deduction-types", permission: "deductions.view" },
-    { name: "Deduction Rates", path: "/admin/hr/deduction-rate-versions", permission: "deductions.view" },
-    { name: "Recurring Deductions", path: "/admin/hr/recurring-deductions", permission: "deductions.view" },
+    { name: "Deduction Types", path: "/admin/hr/deduction-types" },
+    { name: "Deduction Rates", path: "/admin/hr/deduction-rate-versions"},
+    { name: "Recurring Deductions", path: "/admin/hr/recurring-deductions"},
 
-    { name: "PAYE Tax Bands", path: "/admin/hr/paye-tax-bands", permission: "paye.manage" },
-    { name: "PAYE Personal Relief", path: "/admin/hr/paye-personal-relief", permission: "paye.manage" },
+    { name: "PAYE Tax Bands", path: "/admin/hr/paye-tax-bands" },
+    { name: "PAYE Personal Relief", path: "/admin/hr/paye-personal-relief"},
 
-    { name: "Payroll Periods", path: "/admin/hr/payroll-periods", permission: "payroll.view" },
-    { name: "Payslips", path: "/admin/hr/payslips", permission: "payslips.view" },
+    { name: "Payroll Periods", path: "/admin/hr/payroll-periods" },
+    { name: "Payslips", path: "/admin/hr/payslips"},
   ],
 },
 

@@ -181,7 +181,7 @@ RETURNING *
   // Customer-supplied parts have no sparepart_id and never touch stock -
   // they're a name-only, zero-priced line. Everything else (real
   // inventory spareparts) goes through the usual lock/check/deduct.
-  if (item.item_type === "sparepart" && !item.customer_supplied) {
+  if (item.item_type === "sparepart" && !item.customer_supplied && !item.is_custom) {
 
     const stock = await queryWithDiagnostics(
       client,

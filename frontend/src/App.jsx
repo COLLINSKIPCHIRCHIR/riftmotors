@@ -169,36 +169,35 @@ function App() {
           <Route path="services/receipts/:id" element={<RequirePermission permission="services.receipts"><ServiceReceiptDetails /></RequirePermission>} />
           <Route path="services/reports/daily" element={<RequirePermission permission="services.jobs"><DailyJobReport /></RequirePermission>} />
           
-          <Route path="hr/departments" element={<RequirePermission permission="departments.view"><Departments /></RequirePermission>} />
-          <Route path="hr/branches" element={<RequirePermission permission="branches.view"><Branches /></RequirePermission>} />
+          <Route path="hr/departments" element={<Departments />} />
+<Route path="hr/branches" element={<Branches />} />
 
-          <Route path="hr/employees" element={<RequirePermission permission="employees.view"><Employees /></RequirePermission>} />
-          <Route path="hr/employees/:id" element={<RequirePermission permission="employees.view"><EmployeeDetails /></RequirePermission>} />
+<Route path="hr/employees" element={<Employees />} />
+<Route path="hr/employees/:id" element={<EmployeeDetails />} />
 
-          <Route path="hr/leave-types" element={<RequirePermission permission="leave.types.manage"><LeaveTypes /></RequirePermission>} />
-          <Route path="hr/leave-balances" element={<RequirePermission permission="leave.balances.manage"><LeaveBalances /></RequirePermission>} />
-          <Route path="hr/leave-requests" element={<RequirePermission permission="leave.requests.view"><LeaveRequests /></RequirePermission>} />
-          <Route path="hr/public-holidays" element={<RequirePermission permission="holidays.view"><PublicHolidays /></RequirePermission>} />
-          <Route path="hr/attendance" element={<RequirePermission permission="attendance.view"><EmployeeAttendance /></RequirePermission>} />
+<Route path="hr/leave-types" element={<LeaveTypes />} />
+<Route path="hr/leave-balances" element={<LeaveBalances />} />
+<Route path="hr/leave-requests" element={<LeaveRequests />} />
+<Route path="hr/public-holidays" element={<PublicHolidays />} />
+<Route path="hr/attendance" element={<EmployeeAttendance />} />
 
-          <Route path="hr/salary-history" element={<RequirePermission permission="salary.view"><EmployeeSalaryHistory /></RequirePermission>} />
+<Route path="hr/salary-history" element={<EmployeeSalaryHistory />} />
 
-          <Route path="hr/deduction-types" element={<RequirePermission permission="deductions.view"><DeductionTypes /></RequirePermission>} />
-          <Route path="hr/deduction-rate-versions" element={<RequirePermission permission="deductions.view"><DeductionRateVersions /></RequirePermission>} />
-          <Route path="hr/recurring-deductions" element={<RequirePermission permission="deductions.view"><EmployeeRecurringDeductions /></RequirePermission>} />
+<Route path="hr/deduction-types" element={<DeductionTypes />} />
+<Route path="hr/deduction-rate-versions" element={<DeductionRateVersions />} />
+<Route path="hr/recurring-deductions" element={<EmployeeRecurringDeductions />} />
 
-          <Route path="hr/paye-tax-bands" element={<RequirePermission permission="paye.manage"><PayeTaxBands /></RequirePermission>} />
-          <Route path="hr/paye-personal-relief" element={<RequirePermission permission="paye.manage"><PayePersonalRelief /></RequirePermission>} />
+<Route path="hr/paye-tax-bands" element={<PayeTaxBands />} />
+<Route path="hr/paye-personal-relief" element={<PayePersonalRelief />} />
 
-          <Route path="/admin/hr/payslip-earnings" element={<RequirePermission permission="payslips.view"><PayslipEarnings /></RequirePermission>} />
-          <Route path="/admin/hr/payslip-deductions" element={<RequirePermission permission="payslips.view"><PayslipDeductions /></RequirePermission>} />
+<Route path="/admin/hr/payslip-earnings" element={<PayslipEarnings />} />
+<Route path="/admin/hr/payslip-deductions" element={<PayslipDeductions />} />
 
-          <Route path="hr/payroll-periods" element={<RequirePermission permission="payroll.view"><PayrollPeriods /></RequirePermission>} />
-          <Route path="hr/payroll/:id" element={<RequirePermission permission="payroll.view"><PayrollRun /></RequirePermission>} />
-          <Route path="hr/payslips" element={<RequirePermission permission="payslips.view"><PayslipsList /></RequirePermission>} />
-          <Route path="hr/payslips/:id" element={<RequirePermission permission="payslips.view"><PayslipDetail /></RequirePermission>} />
-          <Route path="hr/employee-allowances" element={<RequirePermission permission="salary.view"><EmployeeAllowances /></RequirePermission>} />
-
+<Route path="hr/payroll-periods" element={<PayrollPeriods />} />
+<Route path="hr/payroll/:id" element={<PayrollRun />} />
+<Route path="hr/payslips" element={<PayslipsList />} />
+<Route path="hr/payslips/:id" element={<PayslipDetail />} />
+<Route path="hr/employee-allowances" element={<EmployeeAllowances />} />
 
           {/* ✅ Administration */}
           <Route path="roles" element={<RequirePermission permission="roles.view"><RolesPermissions /></RequirePermission>} />
