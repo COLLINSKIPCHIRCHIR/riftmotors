@@ -52,6 +52,18 @@
     print-color-adjust: exact !important;
   }
 
+  /* Prevents a block from being split across a page boundary in native
+     print (and, since it also applies outside @media print, keeps the
+     same behaviour available to html2canvas-based PDF export if the
+     canvas slicing logic is ever changed to respect it). Applied to the
+     job-card signature strip in JobDetails.jsx so it always stays
+     together - if it doesn't fit on the current page it moves whole to
+     the next one instead of being cut mid-block. */
+  .avoid-break {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
   .print-document {
     width: 100%;
     max-width: none;

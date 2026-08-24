@@ -1458,7 +1458,11 @@ last
 
 
 {/* Type of work table, with damage-marking car diagrams like the
-    paper form. */}
+    paper form.
+    NOTE: min-h trimmed from 180px -> 130px on these four cells so the
+    whole page-1 job card (letterhead through signatures) fits within
+    one A4 page after print margins - see the "Solutions" and
+    "Comments/Findings" blocks below for the matching trims. */}
 
 <div className="grid grid-cols-[50px_1fr_90px_90px] border border-t-0 border-black text-xs">
 
@@ -1488,9 +1492,9 @@ Time Used
 </div>
 
 
-<div className="border-r border-black min-h-[180px]"></div>
+<div className="border-r border-black min-h-[130px]"></div>
 
-<div className="border-r border-black min-h-[180px] p-2 flex flex-col justify-between">
+<div className="border-r border-black min-h-[130px] p-2 flex flex-col justify-between">
 
 <p className="whitespace-pre-wrap">
 
@@ -1512,9 +1516,9 @@ Time Used
 
 </div>
 
-<div className="border-r border-black min-h-[180px]"></div>
+<div className="border-r border-black min-h-[130px]"></div>
 
-<div className="min-h-[180px]"></div>
+<div className="min-h-[130px]"></div>
 
 
 </div>
@@ -1566,14 +1570,16 @@ Tool Check Box
 </div>
 
 
-{/* Comments / Findings, with the parts-kept declaration alongside it */}
+{/* Comments / Findings, with the parts-kept declaration alongside it.
+    min-h trimmed from 90px -> 60px (see note above the Type of Work
+    table). */}
 
 <div className="grid grid-cols-[1fr_220px] border border-t-0 border-black text-xs">
 
 
 <div
 
-className="border-r border-black p-2 min-h-[90px]"
+className="border-r border-black p-2 min-h-[60px]"
 
 style={{
 
@@ -1631,7 +1637,9 @@ No
 
 {/* Solutions - blank ruled space for the technician to write up the
     work done / remedy by hand before the card is filed or handed back
-    to the customer. */}
+    to the customer. min-h trimmed from 150px -> 110px (see note above
+    the Type of Work table) - this is the biggest single contributor to
+    reclaiming page-1 space for the signatures. */}
 
 <div className="border border-t-0 border-black p-2 text-xs">
 
@@ -1643,7 +1651,7 @@ Solutions
 
 <div
 
-className="min-h-[150px]"
+className="min-h-[110px]"
 
 style={{
 
@@ -1674,9 +1682,14 @@ is specifically drawn to the notice at reception under the Disposal of Uncollect
 
 {/* SIGN-OFF - closes out page 1 of the job card, same as the physical
     form. This is the print/PDF version; a separate on-screen-only copy
-    further down mirrors it for the dashboard view. */}
+    further down mirrors it for the dashboard view.
+    `avoid-break` (defined in index.css) keeps this block from ever
+    being split across a page boundary - if it doesn't fully fit on
+    page 1 it will move to page 2 as a whole instead of being cut
+    mid-block, but with the min-h trims above it should now fit on
+    page 1. */}
 
-<div className="grid grid-cols-3 gap-6 mt-6 pt-4 border-t border-black text-xs">
+<div className="grid grid-cols-3 gap-6 mt-6 pt-4 border-t border-black text-xs avoid-break">
 
 <div>
 
