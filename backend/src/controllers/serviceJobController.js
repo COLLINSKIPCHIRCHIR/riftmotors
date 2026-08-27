@@ -52,7 +52,9 @@ export const fetchServiceJobs = async(req,res)=>{
 try{
 
 
-const jobs = await getServiceJobs();
+const { search } = req.query;
+
+const jobs = await getServiceJobs(search);
 
 
 res.json(jobs);

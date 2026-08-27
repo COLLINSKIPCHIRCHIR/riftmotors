@@ -1,7 +1,8 @@
 import {
 createCustomerVehicle,
 getCustomerVehicles,
-getCustomerVehicleById
+getCustomerVehicleById,
+updateCustomerVehicle
 } from "../models/customerVehicle.js";
 
 
@@ -89,5 +90,34 @@ message:"Server error"
 
 }
 
+
+}
+
+
+export const editVehicle = async(req,res)=>{
+
+try{
+
+const vehicle = await updateCustomerVehicle(req.params.id, req.body);
+
+if(!vehicle){
+
+return res.status(400).json({
+message:"No valid fields to update"
+});
+
+}
+
+res.json(vehicle);
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+message:"Failed to update vehicle"
+});
+
+}
 
 }

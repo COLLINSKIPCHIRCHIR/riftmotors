@@ -42,49 +42,65 @@ return insertResult.rows[0];
 };
 
 
-export const getServiceJobs = async()=>{
+export const getServiceJobs = async(search)=>{
 
-const result = await pool.query(`
+  const params = [];
+  let whereClause = "";
 
-SELECT 
+  if (search && search.trim()) {
+    params.push(`%${search.trim()}%`);
+    whereClause = `
+      WHERE
+        sj.job_number ILIKE $1
+        OR cv.registration_number ILIKE $1
+        OR c.name ILIKE $1
+        OR cv.make ILIKE $1
+        OR cv.model ILIKE $1
+    `;
+  }
 
-sj.*,
+  const result = await pool.query(`
 
-c.name AS customer_name,
+  SELECT 
 
-cv.registration_number,
+  sj.*,
 
-cv.make,
+  c.name AS customer_name,
 
-cv.model
+  cv.registration_number,
 
+  cv.make,
 
-FROM service_jobs sj
-
-
-JOIN customers c
-ON sj.customer_id = c.id
-
-
-JOIN customer_vehicles cv
-ON sj.vehicle_id = cv.id
-
-
-ORDER BY
-
-CASE WHEN sj.job_number ~ '^[0-9]+' THEN 0 ELSE 1 END,
-
-CASE WHEN sj.job_number ~ '^[0-9]+'
-     THEN substring(sj.job_number from '^[0-9]+')::bigint
-     ELSE NULL
-END DESC NULLS LAST,
-
-sj.job_number DESC
-
-`);
+  cv.model
 
 
-return result.rows;
+  FROM service_jobs sj
+
+
+  JOIN customers c
+  ON sj.customer_id = c.id
+
+
+  JOIN customer_vehicles cv
+  ON sj.vehicle_id = cv.id
+
+  ${whereClause}
+
+  ORDER BY
+
+  CASE WHEN sj.job_number ~ '^[0-9]+' THEN 0 ELSE 1 END,
+
+  CASE WHEN sj.job_number ~ '^[0-9]+'
+       THEN substring(sj.job_number from '^[0-9]+')::bigint
+       ELSE NULL
+  END DESC NULLS LAST,
+
+  sj.job_number DESC
+
+  `, params);
+
+
+  return result.rows;
 
 };
 

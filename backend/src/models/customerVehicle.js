@@ -105,3 +105,55 @@ return result.rows[0];
 
 
 }
+
+
+export const updateCustomerVehicle = async (id, data) => {
+
+  const allowedFields = [
+    "registration_number",
+    "make",
+    "model",
+    "year",
+    "mileage",
+    "color",
+    "fuel_type",
+    "transmission",
+    "vin_no",
+    "engine_number"
+  ];
+
+  const fields = Object.keys(data).filter(key => allowedFields.includes(key));
+
+  if (fields.length === 0) {
+    return null;
+  }
+
+  const setClause = fields
+    .map((field, i) => `${field} = $${i + 1}`)
+    .join(", ");
+
+  const values = fields.map(field => {
+
+    if (field === "year" && data.year === "") return null;
+
+    if (field === "mileage" && typeof data.mileage === "string") {
+      return data.mileage.replace(/,/g, "");
+    }
+
+    return data[field] === "" ? null : data[field];
+
+  });
+
+  const result = await pool.query(
+    `
+    UPDATE customer_vehicles
+    SET ${setClause}
+    WHERE id = $${fields.length + 1}
+    RETURNING *
+    `,
+    [...values, id]
+  );
+
+  return result.rows[0];
+
+};

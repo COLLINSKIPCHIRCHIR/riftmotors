@@ -12,7 +12,7 @@ from "../models/serviceInvoiceModel.js";
 
 export const convertEstimate = async (req, res) => {
   try {
-    const invoice = await convertServiceEstimateToInvoice(req.params.id);
+    const invoice = await convertServiceEstimateToInvoice(req.params.id, req.body);
     res.json({ message: "Service estimate converted", invoice });
   } catch (err) {
     console.error("CONVERT ESTIMATE ERROR:", {

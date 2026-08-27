@@ -24,6 +24,10 @@ const [error,setError]=useState("");
 
 const [saving,setSaving]=useState(false);
 
+const [search,setSearch]=useState("");
+
+const [loadingJobs,setLoadingJobs]=useState(false);
+
 
 
 const [form,setForm]=useState({
@@ -49,12 +53,30 @@ loadVehicles();
 
 
 
+// DEBOUNCED SEARCH - refetch from backend 350ms after typing stops
+useEffect(()=>{
 
-const loadJobs=async()=>{
+const timer = setTimeout(()=>{
+
+loadJobs(search);
+
+},350);
+
+return ()=>clearTimeout(timer);
+
+// eslint-disable-next-line react-hooks/exhaustive-deps
+},[search])
+
+
+
+
+const loadJobs=async(searchTerm)=>{
+
+setLoadingJobs(true);
 
 try{
 
-const res=await getServiceJobs();
+const res=await getServiceJobs(searchTerm);
 
 setJobs(res.data);
 
@@ -62,6 +84,10 @@ setJobs(res.data);
 }catch(err){
 
 console.log(err);
+
+}finally{
+
+setLoadingJobs(false);
 
 }
 
@@ -175,7 +201,7 @@ setForm({
 
 
 
-loadJobs();
+loadJobs(search);
 
 
 
@@ -213,7 +239,7 @@ return (
 
 
 
-<div className="flex justify-between mb-6">
+<div className="flex justify-between items-center mb-6">
 
 
 <h1 className="text-2xl font-bold text-slate-800">
@@ -249,6 +275,35 @@ hover:bg-blue-700
 
 
 
+{/* SEARCH BAR */}
+
+<div className="mb-4">
+
+<input
+
+type="text"
+
+value={search}
+
+onChange={(e)=>setSearch(e.target.value)}
+
+placeholder="Search by job number, registration, or customer..."
+
+className="
+w-full
+max-w-md
+border
+rounded-lg
+p-2
+text-sm
+"
+
+/>
+
+</div>
+
+
+
 
 
 
@@ -263,7 +318,7 @@ overflow-hidden
 
 
 
-<table className="w-full text-sm">
+<table className="w-full text-sm table-fixed">
 
 
 <thead className="bg-slate-50 border-b">
@@ -272,27 +327,32 @@ overflow-hidden
 <tr>
 
 
-<th className="p-4 text-left">
+<th className="p-4 text-left w-1/5">
 Job Number
 </th>
 
 
-<th>
+<th className="p-4 text-left w-1/5">
+Registration
+</th>
+
+
+<th className="p-4 text-left w-1/4">
 Vehicle
 </th>
 
 
-<th>
+<th className="p-4 text-left w-1/6">
 Status
 </th>
 
 
-<th>
+<th className="p-4 text-left w-1/6">
 Date
 </th>
 
 
-<th>
+<th className="p-4 text-left w-1/6">
 Action
 </th>
 
@@ -310,7 +370,26 @@ Action
 
 
 {
-jobs.map(job=>(
+loadingJobs && (
+
+<tr>
+
+<td colSpan="6" className="p-6 text-center text-slate-400">
+
+Loading...
+
+</td>
+
+</tr>
+
+)
+
+}
+
+
+
+{
+!loadingJobs && jobs.map(job=>(
 
 
 <tr
@@ -328,7 +407,16 @@ className="border-b hover:bg-slate-50"
 
 
 
-<td>
+<td className="p-4">
+
+{job.registration_number}
+
+</td>
+
+
+
+
+<td className="p-4 text-slate-500">
 
 
 {job.make}
@@ -342,7 +430,7 @@ className="border-b hover:bg-slate-50"
 
 
 
-<td>
+<td className="p-4">
 
 
 <span
@@ -353,6 +441,7 @@ rounded-full
 text-xs
 bg-yellow-100
 text-yellow-700
+whitespace-nowrap
 "
 >
 
@@ -369,7 +458,7 @@ text-yellow-700
 
 
 
-<td>
+<td className="p-4">
 
 {
 new Date(job.created_at)
@@ -384,7 +473,7 @@ new Date(job.created_at)
 
 
 
-<td>
+<td className="p-4">
 
 
 <Link
@@ -411,6 +500,25 @@ View
 
 
 ))
+
+}
+
+
+
+{
+!loadingJobs && jobs.length === 0 && (
+
+<tr>
+
+<td colSpan="6" className="p-6 text-center text-slate-400">
+
+No jobs found
+
+</td>
+
+</tr>
+
+)
 
 }
 

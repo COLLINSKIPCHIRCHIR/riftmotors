@@ -2,7 +2,8 @@ import express from "express";
 import {
 addVehicle,
 getVehicles,
-fetchVehicle
+fetchVehicle,
+editVehicle
 } from "../controllers/serviceVehicleController.js";
 
 
@@ -14,6 +15,8 @@ router.post("/",addVehicle);
 router.get("/", getVehicles);
 
 router.get("/:id",fetchVehicle);
+
+router.put("/:id",editVehicle);
 
 
 export default router;

@@ -3,8 +3,8 @@ import API from "./api";
 
 // JOBS
 
-export const getServiceJobs = () =>
- API.get("/service-jobs");
+export const getServiceJobs = (search) =>
+ API.get("/service-jobs", { params: search ? { search } : {} });
 
 
 export const getServiceJob = (id) =>
@@ -28,6 +28,9 @@ export const createCustomerVehicle = (data)=>
 
 export const getCustomerVehicles = () =>
  API.get("/service-vehicles");
+
+export const updateCustomerVehicle = (id, data) =>
+ API.put(`/service-vehicles/${id}`, data);
 
 
 
@@ -161,10 +164,8 @@ API.get(`/service-invoices/${id}`);
 
 
 
-export const convertServiceEstimate=(id)=>
-API.post(
-`/service-invoices/${id}/convert-from-estimate`
-);
+export const convertServiceEstimate = (id, data = {}) =>
+ API.post(`/service-invoices/${id}/convert-from-estimate`, data);
 
 
 // SERVICE RECEIPTS

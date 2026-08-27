@@ -41,6 +41,10 @@ const ServiceEstimateDetails =()=>{
   const navigate = useNavigate();
   const [estimate,setEstimate]=useState(null);
   const [adjustments,setAdjustments]=useState({});
+  const [showBillToModal, setShowBillToModal] = useState(false);
+  const [billToName, setBillToName] = useState("");
+  const [billToKraPin, setBillToKraPin] = useState("");
+  const [converting, setConverting] = useState(false);
   const printRef = useRef();
 
   // Same pattern used in InvoiceDetails.jsx for "Served By"
@@ -51,6 +55,8 @@ const ServiceEstimateDetails =()=>{
       try{
         const res = await getServiceEstimate(id);
         setEstimate(res.data);
+        setBillToName(res.data.bill_to_name || res.data.customer_name || "");
+        setBillToKraPin(res.data.bill_to_kra_pin || "");
       }catch(err){
         console.log(err);
       }
@@ -61,13 +67,23 @@ const ServiceEstimateDetails =()=>{
   if(!estimate)
     return (<div className="p-6">Loading estimate...</div>)
 
-  const handleConvertInvoice = async()=>{
+    const handleOpenConvertModal = () => {
+    setShowBillToModal(true);
+  };
+
+  const handleConfirmConvert = async()=>{
+    setConverting(true);
     try{
-      const res = await convertServiceEstimate(id);
+      const res = await convertServiceEstimate(id, {
+        bill_to_name: billToName.trim(),
+        bill_to_kra_pin: billToKraPin.trim()
+      });
       alert("Estimate converted to invoice");
       navigate(`/admin/services/invoices/${res.data.invoice.id}`);
     }catch(err){
       alert(err.response?.data?.error || "Failed converting invoice");
+    }finally{
+      setConverting(false);
     }
   }
 
@@ -506,7 +522,7 @@ const ServiceEstimateDetails =()=>{
               Download PDF / Share captures too. */}
           <div className="flex justify-end gap-3 my-3 print:hidden capture-hide">
             <button
-              onClick={handleConvertInvoice}
+              onClick={handleOpenConvertModal}
               disabled={estimate.status !== "pending"}
               className="bg-green-600 text-white px-5 py-2 rounded disabled:bg-gray-400"
             >Convert To Invoice</button>
@@ -756,6 +772,58 @@ const ServiceEstimateDetails =()=>{
           <img src="/brands/ford.jpg" alt="Ford" className="h-16 object-contain" />
           <img src="/brands/subaru.jpg" alt="Subaru" className="h-16 object-contain" />
         </div>
+
+        {
+  showBillToModal && (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 print:hidden capture-hide">
+      <div className="bg-white w-full max-w-md rounded-xl p-6 shadow-xl">
+
+        <h2 className="text-xl font-bold mb-2">Bill To (Invoice)</h2>
+
+        <p className="text-sm text-slate-500 mb-4">
+          The estimate can stay addressed to the customer, but this invoice
+          may need to bill someone else — e.g. a company or department.
+          Confirm or update who this invoice should actually bill.
+        </p>
+
+        <label className="text-sm">Bill To Name</label>
+        <input
+          type="text"
+          value={billToName}
+          onChange={(e)=>setBillToName(e.target.value)}
+          placeholder="e.g. National Police Service HQ"
+          className="w-full border rounded-lg p-2 mb-4"
+        />
+
+        <label className="text-sm">Bill To KRA Pin</label>
+        <input
+          type="text"
+          value={billToKraPin}
+          onChange={(e)=>setBillToKraPin(e.target.value)}
+          placeholder="e.g. P051234567X"
+          className="w-full border rounded-lg p-2 mb-4"
+        />
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={()=>setShowBillToModal(false)}
+            className="px-4 py-2 border rounded-lg"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirmConvert}
+            disabled={converting || !billToName.trim()}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+          >
+            {converting ? "Converting..." : "Convert To Invoice"}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  )
+}
 
       </div>
     </div>

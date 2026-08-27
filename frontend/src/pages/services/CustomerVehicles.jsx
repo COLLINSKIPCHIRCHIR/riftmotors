@@ -2,7 +2,8 @@ import React,{useEffect,useState} from "react";
 
 import {
 getCustomerVehicles,
-createCustomerVehicle
+createCustomerVehicle,
+updateCustomerVehicle
 } from "../../api/serviceApi";
 
 import {getCustomers} from "../../api/CustomerApi";
@@ -10,7 +11,8 @@ import {getCustomers} from "../../api/CustomerApi";
 import {
 FaCar,
 FaEye,
-FaTools
+FaTools,
+FaEdit
 } from "react-icons/fa";
 
 import {Link} from "react-router-dom";
@@ -26,6 +28,8 @@ const [customers,setCustomers]=useState([]);
 
 const [showModal,setShowModal]=useState(false);
 
+const [editingId,setEditingId]=useState(null);
+
 
 
 const [search,setSearch]=useState("");
@@ -36,7 +40,7 @@ const [transmission,setTransmission]=useState("");
 
 
 
-const [form,setForm]=useState({
+const emptyForm = {
 
 customer_id:"",
 registration_number:"",
@@ -50,7 +54,11 @@ transmission:"",
 vin_no:"",
 engine_number:""
 
-});
+};
+
+
+
+const [form,setForm]=useState(emptyForm);
 
 
 
@@ -138,6 +146,47 @@ setForm({
 
 
 
+// Opens the modal pre-filled with an existing vehicle's data. Keeping
+// customer_id in the form even though it's not editable here (see the
+// disabled select below) so the modal still shows who owns it.
+const startEditVehicle = (vehicle)=>{
+
+setEditingId(vehicle.id);
+
+setForm({
+
+customer_id: vehicle.customer_id || "",
+registration_number: vehicle.registration_number || "",
+make: vehicle.make || "",
+model: vehicle.model || "",
+year: vehicle.year || "",
+mileage: vehicle.mileage != null ? String(vehicle.mileage) : "",
+color: vehicle.color || "",
+fuel_type: vehicle.fuel_type || "",
+transmission: vehicle.transmission || "",
+vin_no: vehicle.vin_no || "",
+engine_number: vehicle.engine_number || ""
+
+});
+
+setShowModal(true);
+
+}
+
+
+
+const closeModal = ()=>{
+
+setShowModal(false);
+
+setEditingId(null);
+
+setForm(emptyForm);
+
+}
+
+
+
 
 
 
@@ -148,7 +197,7 @@ const saveVehicle=async()=>{
 try{
 
 
-if(!form.customer_id){
+if(!editingId && !form.customer_id){
 
 alert("Select customer");
 
@@ -170,29 +219,19 @@ mileage:form.mileage.replace(/,/g,"")
 
 
 
+if(editingId){
+
+await updateCustomerVehicle(editingId, cleanedForm);
+
+}else{
+
 await createCustomerVehicle(cleanedForm);
 
-
-
-setShowModal(false);
+}
 
 
 
-setForm({
-
-customer_id:"",
-registration_number:"",
-make:"",
-model:"",
-year:"",
-mileage:"",
-color:"",
-fuel_type:"",
-transmission:"",
-vin_no:"",
-engine_number:""
-
-});
+closeModal();
 
 
 
@@ -419,7 +458,7 @@ Manual
 
 
 
-<table className="w-full">
+<table className="w-full table-fixed">
 
 
 
@@ -429,32 +468,32 @@ Manual
 <tr>
 
 
-<th className="p-4 text-left">
+<th className="p-4 text-left w-1/4">
 Vehicle
 </th>
 
 
-<th>
+<th className="p-4 text-left w-1/6">
 Registration
 </th>
 
 
-<th>
+<th className="p-4 text-left w-1/4">
 Owner
 </th>
 
 
-<th>
+<th className="p-4 text-left w-1/12">
 Fuel
 </th>
 
 
-<th>
+<th className="p-4 text-left w-1/6">
 Mileage
 </th>
 
 
-<th>
+<th className="p-4 text-left w-1/6">
 Actions
 </th>
 
@@ -530,7 +569,7 @@ className="border-t"
 
 
 
-<td>
+<td className="p-4">
 
 {vehicle.registration_number}
 
@@ -539,7 +578,7 @@ className="border-t"
 
 
 
-<td>
+<td className="p-4">
 
 
 <p>
@@ -562,7 +601,7 @@ className="border-t"
 
 
 
-<td>
+<td className="p-4">
 
 {vehicle.fuel_type}
 
@@ -573,7 +612,7 @@ className="border-t"
 
 
 
-<td>
+<td className="p-4">
 
 {vehicle.mileage} KM
 
@@ -584,10 +623,10 @@ className="border-t"
 
 
 
-<td>
+<td className="p-4">
 
 
-<div className="flex gap-3">
+<div className="flex gap-3 items-center flex-wrap">
 
 
 
@@ -611,6 +650,27 @@ View
 
 </Link>
 
+
+
+
+<button
+
+onClick={()=>startEditVehicle(vehicle)}
+
+className="
+text-amber-600
+flex
+items-center
+gap-1
+"
+
+>
+
+<FaEdit/>
+
+Edit
+
+</button>
 
 
 
@@ -706,7 +766,7 @@ max-w-xl
 
 <h2 className="text-xl font-bold mb-5">
 
-Add Vehicle
+{editingId ? "Edit Vehicle" : "Add Vehicle"}
 
 </h2>
 
@@ -727,7 +787,9 @@ value={form.customer_id}
 
 onChange={handleChange}
 
-className="border p-2 rounded"
+disabled={!!editingId}
+
+className="border p-2 rounded disabled:bg-slate-100 disabled:text-slate-400"
 
 >
 
@@ -828,7 +890,7 @@ className="border p-2 rounded"
 
 <button
 
-onClick={()=>setShowModal(false)}
+onClick={closeModal}
 
 className="border px-4 py-2 rounded"
 
@@ -855,7 +917,7 @@ rounded
 
 >
 
-Save
+{editingId ? "Save Changes" : "Save"}
 
 </button>
 

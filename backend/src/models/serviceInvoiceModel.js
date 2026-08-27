@@ -104,7 +104,7 @@ return `SRV-${year}-${String(result.rows[0].next).padStart(5,"0")}`;
 // now. When the KRA integration exists, insert a call + UPDATE here (right
 // after the invoice items are inserted, using invoiceId) rather than before
 // items exist like the old broken version did.
-export const convertServiceEstimateToInvoice = async (estimateId) => {
+export const convertServiceEstimateToInvoice = async (estimateId, overrides = {}) => {
 
   const client = await pool.connect();
 
@@ -124,6 +124,14 @@ export const convertServiceEstimateToInvoice = async (estimateId) => {
     }
 
     const estimate = estimateRes.rows[0];
+
+    // Invoice bill-to can differ from the estimate's — e.g. the estimate
+    // went to the customer, but the actual invoice bills a company or
+    // department instead. Falls back to whatever was on the estimate
+    // (which itself already falls back to the customer name/pin) when
+    // nothing is provided at conversion time.
+    const billToName = overrides.bill_to_name?.trim() || estimate.bill_to_name;
+    const billToKraPin = overrides.bill_to_kra_pin?.trim() || estimate.bill_to_kra_pin;
 
     const itemsRes = await queryWithDiagnostics(
       client,
@@ -158,8 +166,8 @@ RETURNING *
   estimate.customer_phone,
   estimate.driver_name,
   estimate.driver_phone,
-  estimate.bill_to_name,
-  estimate.bill_to_kra_pin,
+  billToName,
+  billToKraPin,
   estimate.subtotal,
   estimate.discount_type,
   estimate.discount,
@@ -174,13 +182,8 @@ RETURNING *
 
     for (const item of items) {
 
-  // Cast once — quantity comes back as NUMERIC ("1.00") but every
-  // downstream INTEGER column needs a real integer.
   const quantity = Math.round(Number(item.quantity));
 
-  // Customer-supplied parts have no sparepart_id and never touch stock -
-  // they're a name-only, zero-priced line. Everything else (real
-  // inventory spareparts) goes through the usual lock/check/deduct.
   if (item.item_type === "sparepart" && !item.customer_supplied && !item.is_custom) {
 
     const stock = await queryWithDiagnostics(
