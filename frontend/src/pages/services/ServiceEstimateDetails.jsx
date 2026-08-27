@@ -457,12 +457,7 @@ const ServiceEstimateDetails =()=>{
                 <td className="border border-black px-1 py-0.5 font-bold w-[10%] align-middle">Date:</td>
                 <td className="border border-black px-1 py-0.5 align-middle">{new Date(estimate.created_at).toLocaleDateString()}</td>
               </tr>
-              <tr>
-                <td className="border border-black px-1 py-0.5 font-bold align-middle">Customer:</td>
-                <td className="border border-black px-1 py-0.5 align-middle" colSpan={4}>
-                  {field(estimate.customer_name)}
-                </td>
-              </tr>
+            
               <tr>
                 <td className="border border-black px-1 py-0.5 font-bold align-middle">Bill To:</td>
                 <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>
@@ -471,6 +466,13 @@ const ServiceEstimateDetails =()=>{
                 <td className="border border-black px-1 py-0.5 font-bold align-middle">KRA Pin:</td>
                 <td className="border border-black px-1 py-0.5 align-middle">
                   {field(estimate.bill_to_kra_pin || estimate.customer_kra_pin)}
+                </td>
+              </tr>
+
+              <tr>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Customer:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={4}>
+                  {field(estimate.customer_name)}
                 </td>
               </tr>
               {estimate.driver_name && (
