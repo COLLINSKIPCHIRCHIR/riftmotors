@@ -2,7 +2,8 @@ import React,{useEffect,useState,useRef} from "react";
 import {useParams,useNavigate} from "react-router-dom";
 import {
   getServiceInvoice,
-  payServiceInvoice
+  payServiceInvoice,
+  createCreditNote
 } from "../../api/serviceApi";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -37,6 +38,10 @@ const ServiceInvoiceDetails = () => {
   const [invoice,setInvoice] = useState(null);
   const [paymentMethod,setPaymentMethod] = useState("");
   const [amountPaid, setAmountPaid] = useState("");
+  const [showCreditNoteModal, setShowCreditNoteModal] = useState(false);
+  const [creditReason, setCreditReason] = useState("");
+  const [creditSelections, setCreditSelections] = useState({}); // { [invoiceItemId]: amountString }
+  const [issuingCredit, setIssuingCredit] = useState(false);
   const printRef = useRef();
 
   // Same pattern used elsewhere in the app for "Served By"/"Printed By"
@@ -60,6 +65,12 @@ const ServiceInvoiceDetails = () => {
   if(!invoice)
     return <div className="p-6">Loading invoice...</div>
 
+  // How much of this invoice's total can still be credited. Any invoice
+  // qualifies regardless of payment status - a fully paid invoice can
+  // still carry a credit, it just becomes money owed back rather than
+  // reducing an unpaid balance.
+  const remainingCreditable = Number(invoice.total) - Number(invoice.amount_credited || 0);
+
  const handlePay = async () => {
   if (!paymentMethod) {
     alert("Select payment method");
@@ -71,6 +82,58 @@ const ServiceInvoiceDetails = () => {
   }
   const res = await payServiceInvoice(invoice.id, paymentMethod, amountPaid);
   navigate(`/admin/services/receipts/${res.data.receipt.id}`);
+};
+
+const handleOpenCreditNoteModal = () => {
+  setCreditReason("");
+  setCreditSelections({});
+  setShowCreditNoteModal(true);
+};
+
+const handleToggleCreditItem = (item) => {
+  setCreditSelections((prev) => {
+    const next = { ...prev };
+    if (next[item.id] !== undefined) {
+      delete next[item.id];
+    } else {
+      // default to the full line amount - user can lower it for a
+      // partial correction
+      next[item.id] = item.total_price;
+    }
+    return next;
+  });
+};
+
+const handleCreditAmountChange = (itemId, value) => {
+  setCreditSelections((prev) => ({ ...prev, [itemId]: value }));
+};
+
+const handleSubmitCreditNote = async () => {
+  const items = Object.entries(creditSelections)
+    .filter(([, amount]) => Number(amount) > 0)
+    .map(([invoice_item_id, amount]) => ({
+      invoice_item_id: Number(invoice_item_id),
+      credit_amount: Number(amount)
+    }));
+
+  if (items.length === 0) {
+    alert("Select at least one item and enter a credit amount");
+    return;
+  }
+
+  setIssuingCredit(true);
+  try {
+    const res = await createCreditNote({
+      invoice_id: invoice.id,
+      reason: creditReason.trim(),
+      items
+    });
+    navigate(`/admin/services/credit-notes/${res.data.creditNote.id}`);
+  } catch (err) {
+    alert(err.response?.data?.error || "Failed to issue credit note");
+  } finally {
+    setIssuingCredit(false);
+  }
 };
 
   // Renders the printable area into a (possibly multi-page) PDF and
@@ -396,24 +459,28 @@ const ServiceInvoiceDetails = () => {
           {/* REF / CUSTOMER / VEHICLE GRID */}
           <table className="w-full border border-black text-[10px] leading-[13px]">
             <tbody>
+
+              
               <tr>
                 <td className="border border-black px-1 py-0.5 font-bold w-[10%] align-middle">REF:</td>
                 <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{field(invoice.invoice_number)}</td>
                 <td className="border border-black px-1 py-0.5 font-bold w-[10%] align-middle">Date:</td>
                 <td className="border border-black px-1 py-0.5 align-middle">{new Date(invoice.created_at).toLocaleDateString()}</td>
               </tr>
-              <tr>
-                <td className="border border-black px-1 py-0.5 font-bold align-middle">Customer:</td>
-                <td className="border border-black px-1 py-0.5 align-middle" colSpan={4}>
-                  {field(invoice.customer_name)}
-                </td>
-              </tr>
+              
 
               <tr>
                 <td className="border border-black px-1 py-0.5 font-bold align-middle">Bill To:</td>
                 <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{field(invoice.bill_to_name || invoice.customer_name)}</td>
                 <td className="border border-black px-1 py-0.5 font-bold align-middle">KRA Pin:</td>
                 <td className="border border-black px-1 py-0.5 align-middle">{field(invoice.bill_to_kra_pin || invoice.customer_kra_pin)}</td>
+              </tr>
+
+              <tr>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Customer:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={4}>
+                  {field(invoice.customer_name)}
+                </td>
               </tr>
               {invoice.driver_name && (
                 <tr>
@@ -461,7 +528,11 @@ const ServiceInvoiceDetails = () => {
           {/* ACTIONS — on-screen only. print:hidden keeps it out of the
               native browser Print, and capture-hide (stripped in the
               html2canvas onclone above) keeps it out of Download PDF /
-              Share too. */}
+              Share too. Record Payment only shows for unpaid/partial
+              invoices, but Issue Credit Note is its own sibling block so
+              it renders regardless of payment status - a paid invoice
+              can still carry a credit (money owed back), it just can't
+              take a payment anymore. */}
           <div className="flex justify-end gap-3 my-3 print:hidden capture-hide flex-wrap">
 
             {invoice.status!=="paid" && (
@@ -490,6 +561,13 @@ const ServiceInvoiceDetails = () => {
                 className="bg-green-600 text-white px-5 py-2 rounded"
                 >Record Payment</button>
             </>
+            )}
+
+            {remainingCreditable > 0 && (
+              <button
+                onClick={handleOpenCreditNoteModal}
+                className="bg-red-700 text-white px-5 py-2 rounded"
+              >Issue Credit Note</button>
             )}
 
             <button
@@ -622,6 +700,12 @@ const ServiceInvoiceDetails = () => {
                   <td className="border border-black px-1 py-0.5 font-bold align-middle">Total Amount</td>
                   <td className="border border-black px-1 py-0.5 text-right font-bold align-middle">{formatMoney(invoice.total)}</td>
                 </tr>
+                {Number(invoice.amount_credited || 0) > 0 && (
+                  <tr>
+                    <td className="border border-black px-1 py-0.5 align-middle text-red-700">Credited</td>
+                    <td className="border border-black px-1 py-0.5 text-right align-middle text-red-700">-{formatMoney(invoice.amount_credited)}</td>
+                  </tr>
+                )}
               </tbody>
             </table>
 
@@ -653,6 +737,76 @@ const ServiceInvoiceDetails = () => {
           <img src="/brands/ford.jpg" alt="Ford" className="h-16 object-contain" />
           <img src="/brands/subaru.jpg" alt="Subaru" className="h-16 object-contain" />
         </div>
+
+        {showCreditNoteModal && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 print:hidden capture-hide">
+            <div className="bg-white w-full max-w-lg rounded-xl p-6 shadow-xl max-h-[85vh] overflow-y-auto">
+
+              <h2 className="text-xl font-bold mb-2">Issue Credit Note</h2>
+              <p className="text-sm text-slate-500 mb-4">
+                Select the line(s) needing a correction and enter the amount to
+                credit back for each. Amounts are pre-VAT.
+              </p>
+
+              <div className="space-y-3 mb-4">
+                {invoice.items
+                  ?.filter((item) => !item.customer_supplied && Number(item.total_price) > 0)
+                  .map((item) => {
+                    const checked = creditSelections[item.id] !== undefined;
+                    return (
+                      <div key={item.id} className="border rounded-lg p-3">
+                        <label className="flex items-center gap-2 mb-2">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => handleToggleCreditItem(item)}
+                          />
+                          <span className="text-sm font-medium">{item.description}</span>
+                          <span className="text-xs text-slate-400 ml-auto">
+                            Line total: KES {formatMoney(item.total_price)}
+                          </span>
+                        </label>
+
+                        {checked && (
+                          <input
+                            type="number"
+                            value={creditSelections[item.id]}
+                            onChange={(e) => handleCreditAmountChange(item.id, e.target.value)}
+                            max={item.total_price}
+                            min={0}
+                            className="w-full border rounded-lg p-2 text-sm"
+                            placeholder="Amount to credit (KES)"
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+
+              <label className="text-sm">Reason</label>
+              <textarea
+                value={creditReason}
+                onChange={(e) => setCreditReason(e.target.value)}
+                placeholder="e.g. Labour was overpriced, correcting to agreed rate"
+                className="w-full border rounded-lg p-2 mb-4"
+                rows={3}
+              />
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowCreditNoteModal(false)}
+                  className="px-4 py-2 border rounded-lg"
+                >Cancel</button>
+                <button
+                  onClick={handleSubmitCreditNote}
+                  disabled={issuingCredit}
+                  className="bg-red-700 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+                >{issuingCredit ? "Issuing..." : "Issue Credit Note"}</button>
+              </div>
+
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

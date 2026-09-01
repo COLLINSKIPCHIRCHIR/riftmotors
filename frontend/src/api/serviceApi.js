@@ -180,6 +180,17 @@ export const getServiceReceipt = (id) =>
 API.get(`/service-receipts/${id}`);
 
 
+// SERVICE CREDIT NOTES
+
+export const createCreditNote = (data) =>
+API.post("/service-credit-notes", data);
+
+export const getServiceCreditNotes = () =>
+API.get("/service-credit-notes");
+
+export const getServiceCreditNote = (id) =>
+API.get(`/service-credit-notes/${id}`);
+
 
 
 export const payServiceInvoice = (id, payment_method, amount_paid) =>

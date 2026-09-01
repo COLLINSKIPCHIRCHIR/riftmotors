@@ -54,6 +54,8 @@ import ServiceInvoiceDetails from "./pages/services/ServiceInvoiceDetails";
 import ServiceReceipts from "./pages/services/ServiceReceipts";
 import ServiceReceiptDetails from "./pages/services/ServiceReceiptDetails";
 import DailyJobReport from "./pages/services/DailyJobReport";
+import ServiceCreditNotes from "./pages/services/ServiceCreditNotes";
+import ServiceCreditNoteDetails from "./pages/services/ServiceCreditNoteDetails";
 import RolesPermissions from "./pages/admin/RolesPermissions";
 import Users from "./pages/admin/Users";
 
@@ -167,6 +169,8 @@ function App() {
           <Route path="services/invoices/:id" element={<RequirePermission permission="services.invoices"><ServiceInvoiceDetails /></RequirePermission>} />
           <Route path="services/receipts" element={<RequirePermission permission="services.receipts"><ServiceReceipts /></RequirePermission>} />
           <Route path="services/receipts/:id" element={<RequirePermission permission="services.receipts"><ServiceReceiptDetails /></RequirePermission>} />
+          <Route path="services/credit-notes" element={<RequirePermission permission="services.creditnotes"><ServiceCreditNotes /></RequirePermission>} />
+          <Route path="services/credit-notes/:id" element={<RequirePermission permission="services.creditnotes"><ServiceCreditNoteDetails /></RequirePermission>} />
           <Route path="services/reports/daily" element={<RequirePermission permission="services.jobs"><DailyJobReport /></RequirePermission>} />
           
           <Route path="hr/departments" element={<Departments />} />

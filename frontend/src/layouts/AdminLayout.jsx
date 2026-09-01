@@ -204,6 +204,11 @@ const AdminLayout = () => {
             permission:"services.receipts"
         },
         {
+            name:"Credit Notes",
+            path:"/admin/services/credit-notes",
+            permission:"services.creditnotes"
+        },
+        {
           name: "Daily Job Report",
           path: "/admin/services/reports/daily",
           permission: "services.jobs"

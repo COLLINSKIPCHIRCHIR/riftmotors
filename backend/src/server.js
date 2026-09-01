@@ -54,6 +54,8 @@ import payslipRoutes from "./routes/payslipRoutes.js";
 import payslipEarningRoutes from "./routes/payslipEarningRoutes.js";
 import payslipDeductionRoutes from "./routes/payslipDeductionRoutes.js";
 import payrollProcessingRoutes from "./routes/payrollProcessingRoutes.js";
+import serviceCreditNoteRoutes from "./routes/serviceCreditNoteRoutes.js";
+
 
 
 import { createSpareSalesTables } from "./models/spareSalesModel.js";
@@ -189,6 +191,11 @@ serviceInvoiceRoutes
 app.use(
 "/api/service-receipts",
 serviceReceiptRoutes
+);
+
+app.use(
+  "/api/service-credit-notes",
+  serviceCreditNoteRoutes
 );
 
 app.use(
