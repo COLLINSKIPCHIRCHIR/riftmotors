@@ -1,7 +1,8 @@
 import {
   createServiceCreditNote,
   getServiceCreditNotes,
-  getServiceCreditNoteById
+  getServiceCreditNoteById,
+  updateServiceCreditNote
 } from "../models/serviceCreditNoteModel.js";
 
 export const createCreditNote = async (req, res) => {
@@ -32,5 +33,15 @@ export const getCreditNote = async (req, res) => {
     res.json(creditNote);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+export const updateCreditNote = async (req, res) => {
+  try {
+    const creditNote = await updateServiceCreditNote(req.params.id, req.body);
+    res.json({ message: "Credit note updated", creditNote });
+  } catch (err) {
+    console.error("UPDATE CREDIT NOTE ERROR:", err);
+    res.status(400).json({ error: err.message });
   }
 };

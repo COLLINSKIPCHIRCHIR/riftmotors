@@ -1,44 +1,6 @@
 import pool from "../config/db.js";
 
-// Adds amount_credited to service_invoices (nullable/defaulted, so this
-// is safe to run against existing rows) and creates the credit note
-// tables. Call this once alongside your other table-creation calls.
-export const createServiceCreditNoteTables = async () => {
-  const query = `
-    ALTER TABLE service_invoices
-      ADD COLUMN IF NOT EXISTS amount_credited NUMERIC DEFAULT 0;
 
-    CREATE TABLE IF NOT EXISTS service_credit_notes (
-      id SERIAL PRIMARY KEY,
-      credit_note_number VARCHAR(60) UNIQUE,
-      invoice_id INTEGER REFERENCES service_invoices(id),
-      job_id INTEGER REFERENCES service_jobs(id),
-      customer_name VARCHAR(100),
-      customer_phone VARCHAR(30),
-      reason VARCHAR(255),
-      subtotal NUMERIC DEFAULT 0,
-      tax_rate NUMERIC DEFAULT 0,
-      tax_amount NUMERIC DEFAULT 0,
-      total NUMERIC DEFAULT 0,
-      status VARCHAR(30) DEFAULT 'issued',
-      created_at TIMESTAMP DEFAULT NOW()
-    );
-
-    CREATE TABLE IF NOT EXISTS service_credit_note_items (
-      id SERIAL PRIMARY KEY,
-      credit_note_id INTEGER REFERENCES service_credit_notes(id) ON DELETE CASCADE,
-      invoice_item_id INTEGER REFERENCES service_invoice_items(id),
-      item_type VARCHAR(20),
-      description VARCHAR(200),
-      quantity INTEGER,
-      unit_price NUMERIC,
-      total_price NUMERIC
-    );
-  `;
-
-  await pool.query(query);
-  console.log("Service credit note tables ready");
-};
 
 // First credit note on an invoice: SRV-2026-00001-CN
 // Second (rare, but possible - e.g. two separate corrections over time):
@@ -108,29 +70,43 @@ export const createServiceCreditNote = async ({ invoice_id, reason, items }) => 
     let subtotal = 0;
 
     const preparedItems = items.map((item) => {
-      const invoiceItem = invoiceItemsById[item.invoice_item_id];
-      const creditAmount = Number(item.credit_amount);
+  const invoiceItem = invoiceItemsById[item.invoice_item_id];
+  const creditAmount = Number(item.credit_amount ?? 0);
 
-      if (!(creditAmount > 0)) {
-        throw new Error(`Credit amount must be greater than zero for "${invoiceItem.description}"`);
-      }
+  // Quantity can be overridden at creation time too — e.g. the invoice
+  // recorded "2" for labour due to the old rounding bug, but the real
+  // figure was "1.5". This never affects total_price/subtotal — it's a
+  // documentation field only, same as in updateServiceCreditNote.
+  const quantity =
+    item.quantity !== undefined && item.quantity !== null && item.quantity !== ""
+      ? Number(item.quantity)
+      : Number(invoiceItem.quantity);
 
-      if (creditAmount > Number(invoiceItem.total_price)) {
-        throw new Error(`Credit amount exceeds line total for "${invoiceItem.description}"`);
-      }
+  if (creditAmount < 0) {
+    throw new Error(`Credit amount cannot be negative for "${invoiceItem.description}"`);
+  }
 
-      subtotal += creditAmount;
+  if (creditAmount === 0 && quantity === Number(invoiceItem.quantity)) {
+    throw new Error(
+      `"${invoiceItem.description}" has no credit amount and no quantity change — nothing to record`
+    );
+  }
 
-      return {
-        invoice_item_id: invoiceItem.id,
-        item_type: invoiceItem.item_type,
-        description: invoiceItem.description,
-        quantity: invoiceItem.quantity,
-        unit_price: invoiceItem.unit_price,
-        total_price: creditAmount
-      };
-    });
+  if (creditAmount > Number(invoiceItem.total_price)) {
+    throw new Error(`Credit amount exceeds line total for "${invoiceItem.description}"`);
+  }
 
+  subtotal += creditAmount;
+
+  return {
+    invoice_item_id: invoiceItem.id,
+    item_type: invoiceItem.item_type,
+    description: invoiceItem.description,
+    quantity,
+    unit_price: invoiceItem.unit_price,
+    total_price: creditAmount
+  };
+});
     const taxRate = Number(invoice.tax_rate || 0);
     const taxAmount = subtotal * (taxRate / 100);
     const total = subtotal + taxAmount;
@@ -263,4 +239,119 @@ export const getServiceCreditNoteById = async (id) => {
   );
 
   return { ...creditNote.rows[0], items: items.rows };
+};
+
+
+export const updateServiceCreditNote = async (creditNoteId, { reason, items }) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const cnRes = await client.query(`SELECT * FROM service_credit_notes WHERE id=$1`, [creditNoteId]);
+    if (cnRes.rows.length === 0) throw new Error("Credit note not found");
+    const creditNote = cnRes.rows[0];
+
+    const invoiceRes = await client.query(
+      `SELECT * FROM service_invoices WHERE id=$1 FOR UPDATE`,
+      [creditNote.invoice_id]
+    );
+    if (invoiceRes.rows.length === 0) throw new Error("Invoice not found");
+    const invoice = invoiceRes.rows[0];
+
+    if (!items || items.length === 0) throw new Error("At least one item is required");
+
+    const existingItemsRes = await client.query(
+      `SELECT * FROM service_credit_note_items WHERE credit_note_id=$1`,
+      [creditNoteId]
+    );
+    const existingById = Object.fromEntries(existingItemsRes.rows.map((r) => [r.id, r]));
+
+    const invoiceItemIds = existingItemsRes.rows.map((r) => r.invoice_item_id);
+    const invoiceItemsRes = await client.query(
+      `SELECT * FROM service_invoice_items WHERE id = ANY($1::int[])`,
+      [invoiceItemIds]
+    );
+    const invoiceItemsById = Object.fromEntries(invoiceItemsRes.rows.map((r) => [r.id, r]));
+
+    let subtotal = 0;
+    const updates = items.map((item) => {
+      const existing = existingById[item.id];
+      if (!existing) throw new Error("One or more items do not belong to this credit note");
+
+      const invoiceItem = invoiceItemsById[existing.invoice_item_id];
+      const creditAmount = Number(item.credit_amount ?? 0);
+
+      // Quantity is a documentation/label field only — it never feeds
+      // subtotal/tax/total. This lets a line note "actual qty 1.5,
+      // invoiced as 2" (a data-entry correction) without implying any
+      // money moved, distinct from a real price credit.
+      const quantity =
+        item.quantity !== undefined && item.quantity !== null && item.quantity !== ""
+          ? Number(item.quantity)
+          : Number(existing.quantity);
+
+      // A line must carry either a real credit amount, or a quantity
+      // change with zero amount (pure correction) — but not a negative
+      // or garbage amount either way.
+      if (creditAmount < 0) {
+        throw new Error(`Credit amount cannot be negative for "${existing.description}"`);
+      }
+      if (creditAmount === 0 && quantity === Number(existing.quantity)) {
+        throw new Error(
+          `"${existing.description}" has no credit amount and no quantity change — nothing to update`
+        );
+      }
+      if (invoiceItem && creditAmount > Number(invoiceItem.total_price)) {
+        throw new Error(`Credit amount exceeds line total for "${existing.description}"`);
+      }
+
+      subtotal += creditAmount;
+      return { id: existing.id, total_price: creditAmount, quantity };
+    });
+
+    const taxRate = Number(creditNote.tax_rate || 0);
+    const taxAmount = subtotal * (taxRate / 100);
+    const total = subtotal + taxAmount;
+
+    // Everything credited on this invoice EXCLUDING this note's old total,
+    // plus the new total, still can't exceed the invoice total.
+    const otherCredited = Number(invoice.amount_credited || 0) - Number(creditNote.total);
+    if (total > Number(invoice.total) - otherCredited) {
+      throw new Error("Credit amount exceeds what remains creditable on this invoice");
+    }
+
+    for (const u of updates) {
+      await client.query(
+        `UPDATE service_credit_note_items SET total_price=$1, quantity=$2 WHERE id=$3`,
+        [u.total_price, u.quantity, u.id]
+      );
+    }
+
+    await client.query(
+      `UPDATE service_credit_notes SET reason=$1, subtotal=$2, tax_amount=$3, total=$4 WHERE id=$5`,
+      [reason ?? creditNote.reason, subtotal, taxAmount, total, creditNoteId]
+    );
+
+    const newAmountCredited = otherCredited + total;
+    const remainingBalance = Number(invoice.total) - Number(invoice.amount_paid || 0) - newAmountCredited;
+
+    let newStatus = invoice.status;
+    if (remainingBalance <= 0) {
+      newStatus = Number(invoice.amount_paid || 0) > 0 ? "paid" : "credited";
+    } else if (Number(invoice.amount_paid || 0) > 0 || newAmountCredited > 0) {
+      newStatus = "partial";
+    }
+
+    await client.query(`UPDATE service_invoices SET amount_credited=$1, status=$2 WHERE id=$3`, [
+      newAmountCredited, newStatus, invoice.id
+    ]);
+
+    await client.query("COMMIT");
+    return await getServiceCreditNoteById(creditNoteId);
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 };

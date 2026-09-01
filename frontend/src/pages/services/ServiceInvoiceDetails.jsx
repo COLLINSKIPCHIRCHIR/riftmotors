@@ -40,7 +40,12 @@ const ServiceInvoiceDetails = () => {
   const [amountPaid, setAmountPaid] = useState("");
   const [showCreditNoteModal, setShowCreditNoteModal] = useState(false);
   const [creditReason, setCreditReason] = useState("");
-  const [creditSelections, setCreditSelections] = useState({}); // { [invoiceItemId]: amountString }
+  // { [invoiceItemId]: { amount: string, quantity: string } }
+  // `quantity` defaults to the invoice item's recorded quantity but can
+  // be overridden — this is for correcting a wrong recorded quantity
+  // (e.g. the old rounding bug turning 1.5 into 2), separate from the
+  // credit amount itself. It never affects the money math.
+  const [creditSelections, setCreditSelections] = useState({});
   const [issuingCredit, setIssuingCredit] = useState(false);
   const printRef = useRef();
 
@@ -96,28 +101,40 @@ const handleToggleCreditItem = (item) => {
     if (next[item.id] !== undefined) {
       delete next[item.id];
     } else {
-      // default to the full line amount - user can lower it for a
-      // partial correction
-      next[item.id] = item.total_price;
+      // default to the full line amount and the invoice's recorded
+      // quantity — user can lower the amount for a partial correction,
+      // or change the quantity if it was recorded wrong (no dollar
+      // impact from a quantity change alone).
+      next[item.id] = { amount: item.total_price, quantity: item.quantity };
     }
     return next;
   });
 };
 
 const handleCreditAmountChange = (itemId, value) => {
-  setCreditSelections((prev) => ({ ...prev, [itemId]: value }));
+  setCreditSelections((prev) => ({
+    ...prev,
+    [itemId]: { ...prev[itemId], amount: value }
+  }));
+};
+
+const handleCreditQuantityChange = (itemId, value) => {
+  setCreditSelections((prev) => ({
+    ...prev,
+    [itemId]: { ...prev[itemId], quantity: value }
+  }));
 };
 
 const handleSubmitCreditNote = async () => {
-  const items = Object.entries(creditSelections)
-    .filter(([, amount]) => Number(amount) > 0)
-    .map(([invoice_item_id, amount]) => ({
-      invoice_item_id: Number(invoice_item_id),
-      credit_amount: Number(amount)
-    }));
+  const items = Object.entries(creditSelections).map(([invoice_item_id, sel]) => ({
+    invoice_item_id: Number(invoice_item_id),
+    credit_amount: Number(sel.amount || 0),
+    quantity:
+      sel.quantity !== undefined && sel.quantity !== "" ? Number(sel.quantity) : undefined
+  }));
 
   if (items.length === 0) {
-    alert("Select at least one item and enter a credit amount");
+    alert("Select at least one item");
     return;
   }
 
@@ -744,8 +761,9 @@ const handleSubmitCreditNote = async () => {
 
               <h2 className="text-xl font-bold mb-2">Issue Credit Note</h2>
               <p className="text-sm text-slate-500 mb-4">
-                Select the line(s) needing a correction and enter the amount to
-                credit back for each. Amounts are pre-VAT.
+                Select the line(s) needing a correction. Amount is the pre-VAT
+                money to credit back. Qty only needs changing if the invoice
+                recorded the wrong quantity — that alone doesn't move any money.
               </p>
 
               <div className="space-y-3 mb-4">
@@ -763,20 +781,37 @@ const handleSubmitCreditNote = async () => {
                           />
                           <span className="text-sm font-medium">{item.description}</span>
                           <span className="text-xs text-slate-400 ml-auto">
-                            Line total: KES {formatMoney(item.total_price)}
+                            Line total: KES {formatMoney(item.total_price)} &middot; Qty: {item.quantity}
                           </span>
                         </label>
 
                         {checked && (
-                          <input
-                            type="number"
-                            value={creditSelections[item.id]}
-                            onChange={(e) => handleCreditAmountChange(item.id, e.target.value)}
-                            max={item.total_price}
-                            min={0}
-                            className="w-full border rounded-lg p-2 text-sm"
-                            placeholder="Amount to credit (KES)"
-                          />
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <label className="text-xs text-slate-500">Amount to credit (KES)</label>
+                              <input
+                                type="number"
+                                value={creditSelections[item.id]?.amount ?? ""}
+                                onChange={(e) => handleCreditAmountChange(item.id, e.target.value)}
+                                max={item.total_price}
+                                min={0}
+                                className="w-full border rounded-lg p-2 text-sm"
+                                placeholder="0"
+                              />
+                            </div>
+                            <div className="w-24">
+                              <label className="text-xs text-slate-500">Qty</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={creditSelections[item.id]?.quantity ?? ""}
+                                onChange={(e) => handleCreditQuantityChange(item.id, e.target.value)}
+                                min={0}
+                                className="w-full border rounded-lg p-2 text-sm"
+                                placeholder={item.quantity}
+                              />
+                            </div>
+                          </div>
                         )}
                       </div>
                     );

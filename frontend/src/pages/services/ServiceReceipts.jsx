@@ -1,4 +1,4 @@
-import React,{useEffect,useState} from "react";
+import React,{useEffect,useState,useMemo} from "react";
 
 import {
 getServiceReceipts
@@ -17,6 +17,7 @@ const ServiceReceipts=()=>{
 
 
 const [receipts,setReceipts]=useState([]);
+const [searchTerm,setSearchTerm]=useState("");
 
 const navigate=useNavigate();
 
@@ -28,11 +29,19 @@ useEffect(()=>{
 const load=async()=>{
 
 
+try{
+
 const res =
 await getServiceReceipts();
 
 
 setReceipts(res.data);
+
+}catch(err){
+
+console.log(err);
+
+}
 
 
 };
@@ -44,6 +53,19 @@ load();
 },[]);
 
 
+const filteredReceipts = useMemo(()=>{
+
+const term = searchTerm.trim().toLowerCase();
+
+if(!term) return receipts;
+
+return receipts.filter(receipt=>
+(receipt.receipt_number || "").toLowerCase().includes(term) ||
+(receipt.customer_name || "").toLowerCase().includes(term) ||
+(receipt.payment_method || "").toLowerCase().includes(term)
+);
+
+},[receipts,searchTerm]);
 
 
 
@@ -52,11 +74,30 @@ return (
 <div className="p-6 bg-gray-100 min-h-screen">
 
 
-<h1 className="text-3xl font-bold mb-6">
+<div className="flex justify-between items-center mb-6 gap-4">
+
+<h1 className="text-3xl font-bold">
 
 Service Receipts
 
 </h1>
+
+<input
+type="text"
+placeholder="Search by receipt #, customer, or payment method..."
+value={searchTerm}
+onChange={(e)=>setSearchTerm(e.target.value)}
+className="
+border
+rounded
+px-3
+py-2
+w-72
+bg-white
+"
+/>
+
+</div>
 
 
 
@@ -107,7 +148,7 @@ Action
 
 
 {
-receipts.map(receipt=>(
+filteredReceipts.map(receipt=>(
 
 
 <tr
@@ -177,6 +218,20 @@ View
 
 
 ))
+
+}
+
+{
+
+filteredReceipts.length===0 && (
+
+<tr>
+<td colSpan={5} className="p-6 text-center text-gray-500">
+No receipts match your search.
+</td>
+</tr>
+
+)
 
 }
 

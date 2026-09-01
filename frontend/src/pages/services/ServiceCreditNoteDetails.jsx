@@ -1,6 +1,6 @@
 import React,{useEffect,useState,useRef} from "react";
 import {useParams,useNavigate} from "react-router-dom";
-import { getServiceCreditNote } from "../../api/serviceApi";
+import { getServiceCreditNote, updateCreditNote } from "../../api/serviceApi";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -20,6 +20,11 @@ const ServiceCreditNoteDetails = () => {
   const {id} = useParams();
   const navigate = useNavigate();
   const [creditNote,setCreditNote] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [editedReason, setEditedReason] = useState("");
+  // { [itemId]: { credit_amount: string|number, quantity: string|number } }
+  const [editedItems, setEditedItems] = useState({});
+  const [saving, setSaving] = useState(false);
   const printRef = useRef();
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -221,6 +226,64 @@ const ServiceCreditNoteDetails = () => {
     }
   };
 
+  // EDIT MODE ---------------------------------------------------------
+  // Two independent things can be corrected per line:
+  //   - credit_amount: real money owed back to the customer.
+  //   - quantity: a documentation-only label (e.g. the invoice recorded
+  //     "2" for labour due to a rounding bug, but the real figure was
+  //     "1.5"). Changing quantity alone never touches subtotal/tax/total.
+  // A line needs at least one of the two to actually change, enforced
+  // server-side.
+
+  const handleStartEdit = () => {
+    setEditedReason(creditNote.reason || "");
+    setEditedItems(
+      Object.fromEntries(
+        creditNote.items.map((i) => [
+          i.id,
+          { credit_amount: i.total_price, quantity: i.quantity }
+        ])
+      )
+    );
+    setEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditing(false);
+  };
+
+  const handleAmountChange = (itemId, value) => {
+    setEditedItems((prev) => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], credit_amount: value }
+    }));
+  };
+
+  const handleQuantityChange = (itemId, value) => {
+    setEditedItems((prev) => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], quantity: value }
+    }));
+  };
+
+  const handleSaveEdit = async () => {
+    setSaving(true);
+    try {
+      const items = Object.entries(editedItems).map(([itemId, vals]) => ({
+        id: Number(itemId),
+        credit_amount: Number(vals.credit_amount || 0),
+        quantity: Number(vals.quantity)
+      }));
+      const res = await updateCreditNote(creditNote.id, { reason: editedReason, items });
+      setCreditNote(res.data.creditNote);
+      setEditing(false);
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to update credit note");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="print-container p-6 bg-gray-100 min-h-screen">
       <div ref={printRef} className="max-w-5xl mx-auto bg-white print-document border border-black p-2 text-[10px] leading-[13px]">
@@ -257,63 +320,93 @@ const ServiceCreditNoteDetails = () => {
 
           {/* REF / INVOICE / CUSTOMER GRID */}
           <table className="w-full border border-black text-[10px] leading-[13px]">
-  <tbody>
-    <tr>
-      <td className="border border-black px-1 py-0.5 font-bold w-[10%] align-middle">REF:</td>
-      <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>
-        {creditNote.credit_note_number}
-      </td>
-      <td className="border border-black px-1 py-0.5 font-bold w-[10%] align-middle">Date:</td>
-      <td className="border border-black px-1 py-0.5 align-middle">{new Date(creditNote.created_at).toLocaleDateString()}</td>
-    </tr>
-    <tr>
-      <td className="border border-black px-1 py-0.5 font-bold align-middle">Against Invoice:</td>
-      <td className="border border-black px-1 py-0.5 align-middle" colSpan={4}>
-        {field(creditNote.invoice_number)}
-      </td>
-    </tr>
-    <tr>
-      <td className="border border-black px-1 py-0.5 font-bold align-middle">Customer:</td>
-      <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>
-        {field(creditNote.customer_name)}
-      </td>
-      <td className="border border-black px-1 py-0.5 font-bold align-middle">KRA Pin:</td>
-      <td className="border border-black px-1 py-0.5 align-middle">{field(creditNote.customer_kra_pin)}</td>
-    </tr>
-    <tr>
-      <td className="border border-black px-1 py-0.5 font-bold align-middle">Address:</td>
-      <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{field(creditNote.customer_address)}</td>
-      <td className="border border-black px-1 py-0.5 font-bold align-middle">Reg No:</td>
-      <td className="border border-black px-1 py-0.5 align-middle">{field(creditNote.registration_number)}</td>
-    </tr>
-    <tr>
-      <td className="border border-black px-1 py-0.5 font-bold align-middle">Model:</td>
-      <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>
-        {field(creditNote.vehicle_make)} {field(creditNote.vehicle_model)}
-      </td>
-      <td className="border border-black px-1 py-0.5 font-bold align-middle">Vin No:</td>
-      <td className="border border-black px-1 py-0.5 align-middle">{field(creditNote.vin_no)}</td>
-    </tr>
-    <tr>
-      <td className="border border-black px-1 py-0.5" colSpan={3}></td>
-      <td className="border border-black px-1 py-0.5 font-bold align-middle">Engine:</td>
-      <td className="border border-black px-1 py-0.5 align-middle">{field(creditNote.engine_number)}</td>
-    </tr>
-    <tr>
-      <td className="border border-black px-1 py-0.5 font-bold align-middle">Reason:</td>
-      <td className="border border-black px-1 py-0.5 align-middle" colSpan={4}>
-        {field(creditNote.reason)}
-      </td>
-    </tr>
-  </tbody>
-</table>
+            <tbody>
+              <tr>
+                <td className="border border-black px-1 py-0.5 font-bold w-[10%] align-middle">REF:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>
+                  {creditNote.credit_note_number}
+                </td>
+                <td className="border border-black px-1 py-0.5 font-bold w-[10%] align-middle">Date:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">{new Date(creditNote.created_at).toLocaleDateString()}</td>
+              </tr>
+              <tr>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Against Invoice:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={4}>
+                  {field(creditNote.invoice_number)}
+                </td>
+              </tr>
+              <tr>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Customer:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>
+                  {field(creditNote.customer_name)}
+                </td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">KRA Pin:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">{field(creditNote.customer_kra_pin)}</td>
+              </tr>
+              <tr>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Address:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{field(creditNote.customer_address)}</td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Reg No:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">{field(creditNote.registration_number)}</td>
+              </tr>
+              <tr>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Model:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>
+                  {field(creditNote.vehicle_make)} {field(creditNote.vehicle_model)}
+                </td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Vin No:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">{field(creditNote.vin_no)}</td>
+              </tr>
+              <tr>
+                <td className="border border-black px-1 py-0.5" colSpan={3}></td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Engine:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">{field(creditNote.engine_number)}</td>
+              </tr>
+              <tr>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Reason:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={4}>
+                  {editing ? (
+                    <input
+                      type="text"
+                      value={editedReason}
+                      onChange={(e) => setEditedReason(e.target.value)}
+                      className="w-full border border-black rounded px-1 py-0.5 text-[10px] capture-hide print:hidden"
+                    />
+                  ) : (
+                    field(creditNote.reason)
+                  )}
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
           {/* ACTIONS */}
-          <div className="flex justify-end gap-3 my-3 print:hidden capture-hide">
+          <div className="flex justify-end gap-3 my-3 print:hidden capture-hide flex-wrap">
             <button
               onClick={() => navigate(-1)}
               className="bg-gray-600 text-white px-5 py-2 rounded"
             >Back</button>
+
+            {editing ? (
+              <>
+                <button
+                  onClick={handleCancelEdit}
+                  disabled={saving}
+                  className="bg-gray-500 text-white px-5 py-2 rounded disabled:opacity-50"
+                >Cancel</button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={saving}
+                  className="bg-green-600 text-white px-5 py-2 rounded disabled:opacity-50"
+                >{saving ? "Saving..." : "Save Changes"}</button>
+              </>
+            ) : (
+              <button
+                onClick={handleStartEdit}
+                className="bg-amber-600 text-white px-5 py-2 rounded"
+              >Edit</button>
+            )}
+
             <button
               onClick={()=>window.print()}
               className="bg-gray-800 text-white px-5 py-2 rounded"
@@ -328,12 +421,20 @@ const ServiceCreditNoteDetails = () => {
             >Share</button>
           </div>
 
+          {editing && (
+            <p className="text-[9px] text-gray-500 mb-1 print:hidden capture-hide">
+              Amount is pre-VAT money credited back. Qty only needs changing if
+              it was recorded wrong on the original invoice — that alone doesn't
+              move any money.
+            </p>
+          )}
+
           {/* ITEMS */}
           <table className="w-full border border-black text-[10px] leading-normal mt-2">
             <colgroup>
-              <col className="w-[55%]" />
-              <col className="w-[15%]" />
-              <col className="w-[30%]" />
+              <col className="w-[46%]" />
+              <col className="w-[18%]" />
+              <col className="w-[36%]" />
             </colgroup>
             <thead className="bg-gray-100">
               <tr>
@@ -346,8 +447,33 @@ const ServiceCreditNoteDetails = () => {
               {creditNote.items?.map(item=>(
                 <tr key={item.id}>
                   <td className="p-1 border border-black align-middle">{item.description}</td>
-                  <td className="p-1 border border-black text-center align-middle">{item.quantity}</td>
-                  <td className="p-1 border border-black text-right align-middle font-bold">{formatMoney(item.total_price)}</td>
+                  <td className="p-1 border border-black text-center align-middle">
+                    {editing ? (
+                      <input
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        value={editedItems[item.id]?.quantity ?? item.quantity}
+                        onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                        className="w-16 border border-black rounded px-1 py-0.5 text-center text-[10px] capture-hide print:hidden"
+                      />
+                    ) : (
+                      item.quantity
+                    )}
+                  </td>
+                  <td className="p-1 border border-black text-right align-middle font-bold">
+                    {editing ? (
+                      <input
+                        type="number"
+                        min={0}
+                        value={editedItems[item.id]?.credit_amount ?? item.total_price}
+                        onChange={(e) => handleAmountChange(item.id, e.target.value)}
+                        className="w-full border border-black rounded px-1 py-0.5 text-right text-[10px] capture-hide print:hidden"
+                      />
+                    ) : (
+                      formatMoney(item.total_price)
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

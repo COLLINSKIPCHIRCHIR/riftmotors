@@ -182,9 +182,14 @@ RETURNING *
 
     for (const item of items) {
 
-  const quantity = Math.round(Number(item.quantity));
+  // Keep the real quantity (may be fractional — e.g. 1.5 labour hours)
+  // for anything that lands on the invoice or feeds total_price math.
+  const quantity = Number(item.quantity);
 
   if (item.item_type === "sparepart" && !item.customer_supplied && !item.is_custom) {
+
+    // Physical stock only moves in whole units — round ONLY here.
+    const stockQuantity = Math.round(quantity);
 
     const stock = await queryWithDiagnostics(
       client,
@@ -193,29 +198,17 @@ RETURNING *
       [item.sparepart_id]
     );
 
-    if (stock.rows.length === 0) {
-      throw new Error("Spare part missing");
-    }
-
-    if (stock.rows[0].quantity < quantity) {
-      throw new Error("Insufficient stock");
-    }
+    if (stock.rows.length === 0) throw new Error("Spare part missing");
+    if (stock.rows[0].quantity < stockQuantity) throw new Error("Insufficient stock");
 
     await queryWithDiagnostics(
       client,
       `deduct sparepart stock (id=${item.sparepart_id})`,
       `UPDATE spareparts SET quantity = quantity - $1 WHERE id=$2`,
-      [quantity, item.sparepart_id]
+      [stockQuantity, item.sparepart_id]
     );
 
-    await recordStockMovement(
-      client,
-      item.sparepart_id,
-      "OUT",
-      quantity,
-      "service_invoice",
-      invoiceId
-    );
+    await recordStockMovement(client, item.sparepart_id, "OUT", stockQuantity, "service_invoice", invoiceId);
   }
 
   await queryWithDiagnostics(
@@ -229,19 +222,9 @@ RETURNING *
     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
     `,
     [
-      invoiceId,
-      item.item_type,
-      item.service_id,
-      item.sparepart_id,
-      item.customer_supplied,
-      item.description,
-      quantity,
-      item.unit_price,
-      item.original_price,
-      item.adjustment,
-      item.total_price,
-      item.discount_type,
-      item.discount_value
+      invoiceId, item.item_type, item.service_id, item.sparepart_id, item.customer_supplied,
+      item.description, quantity, item.unit_price, item.original_price, item.adjustment,
+      item.total_price, item.discount_type, item.discount_value
     ]
   );
 }

@@ -191,6 +191,9 @@ API.get("/service-credit-notes");
 export const getServiceCreditNote = (id) =>
 API.get(`/service-credit-notes/${id}`);
 
+export const updateCreditNote = (id, data) =>
+API.put(`/service-credit-notes/${id}`, data);
+
 
 
 export const payServiceInvoice = (id, payment_method, amount_paid) =>
