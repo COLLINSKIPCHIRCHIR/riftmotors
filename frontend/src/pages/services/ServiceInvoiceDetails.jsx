@@ -62,7 +62,10 @@ const ServiceInvoiceDetails = () => {
 
   useEffect(()=>{
   if (invoice) {
-    const remaining = Number(invoice.total) - Number(invoice.amount_paid || 0);
+    const remaining =
+      Number(invoice.total) -
+      Number(invoice.amount_paid || 0) -
+      Number(invoice.amount_credited || 0);
     setAmountPaid(remaining > 0 ? remaining : "");
   }
 }, [invoice]);
@@ -85,6 +88,12 @@ const ServiceInvoiceDetails = () => {
     alert("Enter an amount to pay");
     return;
   }
+  const remaining =
+    Number(invoice.total) - Number(invoice.amount_paid || 0) - Number(invoice.amount_credited || 0);
+  if (Number(amountPaid) > remaining) {
+    alert(`Amount exceeds the outstanding balance of KES ${formatMoney(remaining)}`);
+    return;
+  }
   const res = await payServiceInvoice(invoice.id, paymentMethod, amountPaid);
   navigate(`/admin/services/receipts/${res.data.receipt.id}`);
 };
@@ -101,11 +110,7 @@ const handleToggleCreditItem = (item) => {
     if (next[item.id] !== undefined) {
       delete next[item.id];
     } else {
-      // default to the full line amount and the invoice's recorded
-      // quantity — user can lower the amount for a partial correction,
-      // or change the quantity if it was recorded wrong (no dollar
-      // impact from a quantity change alone).
-      next[item.id] = { amount: item.total_price, quantity: item.quantity };
+      next[item.id] = { amount: item.total_price, quantity: item.quantity, restock: false };
     }
     return next;
   });
@@ -119,18 +124,52 @@ const handleCreditAmountChange = (itemId, value) => {
 };
 
 const handleCreditQuantityChange = (itemId, value) => {
-  setCreditSelections((prev) => ({
-    ...prev,
-    [itemId]: { ...prev[itemId], quantity: value }
-  }));
+  setCreditSelections((prev) => {
+    const current = prev[itemId];
+    const item = invoice.items.find((i) => i.id === itemId);
+    // Restocked lines auto-recalculate the credit amount from
+    // qty × unit price as the quantity changes — still editable
+    // afterward if the return needs a partial-condition adjustment.
+    const shouldRecalc = current?.restock && item;
+    return {
+      ...prev,
+      [itemId]: {
+        ...current,
+        quantity: value,
+        amount: shouldRecalc
+          ? (Number(value || 0) * Number(item.unit_price)).toFixed(2)
+          : current?.amount
+      }
+    };
+  });
 };
+
+
+const handleToggleRestock = (item) => {
+  setCreditSelections((prev) => {
+    const current = prev[item.id] || { amount: item.total_price, quantity: item.quantity, restock: false };
+    const nextRestock = !current.restock;
+    const qty = Number(current.quantity ?? item.quantity) || 0;
+    return {
+      ...prev,
+      [item.id]: {
+        ...current,
+        restock: nextRestock,
+        amount: nextRestock ? (qty * Number(item.unit_price)).toFixed(2) : current.amount
+      }
+    };
+  });
+};
+
+
 
 const handleSubmitCreditNote = async () => {
   const items = Object.entries(creditSelections).map(([invoice_item_id, sel]) => ({
     invoice_item_id: Number(invoice_item_id),
     credit_amount: Number(sel.amount || 0),
     quantity:
-      sel.quantity !== undefined && sel.quantity !== "" ? Number(sel.quantity) : undefined
+      sel.quantity !== undefined && sel.quantity !== "" ? Number(sel.quantity) : undefined,
+    restock: !!sel.restock
   }));
 
   if (items.length === 0) {
@@ -552,7 +591,7 @@ const handleSubmitCreditNote = async () => {
               take a payment anymore. */}
           <div className="flex justify-end gap-3 my-3 print:hidden capture-hide flex-wrap">
 
-            {invoice.status!=="paid" && (
+            {invoice.status!=="paid" && invoice.status!=="credited" && (
             <>
                 <input
                 type="number"
@@ -723,6 +762,22 @@ const handleSubmitCreditNote = async () => {
                     <td className="border border-black px-1 py-0.5 text-right align-middle text-red-700">-{formatMoney(invoice.amount_credited)}</td>
                   </tr>
                 )}
+                {Number(invoice.amount_paid || 0) > 0 && (
+                  <tr>
+                    <td className="border border-black px-1 py-0.5 align-middle">Amount Paid</td>
+                    <td className="border border-black px-1 py-0.5 text-right align-middle">-{formatMoney(invoice.amount_paid)}</td>
+                  </tr>
+                )}
+                {(Number(invoice.amount_paid || 0) > 0 || Number(invoice.amount_credited || 0) > 0) && (
+                  <tr className="bg-gray-50">
+                    <td className="border border-black px-1 py-0.5 font-bold align-middle">Balance Due</td>
+                    <td className="border border-black px-1 py-0.5 text-right font-bold align-middle">
+                      {formatMoney(
+                        Number(invoice.total) - Number(invoice.amount_paid || 0) - Number(invoice.amount_credited || 0)
+                      )}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
 
@@ -764,6 +819,8 @@ const handleSubmitCreditNote = async () => {
                 Select the line(s) needing a correction. Amount is the pre-VAT
                 money to credit back. Qty only needs changing if the invoice
                 recorded the wrong quantity — that alone doesn't move any money.
+                For a returned part, tick "add back to stock" so it goes back
+                into inventory.
               </p>
 
               <div className="space-y-3 mb-4">
@@ -771,6 +828,8 @@ const handleSubmitCreditNote = async () => {
                   ?.filter((item) => !item.customer_supplied && Number(item.total_price) > 0)
                   .map((item) => {
                     const checked = creditSelections[item.id] !== undefined;
+                    const sel = creditSelections[item.id];
+                    const isSparepart = item.item_type === "sparepart";
                     return (
                       <div key={item.id} className="border rounded-lg p-3">
                         <label className="flex items-center gap-2 mb-2">
@@ -786,32 +845,45 @@ const handleSubmitCreditNote = async () => {
                         </label>
 
                         {checked && (
-                          <div className="flex gap-2">
-                            <div className="flex-1">
-                              <label className="text-xs text-slate-500">Amount to credit (KES)</label>
-                              <input
-                                type="number"
-                                value={creditSelections[item.id]?.amount ?? ""}
-                                onChange={(e) => handleCreditAmountChange(item.id, e.target.value)}
-                                max={item.total_price}
-                                min={0}
-                                className="w-full border rounded-lg p-2 text-sm"
-                                placeholder="0"
-                              />
+                          <>
+                            <div className="flex gap-2">
+                              <div className="flex-1">
+                                <label className="text-xs text-slate-500">Amount to credit (KES)</label>
+                                <input
+                                  type="number"
+                                  value={sel?.amount ?? ""}
+                                  onChange={(e) => handleCreditAmountChange(item.id, e.target.value)}
+                                  max={item.total_price}
+                                  min={0}
+                                  className="w-full border rounded-lg p-2 text-sm"
+                                  placeholder="0"
+                                />
+                              </div>
+                              <div className="w-24">
+                                <label className="text-xs text-slate-500">Qty</label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={sel?.quantity ?? ""}
+                                  onChange={(e) => handleCreditQuantityChange(item.id, e.target.value)}
+                                  min={0}
+                                  className="w-full border rounded-lg p-2 text-sm"
+                                  placeholder={item.quantity}
+                                />
+                              </div>
                             </div>
-                            <div className="w-24">
-                              <label className="text-xs text-slate-500">Qty</label>
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={creditSelections[item.id]?.quantity ?? ""}
-                                onChange={(e) => handleCreditQuantityChange(item.id, e.target.value)}
-                                min={0}
-                                className="w-full border rounded-lg p-2 text-sm"
-                                placeholder={item.quantity}
-                              />
-                            </div>
-                          </div>
+
+                            {isSparepart && (
+                              <label className="flex items-center gap-2 mt-2 text-xs text-slate-600">
+                                <input
+                                  type="checkbox"
+                                  checked={!!sel?.restock}
+                                  onChange={() => handleToggleRestock(item)}
+                                />
+                                Customer returned this part in sellable condition — add back to stock
+                              </label>
+                            )}
+                          </>
                         )}
                       </div>
                     );

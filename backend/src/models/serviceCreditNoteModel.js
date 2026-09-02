@@ -1,5 +1,5 @@
 import pool from "../config/db.js";
-
+import { recordStockMovement } from "./stockMovementModel.js";
 
 
 // First credit note on an invoice: SRV-2026-00001-CN
@@ -68,52 +68,91 @@ export const createServiceCreditNote = async ({ invoice_id, reason, items }) => 
     );
 
     let subtotal = 0;
+    const preparedItems = [];
 
-    const preparedItems = items.map((item) => {
-  const invoiceItem = invoiceItemsById[item.invoice_item_id];
-  const creditAmount = Number(item.credit_amount ?? 0);
+    // Sequential (not .map) because restock eligibility needs a DB
+    // lookup per line — how much of THIS invoice line has already been
+    // restocked by earlier credit notes, so we never return more units
+    // than were actually sold.
+    for (const item of items) {
+      const invoiceItem = invoiceItemsById[item.invoice_item_id];
+      const creditAmount = Number(item.credit_amount ?? 0);
+      const restockRequested = Boolean(item.restock);
 
-  // Quantity can be overridden at creation time too — e.g. the invoice
-  // recorded "2" for labour due to the old rounding bug, but the real
-  // figure was "1.5". This never affects total_price/subtotal — it's a
-  // documentation field only, same as in updateServiceCreditNote.
-  const quantity =
-    item.quantity !== undefined && item.quantity !== null && item.quantity !== ""
-      ? Number(item.quantity)
-      : Number(invoiceItem.quantity);
+      const isRestockEligible =
+        invoiceItem.item_type === "sparepart" &&
+        !invoiceItem.customer_supplied &&
+        invoiceItem.sparepart_id !== null;
 
-  if (creditAmount < 0) {
-    throw new Error(`Credit amount cannot be negative for "${invoiceItem.description}"`);
-  }
+      if (restockRequested && !isRestockEligible) {
+        throw new Error(
+          `"${invoiceItem.description}" can't be restocked — it's not a stocked spare part`
+        );
+      }
 
-  if (creditAmount === 0 && quantity === Number(invoiceItem.quantity)) {
-    throw new Error(
-      `"${invoiceItem.description}" has no credit amount and no quantity change — nothing to record`
-    );
-  }
+      const quantity =
+        item.quantity !== undefined && item.quantity !== null && item.quantity !== ""
+          ? Number(item.quantity)
+          : Number(invoiceItem.quantity);
 
-  if (creditAmount > Number(invoiceItem.total_price)) {
-    throw new Error(`Credit amount exceeds line total for "${invoiceItem.description}"`);
-  }
+      if (creditAmount < 0) {
+        throw new Error(`Credit amount cannot be negative for "${invoiceItem.description}"`);
+      }
 
-  subtotal += creditAmount;
+      if (creditAmount === 0 && quantity === Number(invoiceItem.quantity) && !restockRequested) {
+        throw new Error(
+          `"${invoiceItem.description}" has no credit amount and no quantity change — nothing to record`
+        );
+      }
 
-  return {
-    invoice_item_id: invoiceItem.id,
-    item_type: invoiceItem.item_type,
-    description: invoiceItem.description,
-    quantity,
-    unit_price: invoiceItem.unit_price,
-    total_price: creditAmount
-  };
-});
+      if (creditAmount > Number(invoiceItem.total_price)) {
+        throw new Error(`Credit amount exceeds line total for "${invoiceItem.description}"`);
+      }
+
+      let restockQuantity = 0;
+
+      if (restockRequested) {
+        if (!(quantity > 0)) {
+          throw new Error(`Enter a return quantity for "${invoiceItem.description}"`);
+        }
+
+        const alreadyRestockedRes = await client.query(
+          `SELECT COALESCE(SUM(quantity),0) AS qty
+           FROM service_credit_note_items
+           WHERE invoice_item_id = $1 AND restock = true`,
+          [invoiceItem.id]
+        );
+        const alreadyRestocked = Number(alreadyRestockedRes.rows[0].qty);
+        const remainingReturnable = Number(invoiceItem.quantity) - alreadyRestocked;
+
+        if (quantity > remainingReturnable) {
+          throw new Error(
+            `Only ${remainingReturnable} unit(s) of "${invoiceItem.description}" remain returnable`
+          );
+        }
+
+        restockQuantity = quantity;
+      }
+
+      subtotal += creditAmount;
+
+      preparedItems.push({
+        invoice_item_id: invoiceItem.id,
+        item_type: invoiceItem.item_type,
+        sparepart_id: invoiceItem.sparepart_id,
+        description: invoiceItem.description,
+        quantity,
+        unit_price: invoiceItem.unit_price,
+        total_price: creditAmount,
+        restock: restockRequested,
+        restock_quantity: restockQuantity
+      });
+    }
+
     const taxRate = Number(invoice.tax_rate || 0);
     const taxAmount = subtotal * (taxRate / 100);
     const total = subtotal + taxAmount;
 
-    // Ceiling is the invoice total itself minus whatever's already been
-    // credited - not the unpaid balance, since paid invoices are fair
-    // game too.
     const alreadyCredited = Number(invoice.amount_credited || 0);
 
     if (total > Number(invoice.total) - alreadyCredited) {
@@ -154,8 +193,8 @@ export const createServiceCreditNote = async ({ invoice_id, reason, items }) => 
       await client.query(
         `
         INSERT INTO service_credit_note_items
-          (credit_note_id, invoice_item_id, item_type, description, quantity, unit_price, total_price)
-        VALUES ($1,$2,$3,$4,$5,$6,$7)
+          (credit_note_id, invoice_item_id, item_type, description, quantity, unit_price, total_price, restock)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
         `,
         [
           creditNoteId,
@@ -164,20 +203,39 @@ export const createServiceCreditNote = async ({ invoice_id, reason, items }) => 
           item.description,
           item.quantity,
           item.unit_price,
-          item.total_price
+          item.total_price,
+          item.restock
         ]
       );
+
+      if (item.restock && item.restock_quantity > 0) {
+        const stockQuantity = Math.round(item.restock_quantity);
+
+        await client.query(
+          `SELECT quantity FROM spareparts WHERE id=$1 FOR UPDATE`,
+          [item.sparepart_id]
+        );
+
+        await client.query(
+          `UPDATE spareparts SET quantity = quantity + $1 WHERE id=$2`,
+          [stockQuantity, item.sparepart_id]
+        );
+
+        await recordStockMovement(
+          client,
+          item.sparepart_id,
+          "IN",
+          stockQuantity,
+          "service_credit_note",
+          creditNoteId
+        );
+      }
     }
 
     const newAmountCredited = alreadyCredited + total;
     const remainingBalance =
       Number(invoice.total) - Number(invoice.amount_paid || 0) - newAmountCredited;
 
-    // 'credited' = fully written off with no payment ever made.
-    // 'paid' stays 'paid' if it was already fully paid (credit just
-    // means money owed back, tracked separately - doesn't unpay it).
-    // Otherwise 'partial' if there's a mix of paid/credited but balance
-    // remains, else leave status as-is.
     let newStatus = invoice.status;
     if (remainingBalance <= 0) {
       newStatus = Number(invoice.amount_paid || 0) > 0 ? "paid" : "credited";
@@ -274,47 +332,92 @@ export const updateServiceCreditNote = async (creditNoteId, { reason, items }) =
     const invoiceItemsById = Object.fromEntries(invoiceItemsRes.rows.map((r) => [r.id, r]));
 
     let subtotal = 0;
-    const updates = items.map((item) => {
+    const updates = [];
+
+    for (const item of items) {
       const existing = existingById[item.id];
       if (!existing) throw new Error("One or more items do not belong to this credit note");
 
       const invoiceItem = invoiceItemsById[existing.invoice_item_id];
       const creditAmount = Number(item.credit_amount ?? 0);
+      const restockRequested =
+        item.restock !== undefined ? Boolean(item.restock) : existing.restock;
 
-      // Quantity is a documentation/label field only — it never feeds
-      // subtotal/tax/total. This lets a line note "actual qty 1.5,
-      // invoiced as 2" (a data-entry correction) without implying any
-      // money moved, distinct from a real price credit.
+      const isRestockEligible =
+        invoiceItem &&
+        invoiceItem.item_type === "sparepart" &&
+        !invoiceItem.customer_supplied &&
+        invoiceItem.sparepart_id !== null;
+
+      if (restockRequested && !isRestockEligible) {
+        throw new Error(
+          `"${existing.description}" can't be restocked — it's not a stocked spare part`
+        );
+      }
+
       const quantity =
         item.quantity !== undefined && item.quantity !== null && item.quantity !== ""
           ? Number(item.quantity)
           : Number(existing.quantity);
 
-      // A line must carry either a real credit amount, or a quantity
-      // change with zero amount (pure correction) — but not a negative
-      // or garbage amount either way.
       if (creditAmount < 0) {
         throw new Error(`Credit amount cannot be negative for "${existing.description}"`);
       }
-      if (creditAmount === 0 && quantity === Number(existing.quantity)) {
+      if (
+        creditAmount === 0 &&
+        quantity === Number(existing.quantity) &&
+        restockRequested === existing.restock
+      ) {
         throw new Error(
-          `"${existing.description}" has no credit amount and no quantity change — nothing to update`
+          `"${existing.description}" has no credit amount, quantity, or restock change — nothing to update`
         );
       }
       if (invoiceItem && creditAmount > Number(invoiceItem.total_price)) {
         throw new Error(`Credit amount exceeds line total for "${existing.description}"`);
       }
 
+      if (restockRequested) {
+        if (!(quantity > 0)) {
+          throw new Error(`Enter a return quantity for "${existing.description}"`);
+        }
+
+        // Everything else restocked against this invoice line,
+        // excluding this credit note's own current contribution.
+        const otherRestockedRes = await client.query(
+          `SELECT COALESCE(SUM(quantity),0) AS qty
+           FROM service_credit_note_items
+           WHERE invoice_item_id = $1 AND restock = true AND id != $2`,
+          [existing.invoice_item_id, existing.id]
+        );
+        const otherRestocked = Number(otherRestockedRes.rows[0].qty);
+        const remainingReturnable = Number(invoiceItem.quantity) - otherRestocked;
+
+        if (quantity > remainingReturnable) {
+          throw new Error(
+            `Only ${remainingReturnable} unit(s) of "${existing.description}" remain returnable`
+          );
+        }
+      }
+
+      const oldUnits = existing.restock ? Number(existing.quantity) : 0;
+      const newUnits = restockRequested ? quantity : 0;
+      const restockDelta = newUnits - oldUnits;
+
       subtotal += creditAmount;
-      return { id: existing.id, total_price: creditAmount, quantity };
-    });
+      updates.push({
+        id: existing.id,
+        total_price: creditAmount,
+        quantity,
+        restock: restockRequested,
+        restockDelta,
+        sparepart_id: invoiceItem?.sparepart_id
+      });
+    }
 
     const taxRate = Number(creditNote.tax_rate || 0);
     const taxAmount = subtotal * (taxRate / 100);
     const total = subtotal + taxAmount;
 
-    // Everything credited on this invoice EXCLUDING this note's old total,
-    // plus the new total, still can't exceed the invoice total.
     const otherCredited = Number(invoice.amount_credited || 0) - Number(creditNote.total);
     if (total > Number(invoice.total) - otherCredited) {
       throw new Error("Credit amount exceeds what remains creditable on this invoice");
@@ -322,9 +425,40 @@ export const updateServiceCreditNote = async (creditNoteId, { reason, items }) =
 
     for (const u of updates) {
       await client.query(
-        `UPDATE service_credit_note_items SET total_price=$1, quantity=$2 WHERE id=$3`,
-        [u.total_price, u.quantity, u.id]
+        `UPDATE service_credit_note_items SET total_price=$1, quantity=$2, restock=$3 WHERE id=$4`,
+        [u.total_price, u.quantity, u.restock, u.id]
       );
+
+      if (u.restockDelta !== 0 && u.sparepart_id) {
+        const roundedDelta = Math.round(u.restockDelta);
+        if (roundedDelta !== 0) {
+          const stockRes = await client.query(
+            `SELECT quantity FROM spareparts WHERE id=$1 FOR UPDATE`,
+            [u.sparepart_id]
+          );
+          const currentStock = Number(stockRes.rows[0]?.quantity || 0);
+
+          if (currentStock + roundedDelta < 0) {
+            throw new Error(
+              `Can't reduce the restocked quantity — only ${currentStock} unit(s) currently in stock`
+            );
+          }
+
+          await client.query(
+            `UPDATE spareparts SET quantity = quantity + $1 WHERE id=$2`,
+            [roundedDelta, u.sparepart_id]
+          );
+
+          await recordStockMovement(
+            client,
+            u.sparepart_id,
+            roundedDelta > 0 ? "IN" : "OUT",
+            Math.abs(roundedDelta),
+            "service_credit_note_adjustment",
+            creditNoteId
+          );
+        }
+      }
     }
 
     await client.query(

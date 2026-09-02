@@ -61,6 +61,7 @@ import Users from "./pages/admin/Users";
 
 import CustomersList from "./pages/customers/CustomersList";
 import AddCustomer from "./pages/customers/AddCustomer";
+import StatementView from "./pages/customers/StatementView";
 
 
 import Departments from "./pages/hr/departments/Departments";
@@ -128,6 +129,7 @@ function App() {
           <Route path="customers" element={<RequirePermission permission="customers.view"><CustomersList /></RequirePermission>} />
           <Route path="customers/new" element={<RequirePermission permission="customers.create"><AddCustomer /></RequirePermission>} />
           <Route path="/admin/customers/edit/:id" element={<AddCustomer />} />
+          <Route path="customers/:id/statement" element={<RequirePermission permission="customers.view"><StatementView /></RequirePermission>} />
 
           {/* ✅ Unified Inventory */}
           <Route path="inventory" element={<RequirePermission permission="inventory.view"><Inventory /></RequirePermission>} />

@@ -249,7 +249,7 @@ const ServiceReceiptDetails = () => {
           <div className="flex items-start mt-4 gap-2 text-[10px]">
             <span className="font-bold w-28 pt-1">For:</span>
             <div className="flex-1 border border-black p-2 min-h-[45px]">
-              {field(receipt.invoice_number)}: PAID
+              {field(receipt.invoice_number)}: {Number(receipt.account_balance_after) <= 0 ? "PAID IN FULL" : "PARTIAL PAYMENT"}
             </div>
           </div>
 

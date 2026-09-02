@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import API from "../../api/api";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { FaPlus, FaSearch, FaTrash , FaEdit } from "react-icons/fa";
+import { FaPlus, FaSearch, FaTrash, FaEdit, FaUserCircle, FaFileInvoiceDollar } from "react-icons/fa";
 
 export default function CustomersList() {
   const [customers, setCustomers] = useState([]);
@@ -101,22 +101,35 @@ export default function CustomersList() {
                   <td className="px-6 py-3 text-sm text-slate-600">{c.email || "—"}</td>
                   <td className="px-6 py-3 text-sm text-slate-600">{c.address || "—"}</td>
                   <td className="px-6 py-3">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => navigate(`/admin/customers/edit/${c.id}`)}
-                      className="text-blue-500 hover:text-blue-700 p-1.5 hover:bg-blue-50 rounded-lg transition"
-                    >
-                      <FaEdit size={13} />
-                    </button>
-
-                    <button
-                      onClick={() => handleDelete(c.id)}
-                      className="text-red-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded-lg transition"
-                    >
-                      <FaTrash size={13} />
-                    </button>
-                  </div>
-                </td>
+                    <div className="flex items-center gap-2">
+                      {/*<button
+                        onClick={() => navigate(`/admin/customers/${c.id}`)}
+                        title="View customer"
+                        className="text-slate-500 hover:text-slate-700 p-1.5 hover:bg-slate-100 rounded-lg transition"
+                      >
+                        <FaUserCircle size={14} />
+                      </button>*/}
+                      <button
+                        onClick={() => navigate(`/admin/customers/${c.id}/statement`)}
+                        title="Statement"
+                        className="text-emerald-600 hover:text-emerald-800 p-1.5 hover:bg-emerald-50 rounded-lg transition"
+                      >
+                        <FaFileInvoiceDollar size={14} />
+                      </button>
+                      <button
+                        onClick={() => navigate(`/admin/customers/edit/${c.id}`)}
+                        className="text-blue-500 hover:text-blue-700 p-1.5 hover:bg-blue-50 rounded-lg transition"
+                      >
+                        <FaEdit size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(c.id)}
+                        className="text-red-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded-lg transition"
+                      >
+                        <FaTrash size={13} />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>

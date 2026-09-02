@@ -236,17 +236,25 @@ const ServiceCreditNoteDetails = () => {
   // server-side.
 
   const handleStartEdit = () => {
-    setEditedReason(creditNote.reason || "");
-    setEditedItems(
-      Object.fromEntries(
-        creditNote.items.map((i) => [
-          i.id,
-          { credit_amount: i.total_price, quantity: i.quantity }
-        ])
-      )
-    );
-    setEditing(true);
-  };
+  setEditedReason(creditNote.reason || "");
+  setEditedItems(
+    Object.fromEntries(
+      creditNote.items.map((i) => [
+        i.id,
+        { credit_amount: i.total_price, quantity: i.quantity, restock: !!i.restock }
+      ])
+    )
+  );
+  setEditing(true);
+};
+
+
+const handleRestockToggle = (itemId) => {
+  setEditedItems((prev) => ({
+    ...prev,
+    [itemId]: { ...prev[itemId], restock: !prev[itemId]?.restock }
+  }));
+};
 
   const handleCancelEdit = () => {
     setEditing(false);
@@ -272,7 +280,8 @@ const ServiceCreditNoteDetails = () => {
       const items = Object.entries(editedItems).map(([itemId, vals]) => ({
         id: Number(itemId),
         credit_amount: Number(vals.credit_amount || 0),
-        quantity: Number(vals.quantity)
+        quantity: Number(vals.quantity),
+        restock: !!vals.restock
       }));
       const res = await updateCreditNote(creditNote.id, { reason: editedReason, items });
       setCreditNote(res.data.creditNote);
@@ -432,15 +441,17 @@ const ServiceCreditNoteDetails = () => {
           {/* ITEMS */}
           <table className="w-full border border-black text-[10px] leading-normal mt-2">
             <colgroup>
-              <col className="w-[46%]" />
-              <col className="w-[18%]" />
-              <col className="w-[36%]" />
+              <col className="w-[40%]" />
+              <col className="w-[14%]" />
+              <col className="w-[30%]" />
+              <col className="w-[16%]" />
             </colgroup>
             <thead className="bg-gray-100">
               <tr>
                 <th className="p-1 text-left border border-black align-middle">Description</th>
                 <th className="p-1 border border-black align-middle">Qty</th>
                 <th className="p-1 border border-black align-middle">Credited (KES)</th>
+                <th className="p-1 border border-black align-middle">Restocked</th>
               </tr>
             </thead>
             <tbody>
@@ -472,6 +483,23 @@ const ServiceCreditNoteDetails = () => {
                       />
                     ) : (
                       formatMoney(item.total_price)
+                    )}
+                  </td>
+
+                  <td className="p-1 border border-black text-center align-middle">
+                    {item.item_type === "sparepart" ? (
+                      editing ? (
+                        <input
+                          type="checkbox"
+                          checked={!!editedItems[item.id]?.restock}
+                          onChange={() => handleRestockToggle(item.id)}
+                          className="capture-hide print:hidden"
+                        />
+                      ) : (
+                        item.restock ? "Yes" : "No"
+                      )
+                    ) : (
+                      "—"
                     )}
                   </td>
                 </tr>

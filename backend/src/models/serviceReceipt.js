@@ -27,7 +27,10 @@ export const convertServiceInvoiceToReceipt = async (invoiceId, payment_method, 
 
     const invoice = invoiceRes.rows[0];
 
-    const balanceBefore = Number(invoice.total) - Number(invoice.amount_paid || 0);
+    const balanceBefore =
+      Number(invoice.total) -
+      Number(invoice.amount_paid || 0) -
+      Number(invoice.amount_credited || 0);
     const payment = Math.min(Number(amount_paid), balanceBefore);
 
     if (!(payment > 0)) {
@@ -173,6 +176,8 @@ export const getServiceReceiptById = async (id) => {
     `SELECT
         sr.*,
 
+        si.invoice_number,
+
         cv.registration_number,
         cv.make      AS vehicle_make,
         cv.model     AS vehicle_model,
@@ -187,6 +192,9 @@ export const getServiceReceiptById = async (id) => {
         c.email    AS customer_email
 
      FROM service_receipts sr
+
+     LEFT JOIN service_invoices si
+     ON sr.invoice_id = si.id
 
      LEFT JOIN service_jobs sj
      ON sr.job_id = sj.id
