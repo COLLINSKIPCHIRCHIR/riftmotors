@@ -4,6 +4,12 @@ import pool from "../config/db.js";
    SERVICE LEDGER
 ========================================================= */
 
+// Who owes an invoice is COALESCE(invoice.bill_to_customer_id, job.customer_id):
+// the vehicle owner by default, or whoever was explicitly billed instead
+// (e.g. an insurer covering a repair on someone else's car). Payments and
+// credit notes carry no billing party of their own — they follow whichever
+// invoice they were issued against, via invoice_id, not via job_id.
+
 const getServiceInvoiceRows = async (customer_id, from, to) => {
   const result = await pool.query(
     `
@@ -19,7 +25,7 @@ const getServiceInvoiceRows = async (customer_id, from, to) => {
       si.status
     FROM service_invoices si
     JOIN service_jobs sj ON si.job_id = sj.id
-    WHERE sj.customer_id = $1
+    WHERE COALESCE(si.bill_to_customer_id, sj.customer_id) = $1
       AND si.created_at::date BETWEEN $2 AND $3
     `,
     [customer_id, from, to]
@@ -38,8 +44,9 @@ const getServicePaymentRows = async (customer_id, from, to) => {
       ('Payment' || CASE WHEN sr.payment_method IS NOT NULL THEN ' - ' || sr.payment_method ELSE '' END) AS description,
       -sr.total AS amount
     FROM service_receipts sr
-    JOIN service_jobs sj ON sr.job_id = sj.id
-    WHERE sj.customer_id = $1
+    JOIN service_invoices si ON sr.invoice_id = si.id
+    JOIN service_jobs sj ON si.job_id = sj.id
+    WHERE COALESCE(si.bill_to_customer_id, sj.customer_id) = $1
       AND sr.created_at::date BETWEEN $2 AND $3
     `,
     [customer_id, from, to]
@@ -58,8 +65,9 @@ const getServiceCreditNoteRows = async (customer_id, from, to) => {
       COALESCE('Credit Note - ' || scn.reason, 'Credit Note') AS description,
       -scn.total AS amount
     FROM service_credit_notes scn
-    JOIN service_jobs sj ON scn.job_id = sj.id
-    WHERE sj.customer_id = $1
+    JOIN service_invoices si ON scn.invoice_id = si.id
+    JOIN service_jobs sj ON si.job_id = sj.id
+    WHERE COALESCE(si.bill_to_customer_id, sj.customer_id) = $1
       AND scn.created_at::date BETWEEN $2 AND $3
     `,
     [customer_id, from, to]
@@ -74,21 +82,23 @@ const getServiceBalanceBefore = async (customer_id, from) => {
       SELECT si.total AS amount
       FROM service_invoices si
       JOIN service_jobs sj ON si.job_id = sj.id
-      WHERE sj.customer_id = $1 AND si.created_at::date < $2
+      WHERE COALESCE(si.bill_to_customer_id, sj.customer_id) = $1 AND si.created_at::date < $2
 
       UNION ALL
 
       SELECT -sr.total AS amount
       FROM service_receipts sr
-      JOIN service_jobs sj ON sr.job_id = sj.id
-      WHERE sj.customer_id = $1 AND sr.created_at::date < $2
+      JOIN service_invoices si ON sr.invoice_id = si.id
+      JOIN service_jobs sj ON si.job_id = sj.id
+      WHERE COALESCE(si.bill_to_customer_id, sj.customer_id) = $1 AND sr.created_at::date < $2
 
       UNION ALL
 
       SELECT -scn.total AS amount
       FROM service_credit_notes scn
-      JOIN service_jobs sj ON scn.job_id = sj.id
-      WHERE sj.customer_id = $1 AND scn.created_at::date < $2
+      JOIN service_invoices si ON scn.invoice_id = si.id
+      JOIN service_jobs sj ON si.job_id = sj.id
+      WHERE COALESCE(si.bill_to_customer_id, sj.customer_id) = $1 AND scn.created_at::date < $2
     ) t
     `,
     [customer_id, from]

@@ -4,6 +4,7 @@ getServiceJobs,
 getCustomerVehicles,
 createServiceJob
 } from "../../api/serviceApi";
+import API from "../../api/api";
 
 import {Link} from "react-router-dom";
 
@@ -15,6 +16,12 @@ const ServiceJobs=()=>{
 const [jobs,setJobs]=useState([]);
 
 const [vehicles,setVehicles]=useState([]);
+
+const [vehicleSearch,setVehicleSearch]=useState("");
+
+const [showVehicleDropdown,setShowVehicleDropdown]=useState(false);
+
+const [customers,setCustomers]=useState([]);
 
 
 const [showModal,setShowModal]=useState(false);
@@ -35,6 +42,7 @@ const [form,setForm]=useState({
   vehicle_id:"",
   driver_name:"",
   driver_phone:"",
+  bill_to_customer_id:"",
   bill_to_name:"",
   bill_to_kra_pin:"",
   complaint:"",
@@ -48,6 +56,7 @@ useEffect(()=>{
 
 loadJobs();
 loadVehicles();
+loadCustomers();
 
 },[])
 
@@ -66,6 +75,7 @@ return ()=>clearTimeout(timer);
 
 // eslint-disable-next-line react-hooks/exhaustive-deps
 },[search])
+
 
 
 
@@ -113,6 +123,36 @@ console.log(err);
 
 }
 
+const filteredVehicles = vehicles.filter(v => {
+
+  const searchTerm = vehicleSearch.toLowerCase().trim();
+
+  if(!searchTerm) return true;
+
+  return (
+    (v.registration_number || "").toLowerCase().includes(searchTerm) ||
+    (v.make || "").toLowerCase().includes(searchTerm) ||
+    (v.model || "").toLowerCase().includes(searchTerm)
+  );
+
+});
+
+const loadCustomers=async()=>{
+
+try{
+
+const res=await API.get("/customers");
+
+setCustomers(res.data);
+
+}catch(err){
+
+console.log(err);
+
+}
+
+}
+
 
 
 
@@ -128,6 +168,26 @@ setForm({
 
 })
 
+
+}
+
+// Selecting an existing customer as the bill-to party auto-fills the
+// text fields (what the invoice will actually print) but leaves them
+// editable — the link (bill_to_customer_id) is what drives statements/360,
+// the text is just what shows on paper. Clearing the dropdown back to
+// "Type manually / none" drops the link but keeps whatever text was
+// typed, for one-off payers who aren't in the system yet.
+const handleBillToCustomerSelect=(e)=>{
+
+  const selectedId = e.target.value;
+  const selected = customers.find(c=>c.id==selectedId);
+
+  setForm({
+    ...form,
+    bill_to_customer_id: selectedId,
+    bill_to_name: selected ? selected.name : form.bill_to_name,
+    bill_to_kra_pin: selected ? (selected.kra_pin || "") : form.bill_to_kra_pin
+  });
 
 }
 
@@ -170,6 +230,7 @@ const data={
   vehicle_id: form.vehicle_id,
   driver_name: form.driver_name.trim() || null,
   driver_phone: form.driver_phone.trim() || null,
+  bill_to_customer_id: form.bill_to_customer_id || null,
   bill_to_name: form.bill_to_name.trim() || null,
   bill_to_kra_pin: form.bill_to_kra_pin.trim() || null,
   complaint: form.complaint,
@@ -193,6 +254,7 @@ setForm({
   vehicle_id:"",
   driver_name:"",
   driver_phone:"",
+  bill_to_customer_id:"",
   bill_to_name:"",
   bill_to_kra_pin:"",
   complaint:"",
@@ -617,66 +679,157 @@ mb-4
 
 
 <label className="text-sm">
-
-Customer Vehicle
-
+  Customer Vehicle
 </label>
 
+<div className="relative mb-4">
 
+  {/* Search / selected vehicle input */}
+  <input
+    type="text"
+    value={
+      form.vehicle_id
+        ? (() => {
+            const selectedVehicle = vehicles.find(
+              v => v.id == form.vehicle_id
+            );
 
-<select
+            return selectedVehicle
+              ? `${selectedVehicle.registration_number} - ${selectedVehicle.make} ${selectedVehicle.model}`
+              : "";
+          })()
+        : vehicleSearch
+    }
+    onChange={(e) => {
 
-name="vehicle_id"
+      setVehicleSearch(e.target.value);
+      setShowVehicleDropdown(true);
 
-value={form.vehicle_id}
+      // Clear selected vehicle when user starts searching
+      if(form.vehicle_id){
 
-onChange={handleChange}
+        setForm({
+          ...form,
+          vehicle_id:""
+        });
 
-className="
-w-full
-border
-rounded-lg
-p-2
-mb-4
-"
+      }
 
->
+    }}
+    onFocus={() => setShowVehicleDropdown(true)}
+    placeholder="Search registration, make or model..."
+    className="
+      w-full
+      border
+      rounded-lg
+      p-2
+      pr-10
+    "
+  />
 
+  {/* Clear selected vehicle */}
+  {form.vehicle_id && (
 
-<option value="">
+    <button
+      type="button"
+      onClick={() => {
 
-Select Vehicle
+        setForm({
+          ...form,
+          vehicle_id:""
+        });
 
-</option>
+        setVehicleSearch("");
+        setShowVehicleDropdown(true);
 
+      }}
+      className="
+        absolute
+        right-3
+        top-2
+        text-slate-400
+        hover:text-red-500
+        text-lg
+      "
+    >
+      ×
+    </button>
 
+  )}
 
-{
-vehicles.map(v=>(
+  {/* Vehicle dropdown */}
+  {showVehicleDropdown && !form.vehicle_id && (
 
+    <div
+      className="
+        absolute
+        z-50
+        left-0
+        right-0
+        mt-1
+        bg-white
+        border
+        rounded-lg
+        shadow-lg
+        max-h-60
+        overflow-y-auto
+      "
+    >
 
-<option
-key={v.id}
-value={v.id}
->
+      {filteredVehicles.length > 0 ? (
 
+        filteredVehicles.map(v => (
 
-{v.registration_number}
--
-{v.make}
-{" "}
-{v.model}
+          <button
+            type="button"
+            key={v.id}
+            onClick={() => {
 
+              setForm({
+                ...form,
+                vehicle_id:v.id
+              });
 
-</option>
+              setVehicleSearch("");
+              setShowVehicleDropdown(false);
 
+            }}
+            className="
+              w-full
+              text-left
+              px-3
+              py-2
+              hover:bg-slate-100
+              border-b
+              last:border-b-0
+            "
+          >
 
-))
+            <div className="font-medium text-slate-800">
+              {v.registration_number}
+            </div>
 
-}
+            <div className="text-xs text-slate-500">
+              {v.make} {v.model}
+            </div>
 
+          </button>
 
-</select>
+        ))
+
+      ) : (
+
+        <div className="p-3 text-sm text-slate-400">
+          No vehicles found
+        </div>
+
+      )}
+
+    </div>
+
+  )}
+
+</div>
 
 
 <label className="text-sm">
@@ -705,14 +858,29 @@ value={v.id}
 
 
 <label className="text-sm">
-  Bill To (only if someone else is paying — e.g. a company or department)
+  Bill To (only if someone else is paying — e.g. an insurer or company)
 </label>
+<select
+  value={form.bill_to_customer_id}
+  onChange={handleBillToCustomerSelect}
+  className="w-full border rounded-lg p-2 mb-2"
+>
+  <option value="">Type manually / not in system</option>
+  {customers.map(c=>(
+    <option key={c.id} value={c.id}>{c.name}</option>
+  ))}
+</select>
+<p className="text-xs text-slate-400 mb-2">
+  Picking a customer here links this job's invoices to their statement.
+  Leave as "Type manually" if the payer isn't registered as a customer —
+  the text below still prints on the invoice either way.
+</p>
 <input
   type="text"
   name="bill_to_name"
   value={form.bill_to_name}
   onChange={handleChange}
-  placeholder="e.g. National Police Service HQ"
+  placeholder="e.g. Fidelity Insurance"
   className="w-full border rounded-lg p-2 mb-4"
 />
 

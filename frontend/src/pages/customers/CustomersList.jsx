@@ -102,13 +102,13 @@ export default function CustomersList() {
                   <td className="px-6 py-3 text-sm text-slate-600">{c.address || "—"}</td>
                   <td className="px-6 py-3">
                     <div className="flex items-center gap-2">
-                      {/*<button
+                      <button
                         onClick={() => navigate(`/admin/customers/${c.id}`)}
                         title="View customer"
                         className="text-slate-500 hover:text-slate-700 p-1.5 hover:bg-slate-100 rounded-lg transition"
                       >
                         <FaUserCircle size={14} />
-                      </button>*/}
+                      </button>
                       <button
                         onClick={() => navigate(`/admin/customers/${c.id}/statement`)}
                         title="Statement"

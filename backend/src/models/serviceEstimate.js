@@ -147,6 +147,7 @@ sj.id,
 sj.job_number,
 sj.driver_name,
 sj.driver_phone,
+sj.bill_to_customer_id,
 sj.bill_to_name,
 sj.bill_to_kra_pin,
 c.name AS customer_name,
@@ -170,6 +171,7 @@ WHERE sj.id=$1
 
     const job = jobResult.rows[0];
 
+    const billToCustomerId = job.bill_to_customer_id || null;
     const billToName = job.bill_to_name || job.customer_name;
     const billToKraPin = job.bill_to_kra_pin || job.customer_kra_pin;
 
@@ -310,6 +312,7 @@ customer_name,
 customer_phone,
 driver_name,
 driver_phone,
+bill_to_customer_id,
 bill_to_name,
 bill_to_kra_pin,
 subtotal,
@@ -320,7 +323,7 @@ tax_amount,
 total,
 status
 )
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'pending')
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'pending')
 RETURNING *
   `,
 
@@ -331,6 +334,7 @@ RETURNING *
     job.customer_phone,
     job.driver_name,
     job.driver_phone,
+    billToCustomerId,
     billToName,
     billToKraPin,
     subtotal,

@@ -1,6 +1,6 @@
 import React,{useEffect,useState,useRef} from "react";
 import {useParams, useNavigate} from "react-router-dom";
-
+import API from "../../api/api";
 import {
  getServiceJob,
  getJobAssignments,
@@ -34,6 +34,7 @@ import {
  FaTools,
  FaIdCard,
  FaClipboardList,
+ FaFileInvoiceDollar,
 
 } from "react-icons/fa";
 
@@ -198,6 +199,13 @@ const [editingPartId, setEditingPartId] = useState(null);
 const [editPartQty, setEditPartQty] = useState("");
 const [editPartPrice, setEditPartPrice] = useState("");
 
+const [customers, setCustomers] = useState([]);
+const [showBillToModal, setShowBillToModal] = useState(false);
+const [billToCustomerId, setBillToCustomerId] = useState("");
+const [billToName, setBillToName] = useState("");
+const [billToKraPin, setBillToKraPin] = useState("");
+const [savingBillTo, setSavingBillTo] = useState(false);
+
 
 const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -219,6 +227,13 @@ jobRes.data;
 
 
 setJob(currentJob);
+
+
+setBillToCustomerId(currentJob.bill_to_customer_id || "");
+setBillToName(currentJob.bill_to_name || "");
+setBillToKraPin(currentJob.bill_to_kra_pin || "");
+
+
 
 setCauseNotes(currentJob?.cause_notes || "");
 
@@ -266,6 +281,9 @@ await getMechanics();
 setMechanics(
 mechanicsRes.data
 );
+
+const customersRes = await API.get("/customers");
+setCustomers(customersRes.data);
 
 const catalogRes =
 await getServiceCatalog();
@@ -341,6 +359,41 @@ err.response?.data?.message ||
 
 
 }
+
+
+const handleOpenBillToModal = () => {
+  setBillToCustomerId(job.bill_to_customer_id || "");
+  setBillToName(job.bill_to_name || "");
+  setBillToKraPin(job.bill_to_kra_pin || "");
+  setShowBillToModal(true);
+};
+
+const handleBillToCustomerSelect = (e) => {
+  const selectedId = e.target.value;
+  const selected = customers.find(c => c.id == selectedId);
+  setBillToCustomerId(selectedId);
+  if (selected) {
+    setBillToName(selected.name);
+    setBillToKraPin(selected.kra_pin || "");
+  }
+};
+
+const handleSaveBillTo = async () => {
+  setSavingBillTo(true);
+  try {
+    const res = await updateServiceJob(id, {
+      bill_to_customer_id: billToCustomerId || null,
+      bill_to_name: billToName.trim() || null,
+      bill_to_kra_pin: billToKraPin.trim() || null,
+    });
+    setJob(res.data);
+    setShowBillToModal(false);
+  } catch (err) {
+    alert(err.response?.data?.message || "Failed updating billing details");
+  } finally {
+    setSavingBillTo(false);
+  }
+};
 
 
 // Shared html2canvas options for both capture passes below.
@@ -1394,6 +1447,32 @@ Deliver To
 </div>
 
 
+</div>
+
+<div className="bg-white p-5 rounded-xl shadow border mb-5 print:hidden capture-hide">
+  <div className="flex items-center justify-between mb-3">
+    <div className="flex items-center gap-3">
+      <FaFileInvoiceDollar className="text-emerald-600" />
+      <h2 className="font-bold">Billing</h2>
+    </div>
+    <button onClick={handleOpenBillToModal} className="text-blue-600 text-sm font-medium">
+      {job.bill_to_name ? "Edit" : "Bill to someone else"}
+    </button>
+  </div>
+
+  {job.bill_to_name ? (
+    <div>
+      <p className="text-sm font-medium text-slate-800">{job.bill_to_name}</p>
+      {job.bill_to_kra_pin && <p className="text-xs text-slate-500">KRA PIN: {job.bill_to_kra_pin}</p>}
+      {job.bill_to_customer_id && (
+        <p className="text-xs text-emerald-600 mt-1">
+          Linked to a customer record — invoices for this job land on their statement.
+        </p>
+      )}
+    </div>
+  ) : (
+    <p className="text-sm text-slate-500">Billed to {job.customer_name} (the vehicle owner).</p>
+  )}
 </div>
 
 
@@ -3310,6 +3389,42 @@ setShowEstimateModal(false)
 />
 
 }
+
+{showBillToModal && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 print:hidden capture-hide">
+    <div className="bg-white w-full max-w-md rounded-xl p-6 shadow-xl">
+      <h2 className="text-xl font-bold mb-2">Bill To</h2>
+      <p className="text-sm text-slate-500 mb-4">
+        Leave blank to bill {job.customer_name} directly. Otherwise pick who's actually
+        paying — an insurer, employer, etc — so invoices for this job land on their
+        statement instead.
+      </p>
+
+      <label className="text-sm">Existing Customer</label>
+      <select value={billToCustomerId} onChange={handleBillToCustomerSelect} className="w-full border rounded-lg p-2 mb-2">
+        <option value="">Type manually / not in system</option>
+        {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
+
+      <label className="text-sm">Bill To Name</label>
+      <input type="text" value={billToName} onChange={(e)=>setBillToName(e.target.value)}
+        placeholder="Leave blank to bill the customer directly"
+        className="w-full border rounded-lg p-2 mb-4" />
+
+      <label className="text-sm">Bill To KRA Pin</label>
+      <input type="text" value={billToKraPin} onChange={(e)=>setBillToKraPin(e.target.value)}
+        className="w-full border rounded-lg p-2 mb-4" />
+
+      <div className="flex justify-end gap-3">
+        <button onClick={()=>setShowBillToModal(false)} className="px-4 py-2 border rounded-lg">Cancel</button>
+        <button onClick={handleSaveBillTo} disabled={savingBillTo}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg disabled:opacity-50">
+          {savingBillTo ? "Saving..." : "Save"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
 
 

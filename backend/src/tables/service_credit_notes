@@ -1,0 +1,15 @@
+CREATE TABLE service_credit_notes (
+  id SERIAL PRIMARY KEY,
+  credit_note_number VARCHAR(60) UNIQUE,
+  invoice_id INTEGER REFERENCES service_invoices(id),
+  job_id INTEGER REFERENCES service_jobs(id),
+  customer_name VARCHAR(100),
+  customer_phone VARCHAR(30),
+  reason VARCHAR(255),
+  subtotal NUMERIC DEFAULT 0,
+  tax_rate NUMERIC DEFAULT 0,
+  tax_amount NUMERIC DEFAULT 0,
+  total NUMERIC DEFAULT 0,
+  status VARCHAR(30) DEFAULT 'issued',
+  created_at TIMESTAMP DEFAULT NOW()
+);

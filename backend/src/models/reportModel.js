@@ -92,3 +92,104 @@ export const getDashboardStats = async () => {
     total_parts: totalParts.rows[0].total,
   };
 };
+
+
+
+/* =========================================================
+   BUSINESS-WIDE INVOICE REPORT (services + spareparts, all customers)
+========================================================= */
+
+const getServiceInvoiceReportRows = async (from, to) => {
+  const result = await pool.query(
+    `
+    SELECT
+      si.id,
+      'service' AS type,
+      si.invoice_number,
+      si.customer_name,
+      si.created_at::date AS date,
+      si.subtotal,
+      si.discount,
+      si.tax_amount,
+      si.total,
+      si.status,
+      COALESCE(si.amount_paid,0) AS amount_paid,
+      si.total - COALESCE(si.amount_paid,0) - COALESCE(si.amount_credited,0) AS balance,
+      latest.receipt_number,
+      latest.payment_method,
+      latest.receipt_date
+    FROM service_invoices si
+    LEFT JOIN LATERAL (
+      SELECT sr.receipt_number, sr.payment_method, sr.created_at AS receipt_date
+      FROM service_receipts sr
+      WHERE sr.invoice_id = si.id
+      ORDER BY sr.created_at DESC
+      LIMIT 1
+    ) latest ON true
+    WHERE si.created_at::date BETWEEN $1 AND $2
+    `,
+    [from, to]
+  );
+  return result.rows;
+};
+
+const getSparePartsInvoiceReportRows = async (from, to) => {
+  const result = await pool.query(
+    `
+    SELECT
+      spi.id,
+      'sparepart' AS type,
+      spi.invoice_number,
+      spi.customer_name,
+      spi.created_at::date AS date,
+      spi.subtotal,
+      spi.discount,
+      spi.tax_amount,
+      spi.total,
+      spi.status,
+      COALESCE(spi.amount_paid,0) AS amount_paid,
+      spi.total - COALESCE(spi.amount_paid,0) AS balance,
+      latest.receipt_number,
+      latest.payment_method,
+      latest.receipt_date
+    FROM spare_invoices spi
+    LEFT JOIN LATERAL (
+      SELECT ss.receipt_number, ss.payment_method, ss.sale_date AS receipt_date
+      FROM spare_sales ss
+      WHERE ss.invoice_id = spi.id
+      ORDER BY ss.sale_date DESC
+      LIMIT 1
+    ) latest ON true
+    WHERE spi.created_at::date BETWEEN $1 AND $2
+    `,
+    [from, to]
+  );
+  return result.rows;
+};
+
+// type: 'service' | 'sparepart' | 'both'
+export const getBusinessInvoiceReport = async (from, to, type = "both") => {
+  let rows = [];
+
+  if (type === "service" || type === "both") {
+    rows = rows.concat(await getServiceInvoiceReportRows(from, to));
+  }
+  if (type === "sparepart" || type === "both") {
+    rows = rows.concat(await getSparePartsInvoiceReportRows(from, to));
+  }
+
+  rows.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const summary = rows.reduce(
+    (acc, r) => {
+      acc.total_invoiced += Number(r.total);
+      acc.total_paid += Number(r.amount_paid);
+      acc.total_outstanding += Number(r.balance);
+      acc.count += 1;
+      return acc;
+    },
+    { total_invoiced: 0, total_paid: 0, total_outstanding: 0, count: 0 }
+  );
+
+  return { rows, summary };
+};

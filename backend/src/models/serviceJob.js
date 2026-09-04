@@ -8,6 +8,7 @@ const {
     vehicle_id,
     driver_name,
     driver_phone,
+    bill_to_customer_id,
     bill_to_name,
     bill_to_kra_pin,
     complaint,
@@ -19,22 +20,15 @@ const {
 const insertResult = await pool.query(
     `
     INSERT INTO service_jobs
-    (job_number, customer_id, vehicle_id, driver_name, driver_phone, bill_to_name, bill_to_kra_pin, complaint, diagnosis, notes, created_by)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+    (job_number, customer_id, vehicle_id, driver_name, driver_phone, bill_to_customer_id, bill_to_name, bill_to_kra_pin, complaint, diagnosis, notes, created_by)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
     RETURNING *
     `,
     [
-      job_number,
-      customer_id,
-      vehicle_id,
-      driver_name || null,
-      driver_phone || null,
-      bill_to_name || null,
-      bill_to_kra_pin || null,
-      complaint,
-      diagnosis || null,
-      notes || null,
-      created_by || 1
+      job_number, customer_id, vehicle_id,
+      driver_name || null, driver_phone || null,
+      bill_to_customer_id || null, bill_to_name || null, bill_to_kra_pin || null,
+      complaint, diagnosis || null, notes || null, created_by || 1
     ]
 );
 
@@ -239,13 +233,9 @@ export const getDailyJobReport = async (from, to) => {
 export const updateServiceJob = async (id, data) => {
 
   const allowedFields = [
-    "complaint",
-    "diagnosis",
-    "notes",
-    "driver_name",
-    "driver_phone",
-    "bill_to_name",
-    "bill_to_kra_pin"
+      "complaint", "diagnosis", "notes",
+      "driver_name", "driver_phone",
+      "bill_to_customer_id", "bill_to_name", "bill_to_kra_pin"
   ];
 
   const fields = Object.keys(data).filter(key => allowedFields.includes(key));

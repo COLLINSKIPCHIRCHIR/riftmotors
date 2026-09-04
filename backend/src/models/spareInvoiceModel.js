@@ -228,40 +228,42 @@ export const convertInvoiceToSale = async (invoiceId, payment_method, amount_pai
     });
 
     const saleRes = await client.query(
-      `INSERT INTO spare_sales
-        (
-        customer_id,
-        customer_name,
-        customer_phone,
-        subtotal,
-        discount,
-        tax_rate,
-        tax_amount,
-        total,
-        payment_method,
-        receipt_number,
-        account_balance_before,
-        account_balance_after
-        )
+  `INSERT INTO spare_sales
+    (
+    customer_id,
+    customer_name,
+    customer_phone,
+    subtotal,
+    discount,
+    tax_rate,
+    tax_amount,
+    total,
+    payment_method,
+    receipt_number,
+    account_balance_before,
+    account_balance_after,
+    invoice_id
+    )
 
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
 
-        RETURNING *`,
-      [
-        invoice.customer_id || null,
-        invoice.customer_name,
-        invoice.customer_phone,
-        subtotal,
-        invoice.discount,
-        invoice.tax_rate,
-        invoice.tax_amount,
-        payment,
-        payment_method,
-        receiptNumber,
-        balanceBefore,
-        balanceAfter
-      ]
-    );
+    RETURNING *`,
+  [
+    invoice.customer_id || null,
+    invoice.customer_name,
+    invoice.customer_phone,
+    subtotal,
+    invoice.discount,
+    invoice.tax_rate,
+    invoice.tax_amount,
+    payment,
+    payment_method,
+    receiptNumber,
+    balanceBefore,
+    balanceAfter,
+    invoiceId
+  ]
+);
 
     const saleId = saleRes.rows[0].id;
 

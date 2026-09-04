@@ -6,3 +6,6 @@ export const getCustomers = () =>
 
 export const getCustomerStatement = (id, from, to, type = "both") =>
   API.get(`/customers/${id}/statement`, { params: { from, to, type } });
+
+
+export const getCustomer360 = (id) => API.get(`/customers/${id}/360`);

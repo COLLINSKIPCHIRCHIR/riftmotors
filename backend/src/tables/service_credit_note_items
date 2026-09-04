@@ -1,0 +1,13 @@
+CREATE TABLE service_credit_note_items (
+  id SERIAL PRIMARY KEY,
+  credit_note_id INTEGER REFERENCES service_credit_notes(id) ON DELETE CASCADE,
+  invoice_item_id INTEGER REFERENCES service_invoice_items(id),
+  item_type VARCHAR(20),
+  description VARCHAR(200),
+  quantity INTEGER,
+  unit_price NUMERIC,
+  total_price NUMERIC
+);
+
+ALTER TABLE service_credit_note_items
+  ALTER COLUMN quantity TYPE NUMERIC USING quantity::numeric;

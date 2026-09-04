@@ -5,6 +5,7 @@ import {
   convertServiceEstimate,
   updateEstimateItem
 } from "../../api/serviceApi";
+import API from "../../api/api";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -45,6 +46,8 @@ const ServiceEstimateDetails =()=>{
   const [billToName, setBillToName] = useState("");
   const [billToKraPin, setBillToKraPin] = useState("");
   const [converting, setConverting] = useState(false);
+  const [billToCustomerId, setBillToCustomerId] = useState("");
+  const [customers, setCustomers] = useState([]);
   const printRef = useRef();
 
   // Same pattern used in InvoiceDetails.jsx for "Served By"
@@ -57,12 +60,17 @@ const ServiceEstimateDetails =()=>{
         setEstimate(res.data);
         setBillToName(res.data.bill_to_name || res.data.customer_name || "");
         setBillToKraPin(res.data.bill_to_kra_pin || "");
+        setBillToCustomerId(res.data.bill_to_customer_id || "");
       }catch(err){
         console.log(err);
       }
     }
     load();
   },[id]);
+
+  useEffect(() => {
+  API.get("/customers").then(res => setCustomers(res.data)).catch(console.log);
+}, []);
 
   if(!estimate)
     return (<div className="p-6">Loading estimate...</div>)
@@ -76,7 +84,8 @@ const ServiceEstimateDetails =()=>{
     try{
       const res = await convertServiceEstimate(id, {
         bill_to_name: billToName.trim(),
-        bill_to_kra_pin: billToKraPin.trim()
+        bill_to_kra_pin: billToKraPin.trim(),
+        bill_to_customer_id: billToCustomerId || null   
       });
       alert("Estimate converted to invoice");
       navigate(`/admin/services/invoices/${res.data.invoice.id}`);
@@ -86,6 +95,18 @@ const ServiceEstimateDetails =()=>{
       setConverting(false);
     }
   }
+
+
+  // new handler, same pattern as JobDetails
+const handleBillToCustomerSelect = (e) => {
+  const selectedId = e.target.value;
+  const selected = customers.find(c => c.id == selectedId);
+  setBillToCustomerId(selectedId);
+  if (selected) {
+    setBillToName(selected.name);
+    setBillToKraPin(selected.kra_pin || "");
+  }
+};
 
   // Renders the printable area into a (possibly multi-page) PDF and
   // returns it as a Blob.
@@ -787,6 +808,12 @@ const ServiceEstimateDetails =()=>{
           may need to bill someone else — e.g. a company or department.
           Confirm or update who this invoice should actually bill.
         </p>
+
+        <label className="text-sm">Existing Customer</label>
+        <select value={billToCustomerId} onChange={handleBillToCustomerSelect} className="w-full border rounded-lg p-2 mb-2">
+          <option value="">Type manually / not in system</option>
+          {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
 
         <label className="text-sm">Bill To Name</label>
         <input
