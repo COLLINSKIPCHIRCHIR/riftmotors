@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getCustomerStatement } from "../../api/customerApi";
+import { getCustomerStatement } from "../../api/CustomerApi";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
