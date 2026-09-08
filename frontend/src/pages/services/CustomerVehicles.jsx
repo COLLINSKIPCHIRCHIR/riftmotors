@@ -1,4 +1,4 @@
-import React,{useEffect,useState} from "react";
+import React,{useEffect,useState,useRef} from "react";
 
 import {
 getCustomerVehicles,
@@ -12,7 +12,9 @@ import {
 FaCar,
 FaEye,
 FaTools,
-FaEdit
+FaEdit,
+FaSearch,
+FaChevronDown
 } from "react-icons/fa";
 
 import {Link} from "react-router-dom";
@@ -37,6 +39,13 @@ const [search,setSearch]=useState("");
 const [fuel,setFuel]=useState("");
 
 const [transmission,setTransmission]=useState("");
+
+
+
+// --- searchable customer dropdown state ---
+const [customerQuery,setCustomerQuery]=useState("");
+const [customerDropdownOpen,setCustomerDropdownOpen]=useState(false);
+const customerBoxRef=useRef(null);
 
 
 
@@ -71,6 +80,27 @@ loadVehicles();
 
 loadCustomers();
 
+
+},[])
+
+
+
+// close the customer dropdown when clicking outside of it
+useEffect(()=>{
+
+const handleClickOutside=(e)=>{
+
+if(customerBoxRef.current && !customerBoxRef.current.contains(e.target)){
+
+setCustomerDropdownOpen(false);
+
+}
+
+}
+
+document.addEventListener("mousedown",handleClickOutside);
+
+return ()=> document.removeEventListener("mousedown",handleClickOutside);
 
 },[])
 
@@ -146,9 +176,47 @@ setForm({
 
 
 
+const selectCustomer=(customer)=>{
+
+setForm({
+
+...form,
+
+customer_id: customer.id
+
+});
+
+setCustomerQuery(`${customer.name} - ${customer.phone}`);
+
+setCustomerDropdownOpen(false);
+
+}
+
+
+
+const selectedCustomerLabel=()=>{
+
+const c = customers.find(c=> String(c.id) === String(form.customer_id));
+
+return c ? `${c.name} - ${c.phone}` : "";
+
+}
+
+
+
+const filteredCustomers = customers.filter(c=>{
+
+const text = `${c.name} ${c.phone}`.toLowerCase();
+
+return text.includes(customerQuery.toLowerCase());
+
+});
+
+
+
 // Opens the modal pre-filled with an existing vehicle's data. Keeping
-// customer_id in the form even though it's not editable here (see the
-// disabled select below) so the modal still shows who owns it.
+// customer_id in the form even though it's not editable here so the
+// modal still shows who owns it.
 const startEditVehicle = (vehicle)=>{
 
 setEditingId(vehicle.id);
@@ -169,6 +237,24 @@ engine_number: vehicle.engine_number || ""
 
 });
 
+setCustomerQuery(vehicle.name ? `${vehicle.name} - ${vehicle.phone || ""}` : "");
+
+setShowModal(true);
+
+}
+
+
+
+const openAddModal = ()=>{
+
+setEditingId(null);
+
+setForm(emptyForm);
+
+setCustomerQuery("");
+
+setCustomerDropdownOpen(false);
+
 setShowModal(true);
 
 }
@@ -182,6 +268,10 @@ setShowModal(false);
 setEditingId(null);
 
 setForm(emptyForm);
+
+setCustomerQuery("");
+
+setCustomerDropdownOpen(false);
 
 }
 
@@ -319,7 +409,7 @@ Customer Vehicles
 
 <button
 
-onClick={()=>setShowModal(true)}
+onClick={openAddModal}
 
 className="
 bg-blue-600
@@ -779,57 +869,128 @@ max-w-xl
 
 
 
-<select
+{/* Searchable customer picker (replaces the old plain <select>) */}
 
-name="customer_id"
-
-value={form.customer_id}
-
-onChange={handleChange}
-
-disabled={!!editingId}
-
-className="border p-2 rounded disabled:bg-slate-100 disabled:text-slate-400"
-
->
+<div className="relative col-span-2" ref={customerBoxRef}>
 
 
-<option value="">
+{
+editingId ? (
 
-Select Customer
+// Locked once editing an existing vehicle - shown as read-only text
+<div className="border p-2 rounded bg-slate-100 text-slate-500">
 
-</option>
+{selectedCustomerLabel() || "Customer"}
+
+</div>
+
+) : (
+
+<>
+
+<div className="relative">
+
+<FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"/>
+
+<input
+
+type="text"
+
+placeholder="Search customer by name or phone..."
+
+value={customerQuery}
+
+onChange={(e)=>{
+
+setCustomerQuery(e.target.value);
+
+setCustomerDropdownOpen(true);
+
+// typing again means the previous selection no longer matches
+if(form.customer_id){
+
+setForm({...form, customer_id:""});
+
+}
+
+}}
+
+onFocus={()=>setCustomerDropdownOpen(true)}
+
+className="border p-2 pl-9 pr-8 rounded w-full"
+
+/>
+
+<FaChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"/>
+
+</div>
 
 
 
 {
+customerDropdownOpen && (
 
-customers.map(c=>(
+<div className="absolute z-10 mt-1 w-full max-h-56 overflow-y-auto bg-white border rounded-lg shadow-lg">
 
 
-<option
+{
+filteredCustomers.length === 0 ? (
+
+<div className="p-3 text-sm text-slate-400">
+
+No customers found
+
+</div>
+
+) : (
+
+filteredCustomers.map(c=>(
+
+<button
+
+type="button"
 
 key={c.id}
 
-value={c.id}
+onClick={()=>selectCustomer(c)}
+
+className={`
+w-full
+text-left
+p-3
+hover:bg-blue-50
+${String(form.customer_id)===String(c.id) ? "bg-blue-50" : ""}
+`}
 
 >
 
+<p className="font-medium">{c.name}</p>
 
-{c.name} - {c.phone}
+<p className="text-sm text-slate-500">{c.phone}</p>
 
-
-</option>
-
+</button>
 
 ))
 
+)
 
 }
 
 
+</div>
 
-</select>
+)
+
+}
+
+</>
+
+)
+
+}
+
+
+</div>
 
 
 

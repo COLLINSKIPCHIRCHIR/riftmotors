@@ -72,10 +72,10 @@ export default function SellSpareParts() {
   // Search filter
   // ------------------------------
   const filteredParts = spareparts.filter(
-    (item) =>
-      item.name.toLowerCase().includes(search.toLowerCase()) ||
-      item.part_number.toLowerCase().includes(search.toLowerCase())
-  );
+  (item) =>
+    (item?.name ?? "").toLowerCase().includes(search.toLowerCase()) ||
+    (item?.part_number ?? "").toLowerCase().includes(search.toLowerCase())
+);
 
   // ------------------------------
   // Select part
