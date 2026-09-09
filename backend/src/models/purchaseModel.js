@@ -240,11 +240,13 @@ export const getPurchaseById = async (id) => {
   );
 
   const itemsResult = await pool.query(
-    `SELECT spi.*, sp.name AS sparepart_name
-     FROM spare_purchase_items spi
-     JOIN spareparts sp ON spi.sparepart_id = sp.id
-     WHERE spi.purchase_id = $1
-     ORDER BY spi.id`,
+    `SELECT spi.*, 
+            sp.name AS sparepart_name,
+            sp.part_number
+    FROM spare_purchase_items spi
+    JOIN spareparts sp ON spi.sparepart_id = sp.id
+    WHERE spi.purchase_id = $1
+    ORDER BY spi.id`,
     [id]
   );
 

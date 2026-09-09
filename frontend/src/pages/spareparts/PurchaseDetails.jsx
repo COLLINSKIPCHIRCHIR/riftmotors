@@ -476,7 +476,9 @@ const PurchaseDetails = () => {
             <tbody>
               {items.map((item) => (
                 <tr key={item.id}>
-                  <td className="p-1 border border-black align-middle">{item.sparepart_name}</td>
+                  <td className="p-1 border border-black align-middle">
+                    {item.sparepart_name}{item.part_number ? ` - ${item.part_number}` : ""}
+                  </td>
                   <td className="p-1 border border-black text-center align-middle">{item.quantity}</td>
                   <td className="p-1 border border-black text-right align-middle">{formatMoney(item.unit_cost)}</td>
                   <td className="p-1 border border-black text-center align-middle">R</td>
