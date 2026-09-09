@@ -144,7 +144,7 @@ const CreatePurchase = () => {
   const fetchData = async () => {
     try {
       const suppliersRes = await API.get("/suppliers");
-      const partsRes = await API.get("/spareparts");
+      const partsRes = await API.get("/spareparts?limit=10000");
 
       setSuppliers(suppliersRes.data);
       setSpareParts(partsRes.data.data);
