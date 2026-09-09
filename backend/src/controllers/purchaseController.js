@@ -1,5 +1,6 @@
 import {
   createPurchaseTransaction,
+  updatePurchaseTransaction,
   getAllPurchases,
   getPurchaseById,
   sendPurchaseOrder,
@@ -10,7 +11,7 @@ import {
 // ➤ Create LPO (draft)
 export const createPurchase = async (req, res) => {
   try {
-    const { supplier_id, items, expected_delivery_date, notes } = req.body;
+    const { supplier_id, items, expected_delivery_date, notes, tax_rate } = req.body;
 
     if (!supplier_id || !items || items.length === 0) {
       return res.status(400).json({ message: "Invalid purchase data" });
@@ -20,13 +21,37 @@ export const createPurchase = async (req, res) => {
       supplier_id,
       items,
       req.user?.id || null,
-      { expected_delivery_date, notes }
+      { expected_delivery_date, notes, tax_rate }
     );
 
     res.status(201).json(purchase);
   } catch (error) {
     console.error("Create purchase error:", error);
-    res.status(500).json({ message: "Failed to create purchase" });
+    res.status(500).json({ message: error.message || "Failed to create purchase" });
+  }
+};
+
+// ➤ Update LPO — draft only
+export const updatePurchase = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { supplier_id, items, expected_delivery_date, notes, tax_rate } = req.body;
+
+    if (!supplier_id || !items || items.length === 0) {
+      return res.status(400).json({ message: "Invalid purchase data" });
+    }
+
+    const purchase = await updatePurchaseTransaction(id, supplier_id, items, {
+      expected_delivery_date,
+      notes,
+      tax_rate,
+    });
+
+    res.json(purchase);
+  } catch (error) {
+    console.error("Update purchase error:", error);
+    const status = error.message === "Only draft LPOs can be edited" ? 400 : 500;
+    res.status(status).json({ message: error.message || "Failed to update purchase" });
   }
 };
 

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { getPurchase, sendPurchase, cancelPurchase } from "../../api/purchaseApi";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import toast from "react-hot-toast";
 
 const field = (value) => {
   if (value === null || value === undefined || value === "") return "N/A";
@@ -46,6 +47,7 @@ const PurchaseDetails = () => {
       setData(res.data);
     } catch (err) {
       console.log(err);
+      toast.error(err.response?.data?.message || "Could not load this LPO");
     }
   };
 
@@ -57,9 +59,10 @@ const PurchaseDetails = () => {
     if (!window.confirm("Send this LPO to the supplier? It can't be edited after this.")) return;
     try {
       await sendPurchase(id);
+      toast.success("LPO sent to supplier.");
       load();
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to send LPO");
+      toast.error(err.response?.data?.message || "Failed to send LPO");
     }
   };
 
@@ -67,9 +70,10 @@ const PurchaseDetails = () => {
     if (!window.confirm("Cancel this LPO?")) return;
     try {
       await cancelPurchase(id);
+      toast.success("LPO cancelled.");
       load();
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to cancel LPO");
+      toast.error(err.response?.data?.message || "Failed to cancel LPO");
     }
   };
 
@@ -225,7 +229,7 @@ const PurchaseDetails = () => {
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert("Could not generate PDF");
+      toast.error("Could not generate PDF");
     }
   };
 
@@ -257,7 +261,7 @@ const PurchaseDetails = () => {
         }
       }
     } catch (err) {
-      alert("Sharing failed");
+      toast.error("Sharing failed");
     }
   };
 
@@ -408,6 +412,14 @@ const PurchaseDetails = () => {
             </span>
             <div className="flex gap-2 flex-wrap justify-end">
               {purchase.status === "draft" && (
+                <button
+                  onClick={() => navigate(`/admin/spare-parts/purchases/${id}/edit`)}
+                  className="bg-amber-600 text-white px-4 py-2 rounded text-sm"
+                >
+                  Edit
+                </button>
+              )}
+              {purchase.status === "draft" && (
                 <button onClick={handleSend} className="bg-blue-600 text-white px-4 py-2 rounded text-sm">
                   Send to Supplier
                 </button>
@@ -438,9 +450,12 @@ const PurchaseDetails = () => {
           </div>
 
           {/* ITEMS — Description / Qty / Rate / VAT / Amount, matching the
-              paper LPO layout. VAT column shows the tax class letter, not
-              a computed value — there's no per-line tax breakdown in the
-              schema, only header-level subtotal/total. */}
+              paper LPO layout. VAT column still shows the tax class letter
+              per line (no per-line tax breakdown exists in the schema —
+              only the header-level tax_rate/tax_amount below is a real,
+              computed figure now). If you'd rather drop this column
+              entirely instead of keeping it as a static marker, say so —
+              that's a layout call, not a data one. */}
           <table className="w-full border border-black text-[10px] leading-normal mt-1">
             <colgroup>
               <col className="w-[44%]" />
@@ -479,11 +494,9 @@ const PurchaseDetails = () => {
             </tbody>
           </table>
 
-          {/* NOTES + TOTALS BOX — mirrors the paper layout's VAT Summary /
-              Subtotal-VAT-Total pairing. No per-rate VAT breakdown is
-              tracked yet, so the left box carries the LPO notes instead;
-              the right box shows the same Subtotal/Total the header
-              already stores. */}
+          {/* NOTES + TOTALS BOX — Subtotal / VAT / Total now reads real
+              tax_rate / tax_amount from the header instead of hardcoded
+              0.00 / subtotal-as-total. */}
           <div className="flex justify-between mt-2 gap-4 text-[10px] leading-[13px]">
             <table className="border border-black w-[55%]">
               <tbody>
@@ -503,8 +516,8 @@ const PurchaseDetails = () => {
                   <td className="border border-black px-1 py-0.5 text-right align-middle">{formatMoney(purchase.subtotal)}</td>
                 </tr>
                 <tr>
-                  <td className="border border-black px-1 py-0.5 align-middle">VAT Total</td>
-                  <td className="border border-black px-1 py-0.5 text-right align-middle">0.00</td>
+                  <td className="border border-black px-1 py-0.5 align-middle">VAT ({Number(purchase.tax_rate ?? 0)}%)</td>
+                  <td className="border border-black px-1 py-0.5 text-right align-middle">{formatMoney(purchase.tax_amount)}</td>
                 </tr>
                 <tr>
                   <td className="border border-black px-1 py-0.5 font-bold align-middle">Total</td>

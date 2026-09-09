@@ -1,8 +1,9 @@
 // src/pages/spareparts/CreatePurchase.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import API from "../../api/api";
-import { createPurchase } from "../../api/purchaseApi";
-import { useNavigate } from "react-router-dom";
+import { createPurchase, updatePurchase, getPurchase } from "../../api/purchaseApi";
+import { useNavigate, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 
 // Same list used in AddSparePart.jsx — kept in sync manually since it's
 // not backed by a lookup table.
@@ -18,6 +19,7 @@ const CATEGORIES = [
 ];
 
 const NEW_PART_VALUE = "__new__";
+const DEFAULT_TAX_RATE = 16;
 
 const emptyItem = () => ({
   isNew: false,
@@ -27,19 +29,117 @@ const emptyItem = () => ({
   new_part: { name: "", part_number: "", category: "", selling_price: "", discount: "" },
 });
 
+// Searchable replacement for the old plain <select> of existing parts.
+// Filters spareParts by name or part number as you type, shows up to 8
+// matches, and always offers "+ Add New Part" at the top of the list so
+// it's still one click away. Closes on selection or on outside click.
+const PartSearchInput = ({ spareParts, value, onSelectExisting, onSelectNew }) => {
+  const [query, setQuery] = useState(value || "");
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    setQuery(value || "");
+  }, [value]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? spareParts
+        .filter(
+          (p) =>
+            p.name?.toLowerCase().includes(q) ||
+            p.part_number?.toLowerCase().includes(q)
+        )
+        .slice(0, 8)
+    : spareParts.slice(0, 8);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        placeholder="Search part name or number..."
+        className="w-full border p-1 rounded"
+      />
+
+      {open && (
+        <div className="absolute z-10 mt-1 w-full bg-white border rounded shadow-lg max-h-56 overflow-y-auto">
+          <button
+            type="button"
+            onClick={() => {
+              onSelectNew();
+              setOpen(false);
+            }}
+            className="w-full text-left px-2 py-1.5 text-sm text-blue-700 hover:bg-blue-50 border-b"
+          >
+            + Add New Part
+          </button>
+
+          {filtered.length === 0 && (
+            <div className="px-2 py-1.5 text-sm text-gray-400">No matching parts</div>
+          )}
+
+          {filtered.map((part) => (
+            <button
+              type="button"
+              key={part.id}
+              onClick={() => {
+                onSelectExisting(part);
+                setQuery(part.name);
+                setOpen(false);
+              }}
+              className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 flex justify-between gap-2"
+            >
+              <span>{part.name}</span>
+              {part.part_number && (
+                <span className="text-gray-400 text-xs shrink-0">{part.part_number}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const CreatePurchase = () => {
   const navigate = useNavigate();
+  const { id } = useParams(); // present only on the edit route
+  const isEditMode = Boolean(id);
 
   const [suppliers, setSuppliers] = useState([]);
   const [spareParts, setSpareParts] = useState([]);
   const [supplierId, setSupplierId] = useState("");
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [taxRate, setTaxRate] = useState(DEFAULT_TAX_RATE);
   const [items, setItems] = useState([emptyItem()]);
+  const [loading, setLoading] = useState(isEditMode);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (isEditMode) loadExistingPurchase();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const fetchData = async () => {
     try {
@@ -50,6 +150,45 @@ const CreatePurchase = () => {
       setSpareParts(partsRes.data.data);
     } catch (error) {
       console.error("Error loading purchase data:", error);
+      toast.error("Could not load suppliers or spare parts. Refresh and try again.");
+    }
+  };
+
+  const loadExistingPurchase = async () => {
+    try {
+      const res = await getPurchase(id);
+      const { purchase, items: existingItems } = res.data;
+
+      if (purchase.status !== "draft") {
+        toast.error("Only draft LPOs can be edited.");
+        navigate(`/admin/spare-parts/purchases/${id}`);
+        return;
+      }
+
+      setSupplierId(purchase.supplier_id || "");
+      setExpectedDeliveryDate(
+        purchase.expected_delivery_date
+          ? purchase.expected_delivery_date.slice(0, 10)
+          : ""
+      );
+      setNotes(purchase.notes || "");
+      setTaxRate(purchase.tax_rate ?? DEFAULT_TAX_RATE);
+      setItems(
+        existingItems.map((it) => ({
+          isNew: false,
+          sparepart_id: it.sparepart_id,
+          sparepart_name: it.sparepart_name, // used to prefill the search box
+          quantity: it.quantity,
+          unit_cost: Number(it.unit_cost),
+          new_part: { name: "", part_number: "", category: "", selling_price: "", discount: "" },
+        }))
+      );
+    } catch (error) {
+      console.error("Error loading LPO:", error);
+      toast.error(error.response?.data?.message || "Could not load this LPO");
+      navigate("/admin/spare-parts/purchases");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -67,16 +206,31 @@ const CreatePurchase = () => {
     setItems(updatedItems);
   };
 
-  // Dropdown switches a row between "existing part" and "new part" modes.
-  const handlePartSelect = (index, value) => {
+  // Row selected an existing part from the search dropdown.
+  const handlePartPicked = (index, part) => {
     const updatedItems = [...items];
-    if (value === NEW_PART_VALUE) {
-      updatedItems[index].isNew = true;
-      updatedItems[index].sparepart_id = "";
-    } else {
-      updatedItems[index].isNew = false;
-      updatedItems[index].sparepart_id = value;
-    }
+    updatedItems[index].isNew = false;
+    updatedItems[index].sparepart_id = part.id;
+    updatedItems[index].sparepart_name = part.name;
+    updatedItems[index].unit_cost = Number(part.buying_price || 0);
+    setItems(updatedItems);
+  };
+
+  // Row switched to "new part" mode, from the dropdown's "+ Add New Part" option.
+  const handleSwitchToNewPart = (index) => {
+    const updatedItems = [...items];
+    updatedItems[index].isNew = true;
+    updatedItems[index].sparepart_id = "";
+    updatedItems[index].sparepart_name = "";
+    setItems(updatedItems);
+  };
+
+  // Row switched back from "new part" mode to searching existing parts.
+  const handleSwitchToExisting = (index) => {
+    const updatedItems = [...items];
+    updatedItems[index].isNew = false;
+    updatedItems[index].sparepart_id = "";
+    updatedItems[index].sparepart_name = "";
     setItems(updatedItems);
   };
 
@@ -85,20 +239,24 @@ const CreatePurchase = () => {
   };
 
   const removeRow = (index) => {
+    if (items.length === 1) {
+      toast.error("An LPO needs at least one item");
+      return;
+    }
     const updatedItems = items.filter((_, i) => i !== index);
     setItems(updatedItems);
   };
 
-  const calculateSubtotal = () => {
-    return items.reduce(
-      (sum, item) => sum + item.quantity * item.unit_cost,
-      0
-    );
-  };
+  const calculateSubtotal = () =>
+    items.reduce((sum, item) => sum + item.quantity * item.unit_cost, 0);
+
+  const subtotal = calculateSubtotal();
+  const taxAmount = subtotal * (Number(taxRate || 0) / 100);
+  const total = subtotal + taxAmount;
 
   const handleSubmit = async () => {
     if (!supplierId) {
-      alert("Please select a supplier");
+      toast.error("Please select a supplier");
       return;
     }
 
@@ -106,9 +264,18 @@ const CreatePurchase = () => {
     // { sparepart_id, quantity, unit_cost } or { new_part: {...}, quantity, unit_cost }
     const payloadItems = [];
     for (const item of items) {
+      if (item.quantity <= 0) {
+        toast.error("Every item needs a quantity greater than 0");
+        return;
+      }
+      if (item.unit_cost < 0) {
+        toast.error("Unit cost can't be negative");
+        return;
+      }
+
       if (item.isNew) {
         if (!item.new_part.name.trim()) {
-          alert("Enter a name for every new part");
+          toast.error("Enter a name for every new part");
           return;
         }
         payloadItems.push({
@@ -124,7 +291,7 @@ const CreatePurchase = () => {
         });
       } else {
         if (!item.sparepart_id) {
-          alert("Select a part for every row, or switch it to '+ Add New Part'");
+          toast.error("Search and select a part for every row, or switch it to '+ Add New Part'");
           return;
         }
         payloadItems.push({
@@ -135,28 +302,45 @@ const CreatePurchase = () => {
       }
     }
 
+    const payload = {
+      supplier_id: supplierId,
+      items: payloadItems,
+      expected_delivery_date: expectedDeliveryDate || null,
+      notes: notes || null,
+      tax_rate: Number(taxRate || 0),
+    };
+
+    setSubmitting(true);
     try {
-      await createPurchase({
-        supplier_id: supplierId,
-        items: payloadItems,
-        expected_delivery_date: expectedDeliveryDate || null,
-        notes: notes || null,
-      });
-
-      alert("LPO created as draft. Review it, then send it to the supplier.");
-      navigate("/admin/spare-parts/purchases");
-
+      if (isEditMode) {
+        await updatePurchase(id, payload);
+        toast.success("LPO updated.");
+        navigate(`/admin/spare-parts/purchases/${id}`);
+      } else {
+        await createPurchase(payload);
+        toast.success("LPO created as draft. Review it, then send it to the supplier.");
+        navigate("/admin/spare-parts/purchases");
+      }
     } catch (error) {
       console.error("Purchase error:", error);
-      alert(error.response?.data?.message || "Failed to create LPO");
+      toast.error(
+        error.response?.data?.message ||
+          (isEditMode ? "Failed to update LPO" : "Failed to create LPO")
+      );
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  if (loading) {
+    return <div className="p-6">Loading LPO...</div>;
+  }
 
   return (
     <div className="space-y-6">
 
       <h1 className="text-2xl font-bold text-gray-800">
-        Create Local Purchase Order (LPO)
+        {isEditMode ? "Edit Local Purchase Order (LPO)" : "Create Local Purchase Order (LPO)"}
       </h1>
 
       {/* Supplier + delivery details */}
@@ -187,6 +371,20 @@ const CreatePurchase = () => {
             type="date"
             value={expectedDeliveryDate}
             onChange={(e) => setExpectedDeliveryDate(e.target.value)}
+            className="w-full border p-2 rounded"
+          />
+        </div>
+
+        <div>
+          <label className="block mb-2 text-sm font-medium">
+            Tax / VAT Rate (%)
+          </label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={taxRate}
+            onChange={(e) => setTaxRate(e.target.value)}
             className="w-full border p-2 rounded"
           />
         </div>
@@ -223,28 +421,21 @@ const CreatePurchase = () => {
             {items.map((item, index) => (
               <tr key={index} className="border-b align-top">
 
-                <td className="p-2 min-w-[220px]">
+                <td className="p-2 min-w-[240px]">
                   {!item.isNew ? (
-                    <select
-                      value={item.sparepart_id}
-                      onChange={(e) => handlePartSelect(index, e.target.value)}
-                      className="w-full border p-1 rounded"
-                    >
-                      <option value="">Select Part</option>
-                      <option value={NEW_PART_VALUE}>+ Add New Part</option>
-                      {spareParts.map((part) => (
-                        <option key={part.id} value={part.id}>
-                          {part.name}
-                        </option>
-                      ))}
-                    </select>
+                    <PartSearchInput
+                      spareParts={spareParts}
+                      value={item.sparepart_name}
+                      onSelectExisting={(part) => handlePartPicked(index, part)}
+                      onSelectNew={() => handleSwitchToNewPart(index)}
+                    />
                   ) : (
                     <div className="space-y-1 bg-blue-50 border border-blue-200 rounded p-2">
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-medium text-blue-700">New Part</span>
                         <button
                           type="button"
-                          onClick={() => handlePartSelect(index, "")}
+                          onClick={() => handleSwitchToExisting(index)}
                           className="text-xs text-gray-500 underline"
                         >
                           Use existing part
@@ -335,18 +526,29 @@ const CreatePurchase = () => {
           + Add Item
         </button>
 
-        <div className="text-right mt-4">
+        <div className="text-right mt-4 space-y-1">
+          <p className="text-sm text-gray-600">
+            Subtotal: KES {subtotal.toFixed(2)}
+          </p>
+          <p className="text-sm text-gray-600">
+            VAT ({Number(taxRate || 0)}%): KES {taxAmount.toFixed(2)}
+          </p>
           <p className="text-lg font-bold">
-            Subtotal: {calculateSubtotal()}
+            Total: KES {total.toFixed(2)}
           </p>
         </div>
 
         <div className="text-right mt-4">
           <button
             onClick={handleSubmit}
-            className="bg-green-600 text-white px-6 py-2 rounded"
+            disabled={submitting}
+            className="bg-green-600 text-white px-6 py-2 rounded disabled:opacity-50"
           >
-            Save as Draft LPO
+            {submitting
+              ? "Saving..."
+              : isEditMode
+              ? "Save Changes"
+              : "Save as Draft LPO"}
           </button>
         </div>
 

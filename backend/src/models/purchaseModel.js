@@ -11,6 +11,8 @@ const generateGrnNumber = async (client) => {
   return result.rows[0].grn_number;
 };
 
+const DEFAULT_TAX_RATE = 16;
+
 // Creates a spare part as part of the SAME purchase transaction (same
 // `client`), not via sparePartModel.addSparePart — that function uses the
 // shared `pool` directly, so if it ran outside this transaction and the
@@ -48,6 +50,48 @@ const createSparePartInTransaction = async (client, data) => {
   return result.rows[0];
 };
 
+// Shared by create + update: resolves every line to a real sparepart_id,
+// creating brand-new parts inline (at qty 0) as it goes, and computes
+// subtotal/tax/total. Throws if a line has neither sparepart_id nor
+// new_part.name.
+const resolveItemsAndTotals = async (client, items, supplier_id, tax_rate) => {
+  const resolvedItems = [];
+
+  for (const item of items) {
+    let sparepart_id = item.sparepart_id || null;
+
+    if (!sparepart_id && item.new_part?.name) {
+      const newPart = await createSparePartInTransaction(client, {
+        part_number: item.new_part.part_number,
+        name: item.new_part.name,
+        category: item.new_part.category,
+        buying_price: item.unit_cost,
+        selling_price: item.new_part.selling_price,
+        discount: item.new_part.discount,
+        supplier_id,
+      });
+      sparepart_id = newPart.id;
+    }
+
+    if (!sparepart_id) {
+      throw new Error("Each item needs either an existing sparepart_id or new_part.name");
+    }
+
+    resolvedItems.push({ ...item, sparepart_id });
+  }
+
+  let subtotal = 0;
+  resolvedItems.forEach((item) => {
+    subtotal += item.quantity * item.unit_cost;
+  });
+
+  const rate = tax_rate === undefined || tax_rate === null ? DEFAULT_TAX_RATE : Number(tax_rate);
+  const taxAmount = subtotal * (rate / 100);
+  const total = subtotal + taxAmount;
+
+  return { resolvedItems, subtotal, taxRate: rate, taxAmount, total };
+};
+
 // ➤ Create LPO (status = draft). No stock movement happens here —
 //   stock only moves when goods are actually received (see createGoodsReceipt).
 //   Each item is either { sparepart_id, quantity, unit_cost } for an
@@ -59,52 +103,24 @@ export const createPurchaseTransaction = async (
   supplier_id,
   items,
   created_by,
-  { expected_delivery_date = null, notes = null } = {}
+  { expected_delivery_date = null, notes = null, tax_rate = DEFAULT_TAX_RATE } = {}
 ) => {
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
 
-    // Resolve every line to a real sparepart_id first, creating any
-    // brand-new parts along the way, before we touch spare_purchases.
-    const resolvedItems = [];
-    for (const item of items) {
-      let sparepart_id = item.sparepart_id || null;
-
-      if (!sparepart_id && item.new_part?.name) {
-        const newPart = await createSparePartInTransaction(client, {
-          part_number: item.new_part.part_number,
-          name: item.new_part.name,
-          category: item.new_part.category,
-          buying_price: item.unit_cost,
-          selling_price: item.new_part.selling_price,
-          discount: item.new_part.discount,
-          supplier_id,
-        });
-        sparepart_id = newPart.id;
-      }
-
-      if (!sparepart_id) {
-        throw new Error("Each item needs either an existing sparepart_id or new_part.name");
-      }
-
-      resolvedItems.push({ ...item, sparepart_id });
-    }
-
-    let subtotal = 0;
-    resolvedItems.forEach((item) => {
-      subtotal += item.quantity * item.unit_cost;
-    });
+    const { resolvedItems, subtotal, taxRate, taxAmount, total } =
+      await resolveItemsAndTotals(client, items, supplier_id, tax_rate);
 
     const lpo_number = await generateLpoNumber(client);
 
     const purchaseResult = await client.query(
       `INSERT INTO spare_purchases
-        (supplier_id, subtotal, total, lpo_number, status, created_by, expected_delivery_date, notes)
-       VALUES ($1, $2, $3, $4, 'draft', $5, $6, $7)
+        (supplier_id, subtotal, tax_rate, tax_amount, total, lpo_number, status, created_by, expected_delivery_date, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, 'draft', $7, $8, $9)
        RETURNING *`,
-      [supplier_id, subtotal, subtotal, lpo_number, created_by, expected_delivery_date, notes]
+      [supplier_id, subtotal, taxRate, taxAmount, total, lpo_number, created_by, expected_delivery_date, notes]
     );
 
     const purchase = purchaseResult.rows[0];
@@ -122,6 +138,74 @@ export const createPurchaseTransaction = async (
 
     await client.query("COMMIT");
     return purchase;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
+// ➤ Update LPO — DRAFT ONLY. Replaces supplier/notes/expected date/tax
+//   and fully replaces the item lines (delete-all-then-reinsert, simplest
+//   correct approach since a draft has no receipts yet to preserve
+//   references to). Recomputes subtotal/tax/total exactly like create.
+export const updatePurchaseTransaction = async (
+  id,
+  supplier_id,
+  items,
+  { expected_delivery_date = null, notes = null, tax_rate = DEFAULT_TAX_RATE } = {}
+) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const existing = await client.query(
+      `SELECT status FROM spare_purchases WHERE id = $1 FOR UPDATE`,
+      [id]
+    );
+
+    if (existing.rows.length === 0) {
+      throw new Error("Purchase not found");
+    }
+    if (existing.rows[0].status !== "draft") {
+      throw new Error("Only draft LPOs can be edited");
+    }
+
+    const { resolvedItems, subtotal, taxRate, taxAmount, total } =
+      await resolveItemsAndTotals(client, items, supplier_id, tax_rate);
+
+    const updateResult = await client.query(
+      `UPDATE spare_purchases
+       SET supplier_id = $1,
+           subtotal = $2,
+           tax_rate = $3,
+           tax_amount = $4,
+           total = $5,
+           expected_delivery_date = $6,
+           notes = $7,
+           updated_at = NOW()
+       WHERE id = $8
+       RETURNING *`,
+      [supplier_id, subtotal, taxRate, taxAmount, total, expected_delivery_date, notes, id]
+    );
+
+    await client.query(`DELETE FROM spare_purchase_items WHERE purchase_id = $1`, [id]);
+
+    for (const item of resolvedItems) {
+      const total_cost = item.quantity * item.unit_cost;
+
+      await client.query(
+        `INSERT INTO spare_purchase_items
+          (purchase_id, sparepart_id, quantity, unit_cost, total_cost)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [id, item.sparepart_id, item.quantity, item.unit_cost, total_cost]
+      );
+    }
+
+    await client.query("COMMIT");
+    return updateResult.rows[0];
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

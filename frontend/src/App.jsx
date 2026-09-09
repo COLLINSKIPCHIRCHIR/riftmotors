@@ -1,5 +1,6 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -95,6 +96,7 @@ import EmployeeAllowances from "./pages/hr/allowances/EmployeeAllowances";
 function App() {
   return (
     <Router>
+       <Toaster position="top-right" />
       <Routes>
         {/* Public routes */}
         <Route path="/signup" element={<Signup />} />
@@ -156,6 +158,7 @@ function App() {
           <Route path="spare-parts/purchases" element={<RequirePermission permission="spareparts.purchase"><PurchaseList /></RequirePermission>} />
           <Route path="spare-parts/purchases/create" element={<RequirePermission permission="spareparts.purchase"><CreatePurchase /></RequirePermission>} />
           <Route path="spare-parts/purchases/:id" element={<RequirePermission permission="spareparts.purchase"><PurchaseDetails /></RequirePermission>} />
+          <Route path="spare-parts/purchases/:id/edit" element={<RequirePermission permission="spareparts.purchase"><CreatePurchase /></RequirePermission>} />
           <Route path="spare-parts/purchases/:id/receive" element={<RequirePermission permission="spareparts.purchase"><ReceiveGoods /></RequirePermission>} />
 
           {/* ✅ Services */}

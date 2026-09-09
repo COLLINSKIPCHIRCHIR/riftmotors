@@ -231,3 +231,25 @@ ALTER TABLE service_invoices  ADD COLUMN IF NOT EXISTS bill_to_customer_id INTEG
 
 
 ALTER TABLE spare_sales ADD COLUMN invoice_id INT REFERENCES spare_invoices(id);
+
+
+///////9/9/2026
+-- 1. Tax fields on the LPO header
+ALTER TABLE spare_purchases
+  ADD COLUMN IF NOT EXISTS tax_rate NUMERIC(5,2) NOT NULL DEFAULT 16,
+  ADD COLUMN IF NOT EXISTS tax_amount NUMERIC(12,2) NOT NULL DEFAULT 0;
+
+-- 2. Needed for the new "edit draft" feature to stamp last-modified time.
+--    Skip this if spare_purchases already has updated_at — check first:
+--    SELECT column_name FROM information_schema.columns WHERE table_name = 'spare_purchases';
+ALTER TABLE spare_purchases
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- 3. Backfill tax_amount/total for any existing rows (all your current
+--    LPOs currently have total = subtotal with 0 tax — this recalculates
+--    them at 16% so old records aren't left inconsistent with new ones).
+--    Skip this if you'd rather leave historical LPOs untouched.
+UPDATE spare_purchases
+SET tax_amount = ROUND(subtotal * 0.16, 2),
+    total = ROUND(subtotal * 1.16, 2)
+WHERE tax_amount = 0;

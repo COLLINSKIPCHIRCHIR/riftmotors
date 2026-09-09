@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { getPurchases } from "../../api/purchaseApi";
 import { useNavigate } from "react-router-dom";
 import { FaEye, FaPlus } from "react-icons/fa";
+import toast from "react-hot-toast";
 
 // Same status set as the DB CHECK constraint on spare_purchases.status —
 // keep these two in sync if the lifecycle ever changes.
@@ -38,6 +39,7 @@ export default function PurchaseList() {
       setPurchases(res.data);
     } catch (err) {
       console.log(err);
+      toast.error(err.response?.data?.message || "Could not load purchase orders");
     }
   };
 
