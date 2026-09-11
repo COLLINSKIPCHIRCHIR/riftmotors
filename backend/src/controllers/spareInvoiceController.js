@@ -9,7 +9,7 @@ import {
 
 export const convertEstimate = async (req, res) => {
   try {
-    const invoice = await convertEstimateToInvoice(req.params.id);
+    const invoice = await convertEstimateToInvoice(req.params.id, req.body);
     res.json({
       message: "Estimate converted to invoice",
       invoice

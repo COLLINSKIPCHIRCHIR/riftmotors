@@ -408,9 +408,13 @@ export default function InvoiceDetails() {
     </tr>
     <tr>
       <td className="border border-black px-1 py-0.5 font-bold align-middle">Bill To:</td>
-      <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}></td>
+      <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>
+        {field(invoice.bill_to_name || invoice.customer_name)}
+      </td>
       <td className="border border-black px-1 py-0.5 font-bold align-middle">KRA Pin:</td>
-      <td className="border border-black px-1 py-0.5 align-middle">{field(invoice.customer_kra_pin)}</td>
+      <td className="border border-black px-1 py-0.5 align-middle">
+        {field(invoice.bill_to_kra_pin || invoice.customer_kra_pin)}
+      </td>
     </tr>
     <tr>
       <td className="border border-black px-1 py-0.5 font-bold align-middle">Customer:</td>
@@ -418,6 +422,18 @@ export default function InvoiceDetails() {
       <td className="border border-black px-1 py-0.5 font-bold align-middle">Reg No:</td>
       <td className="border border-black px-1 py-0.5 align-middle">{field(invoice.reg_no)}</td>
     </tr>
+    {invoice.driver_name && (
+      <tr>
+        <td className="border border-black px-1 py-0.5 font-bold align-middle">Contact Person:</td>
+        <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>
+          {invoice.driver_name}
+        </td>
+        <td className="border border-black px-1 py-0.5 font-bold align-middle">Phone:</td>
+        <td className="border border-black px-1 py-0.5 align-middle">
+          {field(invoice.driver_phone)}
+        </td>
+      </tr>
+    )}
     <tr>
       <td className="border border-black px-1 py-0.5 font-bold align-middle">Address:</td>
       <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{field(invoice.customer_address)}</td>
@@ -425,8 +441,7 @@ export default function InvoiceDetails() {
       <td className="border border-black px-1 py-0.5 align-middle">{field(invoice.model)}</td>
     </tr>
     <tr>
-      <td className="border border-black px-1 py-0.5 font-bold align-middle">Contact Person:</td>
-      <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{field(invoice.contact_person)}</td>
+      <td className="border border-black px-1 py-0.5" colSpan={3}></td>
       <td className="border border-black px-1 py-0.5 font-bold align-middle">Vin No:</td>
       <td className="border border-black px-1 py-0.5 align-middle">{field(invoice.vin_no)}</td>
     </tr>

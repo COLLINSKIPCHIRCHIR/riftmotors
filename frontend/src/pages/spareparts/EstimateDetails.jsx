@@ -381,9 +381,13 @@ export default function EstimateDetails(){
             </tr>
             <tr>
               <td className="border border-black px-1 py-0.5 font-bold align-middle">Bill To:</td>
-              <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}></td>
+              <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>
+                {field(estimate.bill_to_name || estimate.customer_name)}
+              </td>
               <td className="border border-black px-1 py-0.5 font-bold align-middle">KRA Pin:</td>
-              <td className="border border-black px-1 py-0.5 align-middle">{field(estimate.customer_kra_pin)}</td>
+              <td className="border border-black px-1 py-0.5 align-middle">
+                {field(estimate.bill_to_kra_pin || estimate.customer_kra_pin)}
+              </td>
             </tr>
             <tr>
               <td className="border border-black px-1 py-0.5 font-bold align-middle">Customer:</td>
@@ -391,6 +395,14 @@ export default function EstimateDetails(){
               <td className="border border-black px-1 py-0.5 font-bold align-middle">Reg No:</td>
               <td className="border border-black px-1 py-0.5 align-middle">{field(estimate.reg_no)}</td>
             </tr>
+            {estimate.driver_name && (
+              <tr>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Contact Person:</td>
+                <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{estimate.driver_name}</td>
+                <td className="border border-black px-1 py-0.5 font-bold align-middle">Phone:</td>
+                <td className="border border-black px-1 py-0.5 align-middle">{field(estimate.driver_phone)}</td>
+              </tr>
+            )}
             <tr>
               <td className="border border-black px-1 py-0.5 font-bold align-middle">Address:</td>
               <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{field(estimate.customer_address)}</td>
@@ -398,8 +410,7 @@ export default function EstimateDetails(){
               <td className="border border-black px-1 py-0.5 align-middle">{field(estimate.model)}</td>
             </tr>
             <tr>
-              <td className="border border-black px-1 py-0.5 font-bold align-middle">Contact Person:</td>
-              <td className="border border-black px-1 py-0.5 align-middle" colSpan={2}>{field(estimate.contact_person)}</td>
+              <td className="border border-black px-1 py-0.5" colSpan={3}></td>
               <td className="border border-black px-1 py-0.5 font-bold align-middle">Vin No:</td>
               <td className="border border-black px-1 py-0.5 align-middle">{field(estimate.vin_no)}</td>
             </tr>

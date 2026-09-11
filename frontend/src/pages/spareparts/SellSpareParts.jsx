@@ -29,6 +29,15 @@ export default function SellSpareParts() {
   const [vehicles, setVehicles] = useState([]);
   const [selectedVehicle, setSelectedVehicle] = useState("");
 
+    const [driverName, setDriverName] = useState("");
+  const [driverPhone, setDriverPhone] = useState("");
+
+  const [billToSearch, setBillToSearch] = useState("");
+  const [showBillToDropdown, setShowBillToDropdown] = useState(false);
+  const [billToCustomerId, setBillToCustomerId] = useState("");
+  const [billToName, setBillToName] = useState("");
+  const [billToKraPin, setBillToKraPin] = useState("");
+
   // ------------------------------
   // Fetch Spareparts
   // ------------------------------
@@ -84,6 +93,32 @@ const fetchVehicles = async () => {
     fetchCustomers();
     fetchVehicles();
   }, []);
+
+
+    const filteredBillToCustomers = customers.filter(c => {
+    const term = billToSearch.toLowerCase().trim();
+    if (!term) return true;
+    return (
+      (c.name || "").toLowerCase().includes(term) ||
+      (c.phone || "").toLowerCase().includes(term)
+    );
+  });
+
+  const handleBillToCustomerSelect = (c) => {
+    setBillToCustomerId(c.id);
+    setBillToName(c.name);
+    setBillToKraPin(c.kra_pin || "");
+    setBillToSearch("");
+    setShowBillToDropdown(false);
+  };
+
+  const clearBillToCustomer = () => {
+    setBillToCustomerId("");
+    setBillToSearch("");
+    setShowBillToDropdown(true);
+  };
+
+
 
   // ------------------------------
   // Search filter
@@ -213,18 +248,30 @@ const customerVehicles = vehicles.filter(
     try {
       const payload = {
         customer_id: selectedCustomer || null,
+
         customer_name: selectedCustomer
-          ? customers.find((c) => c.id === Number(selectedCustomer))?.name
+          ? customers.find(
+              (c) => String(c.id) === String(selectedCustomer)
+            )?.name
           : "Walk-in Customer",
+
         customer_phone: selectedCustomer
-          ? customers.find((c) => c.id === Number(selectedCustomer))?.phone
+          ? customers.find(
+              (c) => String(c.id) === String(selectedCustomer)
+            )?.phone
           : "",
 
         vehicle_id: selectedVehicle || null,
-        
-        discount: Number(totalDiscountAmount),
 
-        tax_rate:Number(taxRate),
+        driver_name: driverName.trim() || null,
+        driver_phone: driverPhone.trim() || null,
+
+        bill_to_customer_id: billToCustomerId || null,
+        bill_to_name: billToName.trim() || null,
+        bill_to_kra_pin: billToKraPin.trim() || null,
+
+        discount: Number(totalDiscountAmount),
+        tax_rate: Number(taxRate),
 
         items: cart.map((item) => ({
           sparepart_id: item.sparepart_id,
@@ -246,7 +293,16 @@ const customerVehicles = vehicles.filter(
       alert(`✅ Estimate created! ID: ${estimate.id}`);
 
       setCart([]);
+      setSelectedCustomer("");
       setSelectedVehicle("");
+      setDriverName("");
+      setDriverPhone("");
+
+      setBillToCustomerId("");
+      setBillToSearch("");
+      setBillToName("");
+      setBillToKraPin("");
+      setShowBillToDropdown(false);
     } catch (err) {
       console.error("❌ Error creating estimate:", err);
       alert(err.response?.data?.message || "Failed to create estimate. Check console.");
@@ -267,8 +323,28 @@ const customerVehicles = vehicles.filter(
             className="border p-2 w-full rounded"
             value={selectedCustomer || ""}
             onChange={(e) => {
-              setSelectedCustomer(e.target.value);
+              const val = e.target.value;
+
+              setSelectedCustomer(val);
               setSelectedVehicle("");
+
+              // Default Bill To to the selected customer.
+              // The user can change it below if someone else is paying.
+              if (val) {
+                const c = customers.find((c) => String(c.id) === String(val));
+
+                if (c) {
+                  setBillToCustomerId(c.id);
+                  setBillToName(c.name);
+                  setBillToKraPin(c.kra_pin || "");
+                  setBillToSearch("");
+                }
+              } else {
+                setBillToCustomerId("");
+                setBillToName("");
+                setBillToKraPin("");
+                setBillToSearch("");
+              }
             }}
           >
             <option value="">Walk-in Customer</option>
@@ -302,6 +378,114 @@ const customerVehicles = vehicles.filter(
             )}
           </div>
         )}
+
+                {/* Driver / Contact */}
+        <div className="mb-4">
+          <label className="block font-medium">
+            Driver / Contact Name
+          </label>
+
+          <input
+            type="text"
+            value={driverName}
+            onChange={(e) => setDriverName(e.target.value)}
+            placeholder="Person collecting the parts, if different from customer"
+            className="border p-2 w-full rounded"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="block font-medium">
+            Driver / Contact Phone
+          </label>
+
+          <input
+            type="text"
+            value={driverPhone}
+            onChange={(e) => setDriverPhone(e.target.value)}
+            placeholder="Contact phone"
+            className="border p-2 w-full rounded"
+          />
+        </div>
+
+        {/* Bill To */}
+        <div className="mb-4">
+          <label className="block font-medium">
+            Bill To (only if someone else is paying)
+          </label>
+
+          <div className="relative">
+            <input
+              type="text"
+              value={
+                billToCustomerId
+                  ? billToName
+                  : billToSearch
+              }
+              onChange={(e) => {
+                const value = e.target.value;
+
+                setBillToSearch(value);
+                setShowBillToDropdown(true);
+
+                // If a linked customer was selected,
+                // typing means the user wants to change it.
+                if (billToCustomerId) {
+                  setBillToCustomerId("");
+                  setBillToName(value);
+                }
+              }}
+              onFocus={() => setShowBillToDropdown(true)}
+              placeholder="Search customer, or type manually..."
+              className="border p-2 w-full rounded pr-8"
+            />
+
+            {billToCustomerId && (
+              <button
+                type="button"
+                onClick={clearBillToCustomer}
+                className="absolute right-3 top-2 text-slate-400 hover:text-red-500"
+              >
+                ×
+              </button>
+            )}
+
+            {showBillToDropdown && !billToCustomerId && (
+              <div className="absolute z-10 mt-1 w-full max-h-56 overflow-y-auto bg-white border rounded-lg shadow-lg">
+                {filteredBillToCustomers.length === 0 ? (
+                  <div className="p-3 text-sm text-slate-400">
+                    No customers found
+                  </div>
+                ) : (
+                  filteredBillToCustomers.map((c) => (
+                    <button
+                      type="button"
+                      key={c.id}
+                      onClick={() => handleBillToCustomerSelect(c)}
+                      className="w-full text-left p-3 hover:bg-blue-50"
+                    >
+                      <p className="font-medium">
+                        {c.name}
+                      </p>
+
+                      <p className="text-sm text-slate-500">
+                        {c.phone}
+                      </p>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          <input
+            type="text"
+            value={billToKraPin}
+            onChange={(e) => setBillToKraPin(e.target.value)}
+            placeholder="Bill To KRA PIN"
+            className="border p-2 w-full rounded mt-2"
+          />
+        </div>
 
         {/* Search */}
         <div className="flex items-center bg-gray-200 px-3 py-2 rounded-lg w-full mb-4">

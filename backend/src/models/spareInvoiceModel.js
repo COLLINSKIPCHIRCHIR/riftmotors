@@ -43,7 +43,7 @@ const generateInvoiceNumber = async (client) => {
   return `INV-${year}-${String(next).padStart(5, "0")}`;
 };
 
-export const convertEstimateToInvoice = async (estimateId) => {
+export const convertEstimateToInvoice = async (estimateId, overrides = {}) => {
   const client = await pool.connect();
 
   try {
@@ -60,6 +60,13 @@ export const convertEstimateToInvoice = async (estimateId) => {
 
     const estimate = estimateRes.rows[0];
 
+    const billToCustomerId =
+      overrides.bill_to_customer_id !== undefined
+        ? overrides.bill_to_customer_id
+        : estimate.bill_to_customer_id;
+    const billToName = overrides.bill_to_name?.trim() || estimate.bill_to_name;
+    const billToKraPin = overrides.bill_to_kra_pin?.trim() || estimate.bill_to_kra_pin;
+
     const itemsRes = await client.query(
       `SELECT * FROM spare_estimate_items WHERE estimate_id=$1`,
       [estimateId]
@@ -69,10 +76,6 @@ export const convertEstimateToInvoice = async (estimateId) => {
 
     const invoiceNumber = await generateInvoiceNumber(client);
 
-
-
-
-    // 1️⃣ Insert invoice
     const invoiceRes = await client.query(
       `INSERT INTO spare_invoices
         (
@@ -82,6 +85,11 @@ export const convertEstimateToInvoice = async (estimateId) => {
         customer_name,
         customer_phone,
         vehicle_id,
+        driver_name,
+        driver_phone,
+        bill_to_customer_id,
+        bill_to_name,
+        bill_to_kra_pin,
         subtotal,
         discount,
         tax_rate,
@@ -90,7 +98,7 @@ export const convertEstimateToInvoice = async (estimateId) => {
         )
 
         VALUES
-        ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+        ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
 
         RETURNING *`,
       [
@@ -100,6 +108,11 @@ export const convertEstimateToInvoice = async (estimateId) => {
       estimate.customer_name,
       estimate.customer_phone,
       estimate.vehicle_id,
+      estimate.driver_name,
+      estimate.driver_phone,
+      billToCustomerId,
+      billToName,
+      billToKraPin,
       estimate.subtotal,
       estimate.discount,
       estimate.tax_rate,
@@ -330,6 +343,8 @@ export const getInvoiceById = async (id) => {
         c.kra_pin  AS customer_kra_pin,
         c.address  AS customer_address,
         c.email    AS customer_email,
+        COALESCE(si.bill_to_name, c.name, si.customer_name) AS bill_to_name,
+        COALESCE(si.bill_to_kra_pin, c.kra_pin)             AS bill_to_kra_pin,
         cv.registration_number AS reg_no,
         NULLIF(TRIM(CONCAT(cv.make, ' ', cv.model)), '') AS model,
         cv.vin_no,

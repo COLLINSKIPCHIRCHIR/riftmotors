@@ -9,7 +9,12 @@ export const createEstimate = async (data) => {
     customer_phone,
     items,
     discount = 0,
-    vehicle_id = null
+    vehicle_id = null,
+    driver_name = null,
+    driver_phone = null,
+    bill_to_customer_id = null,
+    bill_to_name = null,
+    bill_to_kra_pin = null
   } = data;
 
   if (!items || items.length === 0) {
@@ -35,6 +40,24 @@ export const createEstimate = async (data) => {
       `SELECT id, buying_price, quantity FROM spareparts WHERE id = ANY($1::int[])`,
       [sparepartIds]
     );
+
+    let resolvedBillToName = bill_to_name;
+    let resolvedBillToKraPin = bill_to_kra_pin;
+
+    if (!resolvedBillToName || !resolvedBillToKraPin) {
+      if (data.customer_id) {
+        const custRes = await client.query(
+          `SELECT name, kra_pin FROM customers WHERE id=$1`,
+          [data.customer_id]
+        );
+        const cust = custRes.rows[0];
+        if (cust) {
+          resolvedBillToName = resolvedBillToName || cust.name;
+          resolvedBillToKraPin = resolvedBillToKraPin || cust.kra_pin;
+        }
+      }
+      resolvedBillToName = resolvedBillToName || customer_name;
+    }
 
     const stockById = {};
     stockResult.rows.forEach(row => {
@@ -90,12 +113,30 @@ export const createEstimate = async (data) => {
       + taxAmount
       - discount;
 
-    const estimateResult = await client.query(
+        const estimateResult = await client.query(
       `INSERT INTO spare_estimates
-       (customer_id, customer_name, customer_phone, vehicle_id, subtotal, discount, tax_rate, tax_amount, total, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending')
+       (customer_id, customer_name, customer_phone, vehicle_id,
+        driver_name, driver_phone,
+        bill_to_customer_id, bill_to_name, bill_to_kra_pin,
+        subtotal, discount, tax_rate, tax_amount, total, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'pending')
        RETURNING *`,
-      [data.customer_id || null, customer_name, customer_phone, vehicle_id, subtotal, discount, taxRate, taxAmount, total]
+      [
+        data.customer_id || null,
+        customer_name,
+        customer_phone,
+        vehicle_id,
+        driver_name,
+        driver_phone,
+        bill_to_customer_id,
+        resolvedBillToName,
+        resolvedBillToKraPin,
+        subtotal,
+        discount,
+        taxRate,
+        taxAmount,
+        total
+      ]
     );
 
     const estimateId = estimateResult.rows[0].id;
@@ -174,7 +215,7 @@ export const getAllEstimates = async ({ status, customer_name, from, to } = {}) 
    they just fall back to the plain text columns on the estimate itself.
 ========================= */
 export const getEstimateById = async (estimateId) => {
-  const estimateResult = await pool.query(
+    const estimateResult = await pool.query(
     `SELECT
         se.*,
         COALESCE(c.name, se.customer_name)   AS customer_name,
@@ -182,6 +223,8 @@ export const getEstimateById = async (estimateId) => {
         c.kra_pin  AS customer_kra_pin,
         c.address  AS customer_address,
         c.email    AS customer_email,
+        COALESCE(se.bill_to_name, c.name, se.customer_name)     AS bill_to_name,
+        COALESCE(se.bill_to_kra_pin, c.kra_pin)                 AS bill_to_kra_pin,
         cv.registration_number AS reg_no,
         NULLIF(TRIM(CONCAT(cv.make, ' ', cv.model)), '') AS model,
         cv.vin_no,

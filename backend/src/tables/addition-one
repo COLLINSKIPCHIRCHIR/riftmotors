@@ -293,3 +293,22 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r JOIN permissions p ON p.name='customervehicles.view'
 WHERE r.name='Sales Manager'
 ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+
+
+
+new same date
+
+ALTER TABLE spare_estimates
+  ADD COLUMN IF NOT EXISTS driver_name VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS driver_phone VARCHAR(50),
+  ADD COLUMN IF NOT EXISTS bill_to_customer_id INTEGER REFERENCES customers(id),
+  ADD COLUMN IF NOT EXISTS bill_to_name VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS bill_to_kra_pin VARCHAR(50);
+
+ALTER TABLE spare_invoices
+  ADD COLUMN IF NOT EXISTS driver_name VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS driver_phone VARCHAR(50),
+  ADD COLUMN IF NOT EXISTS bill_to_customer_id INTEGER REFERENCES customers(id),
+  ADD COLUMN IF NOT EXISTS bill_to_name VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS bill_to_kra_pin VARCHAR(50);
