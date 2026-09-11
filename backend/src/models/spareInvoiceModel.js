@@ -81,6 +81,7 @@ export const convertEstimateToInvoice = async (estimateId) => {
         customer_id,
         customer_name,
         customer_phone,
+        vehicle_id,
         subtotal,
         discount,
         tax_rate,
@@ -89,7 +90,7 @@ export const convertEstimateToInvoice = async (estimateId) => {
         )
 
         VALUES
-        ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 
         RETURNING *`,
       [
@@ -98,6 +99,7 @@ export const convertEstimateToInvoice = async (estimateId) => {
       estimate.customer_id || null,
       estimate.customer_name,
       estimate.customer_phone,
+      estimate.vehicle_id,
       estimate.subtotal,
       estimate.discount,
       estimate.tax_rate,
@@ -233,6 +235,7 @@ export const convertInvoiceToSale = async (invoiceId, payment_method, amount_pai
     customer_id,
     customer_name,
     customer_phone,
+    vehicle_id,
     subtotal,
     discount,
     tax_rate,
@@ -245,13 +248,14 @@ export const convertInvoiceToSale = async (invoiceId, payment_method, amount_pai
     invoice_id
     )
 
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
 
     RETURNING *`,
   [
     invoice.customer_id || null,
     invoice.customer_name,
     invoice.customer_phone,
+    invoice.vehicle_id,
     subtotal,
     invoice.discount,
     invoice.tax_rate,
@@ -325,9 +329,15 @@ export const getInvoiceById = async (id) => {
         COALESCE(c.phone, si.customer_phone) AS customer_phone,
         c.kra_pin  AS customer_kra_pin,
         c.address  AS customer_address,
-        c.email    AS customer_email
+        c.email    AS customer_email,
+        cv.registration_number AS reg_no,
+        NULLIF(TRIM(CONCAT(cv.make, ' ', cv.model)), '') AS model,
+        cv.vin_no,
+        cv.engine_number AS engine,
+        cv.mileage
      FROM spare_invoices si
      LEFT JOIN customers c ON c.id = si.customer_id
+     LEFT JOIN customer_vehicles cv ON cv.id = si.vehicle_id
      WHERE si.id = $1`,
     [id]
   );

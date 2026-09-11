@@ -8,7 +8,8 @@ export const createEstimate = async (data) => {
     customer_name,
     customer_phone,
     items,
-    discount = 0
+    discount = 0,
+    vehicle_id = null
   } = data;
 
   if (!items || items.length === 0) {
@@ -91,10 +92,10 @@ export const createEstimate = async (data) => {
 
     const estimateResult = await client.query(
       `INSERT INTO spare_estimates
-       (customer_id, customer_name, customer_phone, subtotal, discount, tax_rate, tax_amount, total, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending')
+       (customer_id, customer_name, customer_phone, vehicle_id, subtotal, discount, tax_rate, tax_amount, total, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending')
        RETURNING *`,
-      [data.customer_id || null, customer_name, customer_phone, subtotal, discount, taxRate, taxAmount, total]
+      [data.customer_id || null, customer_name, customer_phone, vehicle_id, subtotal, discount, taxRate, taxAmount, total]
     );
 
     const estimateId = estimateResult.rows[0].id;
@@ -180,9 +181,15 @@ export const getEstimateById = async (estimateId) => {
         COALESCE(c.phone, se.customer_phone) AS customer_phone,
         c.kra_pin  AS customer_kra_pin,
         c.address  AS customer_address,
-        c.email    AS customer_email
+        c.email    AS customer_email,
+        cv.registration_number AS reg_no,
+        NULLIF(TRIM(CONCAT(cv.make, ' ', cv.model)), '') AS model,
+        cv.vin_no,
+        cv.engine_number AS engine,
+        cv.mileage
      FROM spare_estimates se
      LEFT JOIN customers c ON c.id = se.customer_id
+     LEFT JOIN customer_vehicles cv ON cv.id = se.vehicle_id
      WHERE se.id = $1`,
     [estimateId]
   );

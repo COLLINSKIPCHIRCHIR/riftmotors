@@ -201,9 +201,16 @@ export const getSpareSaleReceipt = async (saleId) => {
         COALESCE(c.phone, ss.customer_phone) AS customer_phone,
         c.kra_pin  AS customer_kra_pin,
         c.address  AS customer_address,
-        c.email    AS customer_email
+        c.email    AS customer_email,
+        cv.registration_number,
+        cv.make      AS vehicle_make,
+        cv.model     AS vehicle_model,
+        cv.vin_no,
+        cv.engine_number,
+        cv.mileage
      FROM spare_sales ss
      LEFT JOIN customers c ON c.id = ss.customer_id
+     LEFT JOIN customer_vehicles cv ON cv.id = ss.vehicle_id
      WHERE ss.id=$1`,
     [saleId]
   );

@@ -166,8 +166,8 @@ function App() {
           <Route path="services/jobs" element={<RequirePermission permission="services.jobs"><ServiceJobs /></RequirePermission>} />
         
           <Route path="services/jobs/:id" element={<RequirePermission permission="services.jobs"><JobDetails /></RequirePermission>} />
-          <Route path="services/vehicles" element={<RequirePermission permission="services.vehicles"><CustomerVehicles /></RequirePermission>} />
-          <Route path="services/vehicles/:id" element={<RequirePermission permission="services.vehicles"><VehicleDetails /></RequirePermission>} />
+          <Route path="services/vehicles" element={<RequirePermission permission="customervehicles.view"><CustomerVehicles /></RequirePermission>} />
+          <Route path="services/vehicles/:id" element={<RequirePermission permission="customervehicles.view"><VehicleDetails /></RequirePermission>} />
           <Route path="services/catalog" element={<RequirePermission permission="services.catalog"><ServiceCatalog /></RequirePermission>} />
           <Route path="services/mechanics" element={<RequirePermission permission="services.mechanics"><Mechanics /></RequirePermission>} />
           <Route path="services/estimates" element={<RequirePermission permission="services.estimates"><ServiceEstimates /></RequirePermission>} />

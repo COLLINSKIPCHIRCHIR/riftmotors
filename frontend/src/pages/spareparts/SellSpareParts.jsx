@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import API from "../../api/api";
 import { FaSearch, FaShoppingCart } from "react-icons/fa";
+import { getCustomerVehicles } from "../../api/serviceApi";
 
 export default function SellSpareParts() {
   const [spareparts, setSpareparts] = useState([]);
@@ -23,6 +24,10 @@ export default function SellSpareParts() {
   const [cart, setCart] = useState([]);
 
   const [taxRate,setTaxRate]=useState(16);
+
+
+  const [vehicles, setVehicles] = useState([]);
+  const [selectedVehicle, setSelectedVehicle] = useState("");
 
   // ------------------------------
   // Fetch Spareparts
@@ -64,8 +69,20 @@ export default function SellSpareParts() {
 };
 
 
+const fetchVehicles = async () => {
+    try {
+      const res = await getCustomerVehicles();
+      setVehicles(res.data || []);
+    } catch (err) {
+      console.error("Failed to fetch vehicles", err);
+      setVehicles([]);
+    }
+  };
+
+
     fetchSpareParts();
     fetchCustomers();
+    fetchVehicles();
   }, []);
 
   // ------------------------------
@@ -75,6 +92,10 @@ export default function SellSpareParts() {
   (item) =>
     (item?.name ?? "").toLowerCase().includes(search.toLowerCase()) ||
     (item?.part_number ?? "").toLowerCase().includes(search.toLowerCase())
+);
+
+const customerVehicles = vehicles.filter(
+  (v) => selectedCustomer && String(v.customer_id) === String(selectedCustomer)
 );
 
   // ------------------------------
@@ -199,6 +220,8 @@ export default function SellSpareParts() {
           ? customers.find((c) => c.id === Number(selectedCustomer))?.phone
           : "",
 
+        vehicle_id: selectedVehicle || null,
+        
         discount: Number(totalDiscountAmount),
 
         tax_rate:Number(taxRate),
@@ -223,6 +246,7 @@ export default function SellSpareParts() {
       alert(`✅ Estimate created! ID: ${estimate.id}`);
 
       setCart([]);
+      setSelectedVehicle("");
     } catch (err) {
       console.error("❌ Error creating estimate:", err);
       alert(err.response?.data?.message || "Failed to create estimate. Check console.");
@@ -242,7 +266,10 @@ export default function SellSpareParts() {
           <select
             className="border p-2 w-full rounded"
             value={selectedCustomer || ""}
-            onChange={(e) => setSelectedCustomer(e.target.value)}
+            onChange={(e) => {
+              setSelectedCustomer(e.target.value);
+              setSelectedVehicle("");
+            }}
           >
             <option value="">Walk-in Customer</option>
             {customers.map((c) => (
@@ -252,6 +279,29 @@ export default function SellSpareParts() {
             ))}
           </select>
         </div>
+
+        {selectedCustomer && (
+          <div className="mb-4">
+            <label className="block font-medium">Vehicle (optional)</label>
+            <select
+              className="border p-2 w-full rounded"
+              value={selectedVehicle}
+              onChange={(e) => setSelectedVehicle(e.target.value)}
+            >
+              <option value="">No vehicle</option>
+              {customerVehicles.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.make} {v.model} - {v.registration_number}
+                </option>
+              ))}
+            </select>
+            {customerVehicles.length === 0 && (
+              <p className="text-xs text-slate-400 mt-1">
+                No vehicles on file for this customer.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Search */}
         <div className="flex items-center bg-gray-200 px-3 py-2 rounded-lg w-full mb-4">

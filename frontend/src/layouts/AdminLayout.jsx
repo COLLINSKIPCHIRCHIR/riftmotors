@@ -24,11 +24,11 @@ const AdminLayout = () => {
     if (location.pathname.startsWith("/admin/spare-parts")) {
       setOpenMenus((p) => ({ ...p, spareParts: true }));
     }
-    if(location.pathname.startsWith("/admin/services")){
-    setOpenMenus(p=>({
-      ...p,
-      services:true
-    }))
+    if (
+      location.pathname.startsWith("/admin/services") &&
+      !location.pathname.startsWith("/admin/services/vehicles")
+    ) {
+      setOpenMenus((p) => ({ ...p, services: true }));
     }
     if (location.pathname.startsWith("/admin/customers")) {
       setOpenMenus((p) => ({ ...p, customers: true }));
@@ -103,6 +103,12 @@ const AdminLayout = () => {
       ],
     },
     {
+      name: "Customer Vehicles",
+      icon: <FaCar size={16} />,
+      path: "/admin/services/vehicles",
+      permission: "customervehicles.view",
+    },
+    {
       name: "Spare Parts",
       icon: <FaCogs size={16} />,
       key: "spareParts",
@@ -173,11 +179,7 @@ const AdminLayout = () => {
             path:"/admin/services/jobs",
             permission:"services.jobs"
         },
-        {
-            name:"Customer Vehicles",
-            path:"/admin/services/vehicles",
-            permission:"services.vehicles"
-        },
+        
         {
             name:"Service Catalog",
             path:"/admin/services/catalog",
@@ -329,15 +331,12 @@ const AdminLayout = () => {
                     className={`flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm transition-colors
                       ${isParentActive(
                         `/admin/${
-                          item.key === "vehicleSales"
-                            ? "vehicles"
-                            : item.key === "spareParts"
-                            ? "spare-parts"
-                            : item.key === "services"
-                            ? "services"
-                            : item.key
+                          item.key === "vehicleSales" ? "vehicles"
+                          : item.key === "spareParts" ? "spare-parts"
+                          : item.key === "services" ? "services"
+                          : item.key
                         }`
-                      )
+                      ) && !(item.key === "services" && location.pathname.startsWith("/admin/services/vehicles"))
                         ? "bg-blue-600 text-white"
                         : "text-slate-300 hover:bg-slate-800 hover:text-white"}`}
                   >

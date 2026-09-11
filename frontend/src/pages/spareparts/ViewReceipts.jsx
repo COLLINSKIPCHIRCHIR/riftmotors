@@ -224,6 +224,14 @@ export default function ViewReceipt() {
             <span className="flex-1 border-b border-black pb-0.5">{field(sale.customer_name)}</span>
           </div>
 
+          {/* VEHICLE LINE — only shown when this sale is linked to a vehicle */}
+          {(sale.registration_number || sale.vehicle_make || sale.vehicle_model) && (
+            <div className="flex gap-6 mt-2 text-[9px] text-gray-700">
+              <p><span className="font-bold">Reg No:</span> {field(sale.registration_number)}</p>
+              <p><span className="font-bold">Model:</span> {field(sale.vehicle_make)} {field(sale.vehicle_model)}</p>
+            </div>
+          )}
+
           {/* AMOUNT + PAID IN */}
           <div className="flex items-end gap-6 mt-3 text-[11px]">
             <div className="flex-1">

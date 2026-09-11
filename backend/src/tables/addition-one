@@ -253,3 +253,43 @@ UPDATE spare_purchases
 SET tax_amount = ROUND(subtotal * 0.16, 2),
     total = ROUND(subtotal * 1.16, 2)
 WHERE tax_amount = 0;
+
+
+////////  9/11/2026
+ALTER TABLE spare_estimates ADD COLUMN IF NOT EXISTS vehicle_id INTEGER REFERENCES customer_vehicles(id);
+ALTER TABLE spare_invoices  ADD COLUMN IF NOT EXISTS vehicle_id INTEGER REFERENCES customer_vehicles(id);
+ALTER TABLE spare_sales     ADD COLUMN IF NOT EXISTS vehicle_id INTEGER REFERENCES customer_vehicles(id);
+
+
+INSERT INTO permissions (name, module, description) VALUES
+('customervehicles.view','customervehicles','View customer vehicles'),
+('customervehicles.create','customervehicles','Add customer vehicles'),
+('customervehicles.edit','customervehicles','Edit customer vehicles'),
+('customervehicles.delete','customervehicles','Delete customer vehicles')
+ON CONFLICT (name) DO NOTHING;
+
+
+
+-- Boss & admin: full access
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name IN ('Boss','admin') AND p.module='customervehicles'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- Manager: gets everything except the excluded admin actions (same rule as before)
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name='Manager' AND p.module='customervehicles'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- Service Advisor: they already manage vehicles day-to-day
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name='Service Advisor' AND p.module='customervehicles'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- Sales Manager: view-only makes sense given they handle vehicle sales/customers
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r JOIN permissions p ON p.name='customervehicles.view'
+WHERE r.name='Sales Manager'
+ON CONFLICT (role_id, permission_id) DO NOTHING;

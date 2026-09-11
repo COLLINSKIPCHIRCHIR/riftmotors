@@ -14,7 +14,7 @@ export const newEstimate = async (req, res) => {
       estimate,
     });
   } catch (error) {
-    next(error);
+    res.status(error.statusCode || 500).json({ message: error.message || "Server error" });
   }
 };
 
@@ -26,7 +26,7 @@ export const fetchEstimate = async (req, res) => {
 
     res.json(estimate);
   } catch (error) {
-    next(error);
+    res.status(error.statusCode || 500).json({ message: error.message || "Server error" });
   }
 };
 
@@ -70,6 +70,7 @@ export const updateEstimate = async (req, res) => {
 
     const {
       customer_id,
+      vehicle_id,
       items,
       subtotal,
       discount,
@@ -83,19 +84,20 @@ export const updateEstimate = async (req, res) => {
     // ✅ Update estimate
       await client.query(
       `
-      UPDATE spare_estimates
-      SET 
-      customer_id=$1,
-      subtotal=$2,
-      discount=$3,
-      tax_rate=$4,
-      tax_amount=$5,
-      total=$6
-
-      WHERE id=$7
+       UPDATE spare_estimates
+        SET 
+        customer_id=$1,
+        vehicle_id=$2,
+        subtotal=$3,
+        discount=$4,
+        tax_rate=$5,
+        tax_amount=$6,
+        total=$7
+        WHERE id=$8
       `,
       [
       customer_id || null,
+      vehicle_id || null,
       subtotal,
       discount,
       tax_rate,
