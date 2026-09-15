@@ -1,0 +1,15 @@
+CREATE TABLE sales_invoices (
+  id SERIAL PRIMARY KEY,
+  invoice_no VARCHAR(50) UNIQUE NOT NULL,
+  quote_id INT REFERENCES sales_quotes(id),
+  vehicle_id INT NOT NULL REFERENCES vehicles(id),
+  customer_id INT NOT NULL REFERENCES customers(id),
+  sale_price NUMERIC(12,2) NOT NULL,
+  trade_in_amount NUMERIC(12,2) DEFAULT 0,
+  vat_amount NUMERIC(12,2) DEFAULT 0,
+  total_amount NUMERIC(12,2) NOT NULL,
+  payment_method VARCHAR(50),
+  payment_status VARCHAR(20) DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid','partial','paid')),
+  sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_by INT REFERENCES users(id)
+);

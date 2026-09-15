@@ -467,9 +467,13 @@ const CreatePurchase = () => {
                       </select>
                       <input
                         type="number"
+                        min="0"
+                        step="0.01"
                         placeholder="Selling price"
                         value={item.new_part.selling_price}
-                        onChange={(e) => handleNewPartChange(index, "selling_price", e.target.value)}
+                        onChange={(e) =>
+                          handleNewPartChange(index, "selling_price", e.target.value)
+                        }
                         className="w-full border p-1 rounded text-sm"
                       />
                     </div>
@@ -479,9 +483,11 @@ const CreatePurchase = () => {
                 <td className="p-2">
                   <input
                     type="number"
+                    min="0"
+                    step="0.01"
                     value={item.quantity}
                     onChange={(e) =>
-                      handleItemChange(index, "quantity", Number(e.target.value))
+                      handleItemChange(index, "quantity", e.target.value)
                     }
                     className="w-full border p-1 rounded"
                   />
@@ -490,9 +496,11 @@ const CreatePurchase = () => {
                 <td className="p-2">
                   <input
                     type="number"
+                    min="0"
+                    step="0.01"
                     value={item.unit_cost}
                     onChange={(e) =>
-                      handleItemChange(index, "unit_cost", Number(e.target.value))
+                      handleItemChange(index, "unit_cost", e.target.value)
                     }
                     className="w-full border p-1 rounded"
                   />

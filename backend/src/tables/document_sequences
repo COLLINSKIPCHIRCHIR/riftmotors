@@ -1,0 +1,23 @@
+CREATE TABLE document_sequences (
+  doc_type VARCHAR(30) PRIMARY KEY,   -- e.g. 'sales_quote', 'sales_invoice', 'delivery_note'
+  prefix VARCHAR(20) NOT NULL,        -- e.g. 'RML/Q/'
+  last_number INT NOT NULL DEFAULT 0
+);
+
+INSERT INTO document_sequences (doc_type, prefix, last_number)
+VALUES ('sales_quote', 'RML/Q/', 1174);
+
+
+
+-- run inside BEGIN ... COMMIT, before inserting the quote
+UPDATE document_sequences
+SET last_number = last_number + 1
+WHERE doc_type = 'sales_quote'
+RETURNING prefix, last_number;
+
+
+
+INSERT INTO document_sequences (doc_type, prefix, last_number)
+VALUES
+  ('sales_invoice', 'RML/INV/', 0),
+  ('delivery_note', 'RML/DN/', 0);

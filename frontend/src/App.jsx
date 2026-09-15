@@ -11,6 +11,7 @@ import AdminLayout from "./layouts/AdminLayout";
 import AdminDashboard from "./pages/AdminDashboard";
 import AddVehicle from "./pages/AddVehicle";
 import VehicleInventory from "./pages/VehicleInventory";
+import VehicleDetail from "./pages/vehicles/VehicleDetails";
 import SellVehicle from "./pages/SellVehicle";
 import SpareParts from "./pages/SpareParts";
 import Services from "./pages/Services";
@@ -38,6 +39,11 @@ import EditSparePart from "./pages/spareparts/EditSparePart";
 import PurchaseList from "./pages/spareparts/PurchaseList";
 import PurchaseDetails from "./pages/spareparts/PurchaseDetails";
 import ReceiveGoods from "./pages/spareparts/ReceiveGoods";
+import SupplierInvoices from "./pages/spareparts/SupplierInvoices";
+import SupplierInvoiceDetails from "./pages/spareparts/SupplierInvoiceDetails";
+import RecordInvoice from "./pages/spareparts/RecordInvoice";
+import SupplierPayments from "./pages/spareparts/SupplierPayments";
+import PaySupplier from "./pages/spareparts/PaySupplier";
 
 
 import ServiceDashboard from "./pages/services/ServiceDashboard";
@@ -92,6 +98,17 @@ import EmployeeAllowances from "./pages/hr/allowances/EmployeeAllowances";
 
 
 
+import Quotes from "./pages/sales/Quotes";
+import CreateQuote from "./pages/sales/CreateQuote";
+import QuoteDetails from "./pages/sales/QuoteDetails";
+import Invoices from "./pages/sales/Invoices";
+import SalesInvoiceDetails from "./pages/sales/InvoiceDetails";
+import DeliveryNotes from "./pages/sales/DeliveryNotes";
+import CreateDeliveryNote from "./pages/sales/CreateDeliveryNote";
+import DeliveryNoteDetails from "./pages/sales/DeliveryNoteDetails";
+import Consignors from "./pages/vehicles/Consignors";
+
+
 
 function App() {
   return (
@@ -126,6 +143,7 @@ function App() {
           {/* ✅ Vehicle Sales Dropdown Pages */}
           <Route path="vehicles/add" element={<RequirePermission permission="vehicles.create"><AddVehicle /></RequirePermission>} />
           <Route path="vehicles" element={<RequirePermission permission="vehicles.view"><VehicleInventory /></RequirePermission>} />
+          <Route path="vehicles/:id" element={<RequirePermission permission="vehicles.view"><VehicleDetail /></RequirePermission>} />
           <Route path="vehicles/sell" element={<RequirePermission permission="vehicles.sell"><SellVehicle /></RequirePermission>} />
 
           {/* ✅ Customers */}
@@ -160,6 +178,27 @@ function App() {
           <Route path="spare-parts/purchases/:id" element={<RequirePermission permission="spareparts.purchase"><PurchaseDetails /></RequirePermission>} />
           <Route path="spare-parts/purchases/:id/edit" element={<RequirePermission permission="spareparts.purchase"><CreatePurchase /></RequirePermission>} />
           <Route path="spare-parts/purchases/:id/receive" element={<RequirePermission permission="spareparts.purchase"><ReceiveGoods /></RequirePermission>} />
+          <Route path="spare-parts/supplier-invoices" element={<RequirePermission permission="spareparts.purchase"><SupplierInvoices /></RequirePermission>} />
+          <Route path="spare-parts/supplier-invoices/create" element={<RequirePermission permission="spareparts.purchase"><RecordInvoice /></RequirePermission>} />
+          <Route path="spare-parts/supplier-invoices/:id" element={<RequirePermission permission="spareparts.purchase"><SupplierInvoiceDetails /></RequirePermission>} />
+          <Route path="spare-parts/purchases/:purchaseId/invoice" element={<RequirePermission permission="spareparts.purchase"><RecordInvoice /></RequirePermission>} />
+          <Route path="spare-parts/supplier-payments" element={<RequirePermission permission="spareparts.purchase"><SupplierPayments /></RequirePermission>} />
+          <Route path="spare-parts/supplier-payments/create" element={<RequirePermission permission="spareparts.purchase"><PaySupplier /></RequirePermission>} />
+
+
+          {/*sales */}
+          <Route path="sales/quotes" element={<RequirePermission permission="sales.quotes.view"><Quotes /></RequirePermission>} />
+          <Route path="sales/quotes/create" element={<RequirePermission permission="sales.quotes.create"><CreateQuote /></RequirePermission>} />
+          <Route path="sales/quotes/:id" element={<RequirePermission permission="sales.quotes.view"><QuoteDetails /></RequirePermission>} />
+
+          <Route path="sales/invoices" element={<RequirePermission permission="sales.invoices.view"><Invoices /></RequirePermission>} />
+          <Route path="sales/invoices/:id" element={<RequirePermission permission="sales.invoices.view"><SalesInvoiceDetails /></RequirePermission>} />
+
+          <Route path="sales/delivery-notes" element={<RequirePermission permission="sales.delivery.view"><DeliveryNotes /></RequirePermission>} />
+          <Route path="sales/delivery-notes/create" element={<RequirePermission permission="sales.delivery.create"><CreateDeliveryNote /></RequirePermission>} />
+          <Route path="sales/delivery-notes/:id" element={<RequirePermission permission="sales.delivery.view"><DeliveryNoteDetails /></RequirePermission>} />
+
+          <Route path="vehicles/consignors" element={<RequirePermission permission="consignors.view"><Consignors /></RequirePermission>} />
 
           {/* ✅ Services */}
           <Route path="services" element={<RequirePermission permission="services.view"><ServiceDashboard /></RequirePermission>} />

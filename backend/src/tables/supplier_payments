@@ -1,0 +1,18 @@
+CREATE TABLE supplier_payments (
+  id serial PRIMARY KEY,
+  supplier_id integer NOT NULL REFERENCES suppliers(id),
+  amount numeric NOT NULL,
+  payment_date date NOT NULL DEFAULT CURRENT_DATE,
+  payment_method text,        -- cash, bank_transfer, mpesa, cheque
+  reference_number text,
+  notes text,
+  created_by integer REFERENCES users(id),
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE supplier_payment_allocations (
+  id serial PRIMARY KEY,
+  payment_id integer NOT NULL REFERENCES supplier_payments(id) ON DELETE CASCADE,
+  invoice_id integer NOT NULL REFERENCES supplier_invoices(id),
+  amount_allocated numeric NOT NULL
+);

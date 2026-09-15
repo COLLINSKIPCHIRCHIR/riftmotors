@@ -1,0 +1,15 @@
+CREATE TABLE sales_quote_items (
+  id SERIAL PRIMARY KEY,
+  quote_id INT NOT NULL REFERENCES sales_quotes(id) ON DELETE CASCADE,
+  item_name VARCHAR(150) NOT NULL,
+  price NUMERIC(12,2) NOT NULL DEFAULT 0,
+  quantity INT DEFAULT 1
+);
+
+CREATE TABLE sales_invoice_items (
+  id SERIAL PRIMARY KEY,
+  invoice_id INT NOT NULL REFERENCES sales_invoices(id) ON DELETE CASCADE,
+  item_name VARCHAR(150) NOT NULL,
+  price NUMERIC(12,2) NOT NULL DEFAULT 0,
+  quantity INT DEFAULT 1
+);

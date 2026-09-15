@@ -432,6 +432,14 @@ const PurchaseDetails = () => {
                   Receive Goods
                 </button>
               )}
+              {["sent", "partially_received", "received"].includes(purchase.status) && (
+                <button
+                  onClick={() => navigate(`/admin/spare-parts/purchases/${id}/invoice`)}
+                  className="bg-purple-600 text-white px-4 py-2 rounded text-sm"
+                >
+                  Record Invoice
+                </button>
+              )}
               {["draft", "sent"].includes(purchase.status) && (
                 <button onClick={handleCancel} className="bg-red-100 text-red-700 px-4 py-2 rounded text-sm">
                   Cancel LPO

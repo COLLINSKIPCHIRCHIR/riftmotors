@@ -1,8 +1,14 @@
 import axios from "axios";
 
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5004/api";
+
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5004/api",
+  baseURL: BASE_URL,
 });
+
+// Backend origin without the /api suffix — use this to build URLs for
+// static files like /uploads/xyz.jpg, which are served outside /api.
+export const API_ORIGIN = BASE_URL.replace(/\/api\/?$/, "");
 
 // Attach token to every request automatically
 API.interceptors.request.use(

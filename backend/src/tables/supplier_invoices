@@ -1,0 +1,29 @@
+CREATE TABLE supplier_invoices (
+  id serial PRIMARY KEY,
+  invoice_number text UNIQUE NOT NULL,        -- your internal ref, e.g. INV-2026-00001
+  supplier_invoice_number text,               -- the number printed on the supplier's own paper invoice
+  purchase_id integer REFERENCES spare_purchases(id),   -- nullable — see note below
+  supplier_id integer NOT NULL REFERENCES suppliers(id),
+  invoice_date date NOT NULL DEFAULT CURRENT_DATE,
+  due_date date,
+  subtotal numeric NOT NULL DEFAULT 0,
+  tax_rate numeric NOT NULL DEFAULT 16,
+  tax_amount numeric NOT NULL DEFAULT 0,
+  total numeric NOT NULL DEFAULT 0,
+  amount_paid numeric NOT NULL DEFAULT 0,
+  status text NOT NULL DEFAULT 'unpaid' CHECK (status IN ('unpaid','partially_paid','paid','cancelled')),
+  notes text,
+  created_by integer REFERENCES users(id),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE supplier_invoice_items (
+  id serial PRIMARY KEY,
+  invoice_id integer NOT NULL REFERENCES supplier_invoices(id) ON DELETE CASCADE,
+  purchase_item_id integer REFERENCES spare_purchase_items(id),  -- nullable: lets you invoice things not on an LPO
+  sparepart_id integer NOT NULL REFERENCES spareparts(id),
+  quantity numeric NOT NULL,
+  unit_cost numeric NOT NULL,
+  total_cost numeric NOT NULL
+);

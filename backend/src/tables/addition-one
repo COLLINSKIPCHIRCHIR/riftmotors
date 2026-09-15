@@ -312,3 +312,223 @@ ALTER TABLE spare_invoices
   ADD COLUMN IF NOT EXISTS bill_to_customer_id INTEGER REFERENCES customers(id),
   ADD COLUMN IF NOT EXISTS bill_to_name VARCHAR(255),
   ADD COLUMN IF NOT EXISTS bill_to_kra_pin VARCHAR(50);
+
+
+
+  9/13/2026////////////////////
+  ALTER TABLE vehicles
+  ADD COLUMN condition VARCHAR(10) DEFAULT 'used' CHECK (condition IN ('new','used')),
+  ADD COLUMN chassis_no VARCHAR(100) UNIQUE,
+  ADD COLUMN engine_no VARCHAR(100),
+  ADD COLUMN registration_no VARCHAR(50),
+  ADD COLUMN model_code VARCHAR(50),
+  ADD COLUMN duty_free_price NUMERIC(12,2),
+  ADD COLUMN duty_paid_price NUMERIC(12,2);
+
+
+
+
+  INSERT INTO permissions(name,module,description) VALUES
+('sales.quotes.view','sales','View sales quotes/proformas'),
+('sales.quotes.create','sales','Create sales quotes/proformas'),
+('sales.quotes.cancel','sales','Cancel sales quotes'),
+('sales.invoices.view','sales','View sales invoices'),
+('sales.invoices.create','sales','Create sales invoices (convert quote to sale)'),
+('sales.invoices.payment','sales','Update invoice payment status'),
+('sales.delivery.view','sales','View delivery notes'),
+('sales.delivery.create','sales','Create delivery notes'),
+('vehicles.images.manage','vehicles','Upload/delete/reorder vehicle images');
+
+
+
+
+-- Boss & admin: grant everything new, same as before
+INSERT INTO role_permissions(role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name IN ('Boss','admin')
+AND p.name IN (
+  'sales.quotes.view','sales.quotes.create','sales.quotes.cancel',
+  'sales.invoices.view','sales.invoices.create','sales.invoices.payment',
+  'sales.delivery.view','sales.delivery.create',
+  'vehicles.images.manage'
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- Manager: same "everything except a fixed exclusion list" rule as before
+INSERT INTO role_permissions(role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON TRUE
+WHERE r.name='Manager'
+AND p.name IN (
+  'sales.quotes.view','sales.quotes.create','sales.quotes.cancel',
+  'sales.invoices.view','sales.invoices.create','sales.invoices.payment',
+  'sales.delivery.view','sales.delivery.create',
+  'vehicles.images.manage'
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- Sales Manager: owns the whole quote→invoice→delivery flow
+INSERT INTO role_permissions(role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON TRUE
+WHERE r.name='Sales Manager'
+AND p.name IN (
+  'sales.quotes.view','sales.quotes.create','sales.quotes.cancel',
+  'sales.invoices.view','sales.invoices.create',
+  'sales.delivery.view','sales.delivery.create',
+  'vehicles.images.manage'
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- Accountant: payments and read access, not creation
+INSERT INTO role_permissions(role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON TRUE
+WHERE r.name='Accountant'
+AND p.name IN (
+  'sales.quotes.view',
+  'sales.invoices.view','sales.invoices.payment',
+  'sales.delivery.view'
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+
+
+9 / 14 / 2026  ////// /////// 
+ALTER TABLE spare_purchase_items ADD COLUMN quantity_invoiced numeric NOT NULL DEFAULT 0;
+
+
+
+-- Run once, same pattern as your existing LPO/GRN number generators
+CREATE SEQUENCE IF NOT EXISTS supplier_invoice_seq;
+
+CREATE OR REPLACE FUNCTION generate_invoice_number() RETURNS text AS $$
+  SELECT 'INV-' || to_char(CURRENT_DATE, 'YYYY') || '-' ||
+         lpad(nextval('supplier_invoice_seq')::text, 5, '0');
+$$ LANGUAGE sql;
+
+
+
+/////9/15/2026
+ALTER TABLE vehicles
+  ADD COLUMN engine_rating VARCHAR(150),
+  ADD COLUMN max_power VARCHAR(100),
+  ADD COLUMN max_torque VARCHAR(100),
+  ADD COLUMN braking VARCHAR(150),
+  ADD COLUMN seating_capacity VARCHAR(50),
+  ADD COLUMN fuel_tank_litres NUMERIC(6,1),
+  ADD COLUMN suspension VARCHAR(200),
+  ADD COLUMN tyre_size VARCHAR(50),
+  ADD COLUMN warranty_text VARCHAR(200),
+  ADD COLUMN free_service_text VARCHAR(200),
+  ADD COLUMN stock_quantity INT DEFAULT 1;
+
+-- Used cars and any already-arrived new units: stock is always 1 per row.
+-- Catalog-only "we can order this" rows: set stock_quantity to 0 manually.
+
+
+
+
+ALTER TABLE sales_quotes
+  ADD COLUMN vat_amount NUMERIC(12,2) DEFAULT 0,
+  ADD COLUMN registration_fee NUMERIC(12,2) DEFAULT 0;
+
+ALTER TABLE sales_invoices
+  ADD COLUMN registration_fee NUMERIC(12,2) DEFAULT 0;
+  -- vat_amount already exists on sales_invoices from earlier
+
+
+
+
+
+
+////----------duplicate
+CREATE SEQUENCE IF NOT EXISTS supplier_invoice_seq;
+
+CREATE OR REPLACE FUNCTION generate_invoice_number() RETURNS text AS $$
+  SELECT 'INV-' || to_char(CURRENT_DATE, 'YYYY') || '-' ||
+         lpad(nextval('supplier_invoice_seq')::text, 5, '0');
+$$ LANGUAGE sql;
+
+ALTER TABLE spare_purchase_items
+  ADD COLUMN IF NOT EXISTS quantity_invoiced numeric NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS supplier_invoices (
+  id serial PRIMARY KEY,
+  invoice_number text UNIQUE NOT NULL,
+  supplier_invoice_number text,
+  purchase_id integer REFERENCES spare_purchases(id),
+  supplier_id integer NOT NULL REFERENCES suppliers(id),
+  invoice_date date NOT NULL DEFAULT CURRENT_DATE,
+  due_date date,
+  subtotal numeric NOT NULL DEFAULT 0,
+  tax_rate numeric NOT NULL DEFAULT 16,
+  tax_amount numeric NOT NULL DEFAULT 0,
+  total numeric NOT NULL DEFAULT 0,
+  amount_paid numeric NOT NULL DEFAULT 0,
+  status text NOT NULL DEFAULT 'unpaid' CHECK (status IN ('unpaid','partially_paid','paid','cancelled')),
+  notes text,
+  created_by integer REFERENCES users(id),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS supplier_invoice_items (
+  id serial PRIMARY KEY,
+  invoice_id integer NOT NULL REFERENCES supplier_invoices(id) ON DELETE CASCADE,
+  purchase_item_id integer REFERENCES spare_purchase_items(id),
+  sparepart_id integer NOT NULL REFERENCES spareparts(id),
+  quantity numeric NOT NULL,
+  unit_cost numeric NOT NULL,
+  total_cost numeric NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS supplier_payments (
+  id serial PRIMARY KEY,
+  supplier_id integer NOT NULL REFERENCES suppliers(id),
+  amount numeric NOT NULL,
+  payment_date date NOT NULL DEFAULT CURRENT_DATE,
+  payment_method text,
+  reference_number text,
+  notes text,
+  created_by integer REFERENCES users(id),
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS supplier_payment_allocations (
+  id serial PRIMARY KEY,
+  payment_id integer NOT NULL REFERENCES supplier_payments(id) ON DELETE CASCADE,
+  invoice_id integer NOT NULL REFERENCES supplier_invoices(id),
+  amount_allocated numeric NOT NULL
+);
+
+
+ALTER TABLE vehicles ADD COLUMN consignor_id INT REFERENCES consignors(id);
+-- once your app is fully switched over, you can drop the old text column:
+-- ALTER TABLE vehicles DROP COLUMN consignor;
+
+
+
+INSERT INTO permissions(name,module,description) VALUES
+('consignors.view','consignors','View consignors'),
+('consignors.create','consignors','Add consignors'),
+('consignors.edit','consignors','Edit consignors'),
+('consignors.delete','consignors','Delete consignors');
+
+
+
+
+INSERT INTO role_permissions(role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name IN ('Boss','admin') AND p.module='consignors'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+INSERT INTO role_permissions(role_id, permission_id)
+SELECT r.id, p.id FROM roles r JOIN permissions p ON TRUE
+WHERE r.name IN ('Manager','Sales Manager') AND p.module='consignors'
+ON CONFLICT (role_id, permission_id) DO NOTHING;

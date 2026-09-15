@@ -5,7 +5,7 @@ import cors from "cors";
 import path from "path";
 import pool from "./config/db.js";
 import { createUserTable } from "./models/userModel.js";
-import { createVehicleTable } from "./models/vehicleModel.js";
+//import { createVehicleTable } from "./models/vehicleModel.js";
 import { createSalesTable } from "./models/salesModel.js";
 import {createSpareInvoiceTables} from "./models/spareInvoiceModel.js"
 import userRoutes from "./routes/userRoutes.js";
@@ -56,7 +56,10 @@ import payslipEarningRoutes from "./routes/payslipEarningRoutes.js";
 import payslipDeductionRoutes from "./routes/payslipDeductionRoutes.js";
 import payrollProcessingRoutes from "./routes/payrollProcessingRoutes.js";
 import serviceCreditNoteRoutes from "./routes/serviceCreditNoteRoutes.js";
-
+import salesQuoteRoutes from "./routes/salesQuoteRoutes.js";
+import salesInvoiceRoutes from "./routes/salesInvoiceRoutes.js";
+import deliveryNoteRoutes from "./routes/deliveryNoteRoutes.js";
+import consignorRoutes from "./routes/consignorRoutes.js";
 
 
 import { createSpareSalesTables } from "./models/spareSalesModel.js";
@@ -72,6 +75,10 @@ import { createRefundTable } from "./models/refundModel.js";
 import refundRoutes from "./routes/refundRoutes.js";
 
 import reportRoutes from "./routes/reportRoutes.js";
+
+import supplierInvoiceRoutes from "./routes/supplierInvoiceRoutes.js";
+
+import supplierPaymentRoutes from "./routes/supplierPaymentRoutes.js";
 
 await createSpareSalesTables();
 
@@ -124,7 +131,7 @@ console.log("📦 Connected DB:", result.rows[0].current_database);
 (async () => {
   try {
     await createUserTable();
-    await createVehicleTable();
+    //await createVehicleTable();
     await createSalesTable();
     console.log("✅ All tables ready");
   } catch (error) {
@@ -327,6 +334,18 @@ app.use(
   "/api/payroll-processing",
   payrollProcessingRoutes
 );
+
+app.use("/api/sales-quotes", protect, salesQuoteRoutes);
+
+app.use("/api/sales-invoices", protect, salesInvoiceRoutes);
+
+app.use("/api/delivery-notes", protect, deliveryNoteRoutes);
+
+app.use("/api/supplier-invoices", supplierInvoiceRoutes);
+
+app.use("/api/supplier-payments", supplierPaymentRoutes);
+
+app.use("/api/consignors", protect, consignorRoutes);
 
 app.use(errorHandler);
 

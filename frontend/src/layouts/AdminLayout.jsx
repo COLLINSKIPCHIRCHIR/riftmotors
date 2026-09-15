@@ -64,23 +64,13 @@ const AdminLayout = () => {
       icon: <FaCar size={16} />,
       key: "vehicleSales",
       permission: "vehicles.view",
-
       subMenu: [
-        {
-          name: "All Vehicles",
-          path: "/admin/vehicles",
-          permission: "vehicles.view",
-        },
-        {
-          name: "Add Vehicle",
-          path: "/admin/vehicles/add",
-          permission: "vehicles.create",
-        },
-        {
-          name: "Sell Vehicle",
-          path: "/admin/vehicles/sell",
-          permission: "vehicles.sell",
-        },
+        { name: "All Vehicles", path: "/admin/vehicles", permission: "vehicles.view" },
+        { name: "Add Vehicle", path: "/admin/vehicles/add", permission: "vehicles.create" },
+        { name: "Quotes", path: "/admin/sales/quotes", permission: "sales.quotes.view" },
+        { name: "Invoices", path: "/admin/sales/invoices", permission: "sales.invoices.view" },
+        { name: "Delivery Notes", path: "/admin/sales/delivery-notes", permission: "sales.delivery.view" },
+        { name: "Consignors", path: "/admin/vehicles/consignors", permission: "consignors.view" },
       ],
     },
     {
@@ -159,6 +149,16 @@ const AdminLayout = () => {
           name: "Suppliers",
           path: "/admin/spare-parts/suppliers",
           permission: "spareparts.view",
+        },
+        {
+          name: "Supplier Invoices",
+          path: "/admin/spare-parts/supplier-invoices",
+          permission: "spareparts.purchase",
+        },
+        {
+          name: "Supplier Payments",
+          path: "/admin/spare-parts/supplier-payments",
+          permission: "spareparts.purchase",
         },
       ],
     },

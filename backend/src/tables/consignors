@@ -1,0 +1,13 @@
+CREATE TABLE consignors (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(150) UNIQUE NOT NULL,
+  contact_person VARCHAR(150),
+  phone VARCHAR(50),
+  email VARCHAR(150),
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- seed your existing hardcoded list so nothing breaks on first load
+INSERT INTO consignors (name) VALUES
+('Rift Motors Ltd'), ('Nissan Kenya'), ('Subaru Kenya'), ('Ford Kenya'), ('GWM Kenya');
