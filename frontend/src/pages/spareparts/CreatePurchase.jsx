@@ -178,7 +178,7 @@ const CreatePurchase = () => {
           isNew: false,
           sparepart_id: it.sparepart_id,
           sparepart_name: it.sparepart_name, // used to prefill the search box
-          quantity: it.quantity,
+          quantity: Number(it.quantity), 
           unit_cost: Number(it.unit_cost),
           new_part: { name: "", part_number: "", category: "", selling_price: "", discount: "" },
         }))

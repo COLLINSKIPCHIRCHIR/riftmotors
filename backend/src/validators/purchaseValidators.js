@@ -8,8 +8,8 @@ export const validatePurchase = [
     .isArray({ min: 1 })
     .withMessage("At least one item is required"),
   body("items.*.quantity")
-    .isInt({ min: 1 })
-    .withMessage("Quantity must be at least 1"),
+  .isFloat({ min: 0.01 })
+  .withMessage("Quantity must be greater than 0"),
   body("items.*.unit_cost")
     .isFloat({ min: 0 })
     .withMessage("Unit cost must be positive"),
