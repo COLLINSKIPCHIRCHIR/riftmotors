@@ -618,9 +618,12 @@ return;
 
 }
 
-if(!customServicePrice || Number(customServicePrice) <= 0){
+if(
+  customServicePrice === "" ||
+  !Number.isFinite(Number(customServicePrice))
+){
 
-alert("Enter a price for this service");
+alert("Enter a valid amount for this service");
 
 return;
 
@@ -684,9 +687,15 @@ return;
 }
 
 
-if(isSelectedServiceVariable && !variablePrice){
+if(
+  isSelectedServiceVariable &&
+  (
+    variablePrice === "" ||
+    !Number.isFinite(Number(variablePrice))
+  )
+){
 
-alert("Enter the assessed price for this service before adding it");
+alert("Enter a valid assessed amount for this service before adding it");
 
 return;
 
@@ -2543,27 +2552,20 @@ Suggested range: KES {selectedCatalogService.min_price} - {selectedCatalogServic
 
 
 <input
-
-type="number"
-
-min="0"
-
-value={variablePrice}
-
-onChange={(e)=>
-setVariablePrice(e.target.value)
-}
-
-placeholder="Enter price after inspection"
-
-className="
-border
-rounded-lg
-p-2
-w-full
-mt-1
-"
-
+  type="number"
+  step="0.01"
+  value={variablePrice}
+  onChange={(e)=>
+    setVariablePrice(e.target.value)
+  }
+  placeholder="Enter amount after inspection"
+  className="
+  border
+  rounded-lg
+  p-2
+  w-full
+  mt-1
+  "
 />
 
 </div>
@@ -2611,23 +2613,14 @@ className="border rounded-lg p-2"
 />
 
 <input
-
-type="number"
-
-min="0.01"
-
-step="0.01"
-
-value={customServicePrice}
-
-onChange={(e)=>
-setCustomServicePrice(e.target.value)
-}
-
-placeholder="Price (KES)"
-
-className="border rounded-lg p-2"
-
+  type="number"
+  step="0.01"
+  value={customServicePrice}
+  onChange={(e)=>
+    setCustomServicePrice(e.target.value)
+  }
+  placeholder="Amount (KES)"
+  className="border rounded-lg p-2"
 />
 
 </div>
@@ -2642,9 +2635,13 @@ className="border rounded-lg p-2"
 onClick={handleAddService}
 
 disabled={
-serviceMode==="catalog"
-? !selectedService
-: (!customServiceName.trim() || !customServicePrice || Number(customServicePrice) <= 0)
+  serviceMode==="catalog"
+  ? !selectedService
+  : (
+      !customServiceName.trim() ||
+      customServicePrice === "" ||
+      !Number.isFinite(Number(customServicePrice))
+    )
 }
 
 
@@ -2721,11 +2718,10 @@ services.map(service=>(
           />
           <input
             type="number"
-            min="0.01"
             step="0.01"
             value={editServicePrice}
             onChange={(e)=>setEditServicePrice(e.target.value)}
-            placeholder="Price (KES)"
+            placeholder="Amount (KES)"
             className="border rounded-lg p-2 w-1/2"
           />
         </div>

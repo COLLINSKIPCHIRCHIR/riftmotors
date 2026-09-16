@@ -23,7 +23,7 @@ export const createJobService = async (data) => {
             throw err;
         }
 
-        if (hasPrice && Number(price) <= 0) {
+        if (hasPrice && !Number.isFinite(Number(price))) {
             const err = new Error("Enter a valid price for the custom service");
             err.statusCode = 400;
             throw err;
@@ -62,7 +62,7 @@ export const createJobService = async (data) => {
 
     // Variable-priced services no longer require a price up front —
     // they can be added as "awaiting price" and priced later.
-    if (hasPrice && Number(price) <= 0) {
+    if (hasPrice && !Number.isFinite(Number(price))) {
         const err = new Error("Enter a valid price for this service");
         err.statusCode = 400;
         throw err;
@@ -192,10 +192,10 @@ export const updateJobService = async (id, data) => {
   if (row.is_custom) {
     const finalPrice = price === undefined || price === null || price === "" ? null : Number(price);
 
-    if (finalPrice !== null && finalPrice <= 0) {
-      const err = new Error("Enter a valid price");
-      err.statusCode = 400;
-      throw err;
+    if (finalPrice !== null && !Number.isFinite(finalPrice)) {
+        const err = new Error("Enter a valid price");
+        err.statusCode = 400;
+        throw err;
     }
 
     const result = await pool.query(
@@ -218,11 +218,14 @@ export const updateJobService = async (id, data) => {
   // with no price yet.
   const finalPrice = price === undefined || price === null || price === "" ? null : Number(price);
 
-  if (row.pricing_type === "variable" && (finalPrice === null || finalPrice <= 0)) {
-    const err = new Error("Enter a valid assessed price for this service");
-    err.statusCode = 400;
-    throw err;
-  }
+  if (
+        row.pricing_type === "variable" &&
+        (finalPrice === null || !Number.isFinite(finalPrice))
+    ) {
+        const err = new Error("Enter a valid assessed price for this service");
+        err.statusCode = 400;
+        throw err;
+    }
 
   const qty = row.pricing_type === "unit" ? (quantity || 1) : 1;
 
