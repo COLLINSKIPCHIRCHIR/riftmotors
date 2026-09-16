@@ -8,6 +8,7 @@ import {
  getJobParts,
  getMechanics,
  assignMechanic,
+ removeMechanicAssignment,
  getServiceCatalog,
  addJobService,
  deleteJobService,
@@ -365,6 +366,36 @@ err.response?.data?.message ||
 
 
 }
+
+
+const handleRemoveMechanic = async(assignmentId)=>{
+
+  if(isCompleted) return;
+
+  if(!window.confirm("Remove this technician from the job?")){
+    return;
+  }
+
+  try{
+
+    await removeMechanicAssignment(assignmentId);
+
+    const res = await getJobAssignments(id);
+
+    setAssignment(res.data);
+
+  }catch(err){
+
+    console.log(err);
+
+    setError(
+      err.response?.data?.message ||
+      "Failed removing technician"
+    );
+
+  }
+
+};
 
 
 const handleOpenBillToModal = () => {
@@ -2051,28 +2082,31 @@ assignment.length > 0 ?
 
 
 assignment.map(a=>(
+  <div
+    key={a.id}
+    className="flex items-center justify-between border-b last:border-b-0 py-2"
+  >
 
+    <div>
+      <p className="font-semibold">
+        {a.name}
+      </p>
 
-<div key={a.id}>
+      <p className="text-sm text-slate-500">
+        {a.phone}
+      </p>
+    </div>
 
+    {!isCompleted && (
+      <button
+        onClick={()=>handleRemoveMechanic(a.id)}
+        className="text-red-500 hover:text-red-700 text-sm font-medium"
+      >
+        Remove
+      </button>
+    )}
 
-<p className="font-semibold">
-
-{a.name}
-
-</p>
-
-
-<p className="text-sm text-slate-500">
-
-{a.phone}
-
-</p>
-
-
-</div>
-
-
+  </div>
 ))
 
 

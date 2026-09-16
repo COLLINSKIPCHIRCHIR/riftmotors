@@ -4,7 +4,8 @@ import express from "express";
 import {
 
 assignUser,
-fetchJobAssignments
+fetchJobAssignments,
+removeAssignment
 
 } from "../controllers/serviceAssignmentController.js";
 
@@ -23,6 +24,11 @@ assignUser
 router.get(
 "/job/:job_id",
 fetchJobAssignments
+);
+
+router.delete(
+ "/:id",
+ removeAssignment
 );
 
 

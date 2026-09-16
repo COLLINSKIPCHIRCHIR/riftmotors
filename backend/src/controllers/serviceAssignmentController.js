@@ -1,7 +1,8 @@
 import {
 
 createAssignment,
-getJobAssignments
+getJobAssignments,
+deleteAssignment
 
 } from "../models/serviceAssignment.js";
 
@@ -74,4 +75,32 @@ message:"Failed fetching assignments"
 
 }
 
+};
+
+
+
+export const removeAssignment = async(req,res)=>{
+  try{
+
+    const assignment = await deleteAssignment(
+      req.params.id
+    );
+
+    res.json({
+      message:"Technician removed successfully",
+      assignment
+    });
+
+  }catch(error){
+
+    console.error(error);
+
+    res.status(error.statusCode || 500).json({
+      message:
+        error.statusCode
+          ? error.message
+          : "Failed removing technician"
+    });
+
+  }
 };

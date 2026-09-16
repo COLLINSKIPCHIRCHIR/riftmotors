@@ -67,3 +67,43 @@ ORDER BY sa.assigned_at DESC
 return result.rows;
 
 };
+
+
+// remove mechanic from job
+export const deleteAssignment = async(assignment_id)=>{
+
+  const existing = await pool.query(
+    `
+    SELECT job_id
+    FROM service_assignments
+    WHERE id=$1
+    `,
+    [assignment_id]
+  );
+
+  if(existing.rows.length === 0){
+
+    const error = new Error("Assignment not found");
+    error.statusCode = 404;
+
+    throw error;
+
+  }
+
+  const job_id = existing.rows[0].job_id;
+
+  // Do not allow changes to completed jobs
+  await ensureJobEditable(job_id);
+
+  const result = await pool.query(
+    `
+    DELETE FROM service_assignments
+    WHERE id=$1
+    RETURNING *
+    `,
+    [assignment_id]
+  );
+
+  return result.rows[0];
+
+};

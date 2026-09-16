@@ -59,7 +59,8 @@ export const assignMechanic = (data)=>
 export const getJobAssignments = (jobId)=>
  API.get(`/service-assignments/job/${jobId}`);
 
-
+export const removeMechanicAssignment = (assignmentId) =>
+ API.delete(`/service-assignments/${assignmentId}`);
 
 
 // JOB SERVICES
