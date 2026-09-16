@@ -106,9 +106,10 @@ export const convertServiceInvoiceToReceipt = async (invoiceId, payment_method, 
          adjustment,
          discount_type,
          discount_value,
-         total_price
+         total_price,
+         vatable
          )
-         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
         [
           receiptId,
           item.item_type,
@@ -121,7 +122,8 @@ export const convertServiceInvoiceToReceipt = async (invoiceId, payment_method, 
           item.adjustment,
           item.discount_type,
           item.discount_value,
-          item.total_price
+          item.total_price,
+          item.vatable
         ]
       );
     }
@@ -163,14 +165,6 @@ export const getServiceReceipts = async () => {
   return result.rows;
 };
 
-/*
-  Same LEFT JOIN pattern as getServiceInvoiceById / getServiceEstimateById:
-  pulls vehicle details (via service_jobs -> customer_vehicles) and
-  customer kra_pin/address/email (via service_jobs -> customers) so the
-  receipt shows the same fields the invoice does. All LEFT JOINs, so a job
-  with no vehicle attached, or a customer with no kra_pin, still returns
-  cleanly - those fields just come back null and the frontend renders "N/A".
-*/
 export const getServiceReceiptById = async (id) => {
   const receipt = await pool.query(
     `SELECT

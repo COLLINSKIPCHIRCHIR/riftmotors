@@ -4,14 +4,17 @@ import { ensureJobEditable } from "../utils/jobGuards.js";
 // Create service attached to a job
 // Create service attached to a job — same as before, just also accepts
 // is_completed (defaults to true; advisor can mark it incomplete if the
-// customer only partially paid and this item wasn't actually done).
+// customer only partially paid and this item wasn't actually done) and
+// vatable (defaults to true; false for VAT-exempt lines like scrap metal
+// deductions).
 export const createJobService = async (data) => {
-    const { job_id, service_id, is_custom, custom_name, is_completed } = data;
+    const { job_id, service_id, is_custom, custom_name, is_completed, vatable } = data;
     let { quantity, price } = data;
 
     await ensureJobEditable(job_id);
 
     const completed = is_completed === undefined ? true : Boolean(is_completed);
+    const isVatable = vatable === undefined ? true : Boolean(vatable);
 
     const hasPrice = price !== undefined && price !== null && price !== "";
 
@@ -34,11 +37,11 @@ export const createJobService = async (data) => {
         const result = await pool.query(
             `
             INSERT INTO job_services
-            (job_id, service_id, custom_name, is_custom, quantity, price, is_completed)
-            VALUES ($1, NULL, $2, true, $3, $4, $5)
+            (job_id, service_id, custom_name, is_custom, quantity, price, is_completed, vatable)
+            VALUES ($1, NULL, $2, true, $3, $4, $5, $6)
             RETURNING *
             `,
-            [job_id, custom_name.trim(), quantity || 1, finalPrice, completed]
+            [job_id, custom_name.trim(), quantity || 1, finalPrice, completed, isVatable]
         );
 
         return result.rows[0];
@@ -78,15 +81,16 @@ export const createJobService = async (data) => {
     const result = await pool.query(
         `
         INSERT INTO job_services
-        (job_id, service_id, quantity, price, is_completed)
-        VALUES ($1,$2,$3,$4,$5)
+        (job_id, service_id, quantity, price, is_completed, vatable)
+        VALUES ($1,$2,$3,$4,$5,$6)
         ON CONFLICT(job_id,service_id)
         DO UPDATE SET
-            quantity = CASE WHEN $6 = 'unit' THEN job_services.quantity + EXCLUDED.quantity ELSE 1 END,
-            price = EXCLUDED.price
+            quantity = CASE WHEN $7 = 'unit' THEN job_services.quantity + EXCLUDED.quantity ELSE 1 END,
+            price = EXCLUDED.price,
+            vatable = EXCLUDED.vatable
         RETURNING *
         `,
-        [job_id, service_id, quantity, finalPrice, completed, pricing_type]
+        [job_id, service_id, quantity, finalPrice, completed, isVatable, pricing_type]
     );
 
     return result.rows[0];
@@ -117,11 +121,8 @@ export const setJobServiceCompletion = async (id, is_completed) => {
     return result.rows[0];
 };
 
-// getJobServices and deleteJobService stay exactly as you have them —
-// getJobServices already does SELECT js.* so is_completed comes through
-// automatically once the column exists.
-
-// Get services for one job
+// Get services for one job — js.* already returns vatable once the
+// column exists, no changes needed here.
 export const getJobServices = async (job_id) => {
     const result = await pool.query(
         `
@@ -185,10 +186,13 @@ export const updateJobService = async (id, data) => {
 
   await ensureJobEditable(existing.rows[0].job_id);
 
-  const { quantity, price, custom_name } = data;
+  const { quantity, price, custom_name, vatable } = data;
   const row = existing.rows[0];
+  // undefined -> leave vatable unchanged (COALESCE keeps existing value);
+  // true/false -> explicit update.
+  const vatableValue = vatable === undefined ? null : Boolean(vatable);
 
-  // Custom service: allow renaming, quantity, price.
+  // Custom service: allow renaming, quantity, price, vatable.
   if (row.is_custom) {
     const finalPrice = price === undefined || price === null || price === "" ? null : Number(price);
 
@@ -203,11 +207,12 @@ export const updateJobService = async (id, data) => {
       UPDATE job_services
       SET custom_name = COALESCE($1, custom_name),
           quantity = COALESCE($2, quantity),
-          price = $3
-      WHERE id=$4
+          price = $3,
+          vatable = COALESCE($4, vatable)
+      WHERE id=$5
       RETURNING *
       `,
-      [custom_name ? custom_name.trim() : null, quantity || null, finalPrice, id]
+      [custom_name ? custom_name.trim() : null, quantity || null, finalPrice, vatableValue, id]
     );
     return result.rows[0];
   }
@@ -215,7 +220,8 @@ export const updateJobService = async (id, data) => {
   // Catalog-linked: fixed/unit services normally keep the catalog price,
   // but we still allow overriding it here (e.g. a one-off discount) and
   // always allow setting price on a "variable" service that was added
-  // with no price yet.
+  // with no price yet. vatable is also overridable (e.g. a normally
+  // taxed catalog service billed exempt for a specific job).
   const finalPrice = price === undefined || price === null || price === "" ? null : Number(price);
 
   if (
@@ -233,11 +239,12 @@ export const updateJobService = async (id, data) => {
     `
     UPDATE job_services
     SET quantity = $1,
-        price = COALESCE($2, price)
-    WHERE id=$3
+        price = COALESCE($2, price),
+        vatable = COALESCE($3, vatable)
+    WHERE id=$4
     RETURNING *
     `,
-    [qty, finalPrice, id]
+    [qty, finalPrice, vatableValue, id]
   );
 
   return result.rows[0];

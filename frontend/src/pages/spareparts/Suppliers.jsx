@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from "react";
 import API from "../../api/api";
+import { useNavigate } from "react-router-dom";
 
 export default function Suppliers() {
+
+  const navigate = useNavigate();
+
   const [suppliers, setSuppliers] = useState([]);
   const [formData, setFormData] = useState({
     name: "",
@@ -113,6 +117,7 @@ export default function Suppliers() {
               <th className="p-2 border">Phone</th>
               <th className="p-2 border">Email</th>
               <th className="p-2 border">Address</th>
+              <th className="p-2 border">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -122,6 +127,14 @@ export default function Suppliers() {
                 <td className="p-2 border">{s.phone}</td>
                 <td className="p-2 border">{s.email}</td>
                 <td className="p-2 border">{s.address}</td>
+                <td className="p-2 border">
+                  <button
+                    onClick={() => navigate(`/admin/spare-parts/suppliers/${s.id}/statement`)}
+                    className="text-blue-600 text-sm underline"
+                  >
+                    Statement
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>

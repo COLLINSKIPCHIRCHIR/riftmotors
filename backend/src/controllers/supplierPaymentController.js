@@ -61,7 +61,13 @@ export const fetchPaymentById = async (req, res) => {
 export const fetchStatement = async (req, res) => {
   try {
     const { supplierId } = req.params;
-    const statement = await getSupplierStatement(supplierId);
+    const { from_date, to_date } = req.query;
+    const statement = await getSupplierStatement(supplierId, { from_date, to_date });
+
+    if (!statement.supplier) {
+      return res.status(404).json({ message: "Supplier not found" });
+    }
+
     res.json(statement);
   } catch (error) {
     console.error("Fetch supplier statement error:", error);

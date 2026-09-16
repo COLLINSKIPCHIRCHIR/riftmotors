@@ -444,6 +444,16 @@ ALTER TABLE sales_invoices
 
 
 
+ALTER TABLE spare_purchase_items
+    ALTER COLUMN quantity TYPE NUMERIC(12,2),
+    ALTER COLUMN quantity_received TYPE NUMERIC(12,2);
+
+ALTER TABLE purchase_receipt_items
+    ALTER COLUMN quantity_received TYPE NUMERIC(12,2);
+
+ALTER TABLE spareparts
+    ALTER COLUMN quantity TYPE NUMERIC(12,2);
+
 
 
 
@@ -532,3 +542,22 @@ INSERT INTO role_permissions(role_id, permission_id)
 SELECT r.id, p.id FROM roles r JOIN permissions p ON TRUE
 WHERE r.name IN ('Manager','Sales Manager') AND p.module='consignors'
 ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+
+
+
+///////9/16/2026 ... ..
+
+ALTER TABLE service_estimate_items
+DROP CONSTRAINT positive_prices;
+
+
+
+ALTER TABLE job_services ADD COLUMN vatable boolean NOT NULL DEFAULT true;
+ALTER TABLE job_parts ADD COLUMN vatable boolean NOT NULL DEFAULT true;
+ALTER TABLE service_estimate_items ADD COLUMN vatable boolean NOT NULL DEFAULT true;
+ALTER TABLE service_invoice_items ADD COLUMN vatable boolean NOT NULL DEFAULT true;
+ALTER TABLE service_receipt_items ADD COLUMN vatable boolean NOT NULL DEFAULT true;
+
+
+ALTER TABLE spareparts ALTER COLUMN part_number DROP NOT NULL;

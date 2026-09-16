@@ -181,8 +181,8 @@ export const convertServiceEstimateToInvoice = async (estimateId, overrides = {}
         INSERT INTO service_invoice_items
         (invoice_id, item_type, service_id, sparepart_id, customer_supplied, description,
          quantity, unit_price, original_price, adjustment, total_price,
-         discount_type, discount_value)
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+         discount_type, discount_value, vatable)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
         `,
         [
           invoiceId,
@@ -197,7 +197,8 @@ export const convertServiceEstimateToInvoice = async (estimateId, overrides = {}
           item.adjustment,
           item.total_price,
           item.discount_type,
-          item.discount_value
+          item.discount_value,
+          item.vatable
         ]
       );
     }

@@ -12,10 +12,13 @@ export const addJobPart = async (data) => {
     part_name,
     part_number,
     quantity,
-    unit_price
+    unit_price,
+    vatable
   } = data;
 
   await ensureJobEditable(job_id);
+
+  const isVatable = vatable === undefined ? true : Boolean(vatable);
 
   // CUSTOMER-SUPPLIED: no inventory link, no stock check, no charge.
   if (customer_supplied) {
@@ -28,11 +31,11 @@ export const addJobPart = async (data) => {
     const result = await pool.query(
       `
       INSERT INTO job_parts
-      (job_id, sparepart_id, part_name, customer_supplied, is_custom, quantity, unit_price, total_price)
-      VALUES($1,NULL,$2,true,false,$3,0,0)
+      (job_id, sparepart_id, part_name, customer_supplied, is_custom, quantity, unit_price, total_price, vatable)
+      VALUES($1,NULL,$2,true,false,$3,0,0,$4)
       RETURNING *
       `,
-      [job_id, part_name.trim(), quantity]
+      [job_id, part_name.trim(), quantity, isVatable]
     );
 
     return result.rows[0];
@@ -41,7 +44,9 @@ export const addJobPart = async (data) => {
   // CUSTOM / NOT-IN-INVENTORY PART: still billable, no stock link, no
   // buying-price floor to check against since there's no inventory row.
   // Price is OPTIONAL at creation — advisor can add the part now with
-  // no price, accountant fills it in later via updateJobPart.
+  // no price, accountant fills it in later via updateJobPart. Price MAY
+  // be negative (e.g. a scrap-metal deduction line) — only exactly zero
+  // is rejected as meaningless.
   if (is_custom) {
     if (!part_name || !part_name.trim()) {
       const err = new Error("Enter the part name");
@@ -53,8 +58,8 @@ export const addJobPart = async (data) => {
     const hasPrice = unit_price !== undefined && unit_price !== null && unit_price !== "";
     const finalPrice = hasPrice ? Number(unit_price) : null;
 
-    if (hasPrice && finalPrice <= 0) {
-      const err = new Error("Enter a valid selling price for this part");
+    if (hasPrice && finalPrice === 0) {
+      const err = new Error("Enter a non-zero selling price for this part");
       err.statusCode = 400;
       throw err;
     }
@@ -64,11 +69,11 @@ export const addJobPart = async (data) => {
     const result = await pool.query(
       `
       INSERT INTO job_parts
-      (job_id, sparepart_id, customer_supplied, is_custom, part_name, part_number, quantity, unit_price, total_price)
-      VALUES($1,NULL,false,true,$2,$3,$4,$5,$6)
+      (job_id, sparepart_id, customer_supplied, is_custom, part_name, part_number, quantity, unit_price, total_price, vatable)
+      VALUES($1,NULL,false,true,$2,$3,$4,$5,$6,$7)
       RETURNING *
       `,
-      [job_id, part_name.trim(), part_number ? part_number.trim() : null, qty, finalPrice, total_price]
+      [job_id, part_name.trim(), part_number ? part_number.trim() : null, qty, finalPrice, total_price, isVatable]
     );
 
     return result.rows[0];
@@ -115,11 +120,11 @@ export const addJobPart = async (data) => {
   const result = await pool.query(
     `
     INSERT INTO job_parts
-    (job_id, sparepart_id, customer_supplied, is_custom, quantity, unit_price, total_price)
-    VALUES($1,$2,false,false,$3,$4,$5)
+    (job_id, sparepart_id, customer_supplied, is_custom, quantity, unit_price, total_price, vatable)
+    VALUES($1,$2,false,false,$3,$4,$5,$6)
     RETURNING *
     `,
-    [job_id, sparepart_id, quantity, finalPrice, total_price]
+    [job_id, sparepart_id, quantity, finalPrice, total_price, isVatable]
   );
 
   return result.rows[0];
@@ -139,6 +144,7 @@ const result = await pool.query(
     jp.customer_supplied,
     jp.is_custom,
     jp.sparepart_id,
+    jp.vatable,
     COALESCE(sp.name, jp.part_name) AS name,
     COALESCE(sp.part_number, jp.part_number) AS part_number,
     sp.quantity AS available_stock
@@ -170,13 +176,15 @@ export const updateJobPart = async (id, data) => {
 
   await ensureJobEditable(existing.rows[0].job_id);
 
-  const { quantity } = data;
+  const { quantity, vatable } = data;
+  const vatableValue = vatable === undefined ? null : Boolean(vatable);
 
-  // Customer-supplied rows have no price to validate.
+  // Customer-supplied rows have no price to validate, but the vatable
+  // flag can still be corrected (moot in practice — they always bill 0).
   if (existing.rows[0].customer_supplied) {
     const result = await pool.query(
-      `UPDATE job_parts SET quantity=$1 WHERE id=$2 RETURNING *`,
-      [quantity, id]
+      `UPDATE job_parts SET quantity=$1, vatable=COALESCE($2, vatable) WHERE id=$3 RETURNING *`,
+      [quantity, vatableValue, id]
     );
     return result.rows[0];
   }
@@ -184,10 +192,12 @@ export const updateJobPart = async (id, data) => {
   const { unit_price } = data;
   const finalPrice = Number(unit_price);
 
-  // Custom parts have no inventory row, so no buying-price floor to check.
+  // Custom parts have no inventory row, so no buying-price floor to
+  // check. Negative prices are valid (e.g. a scrap-metal deduction) —
+  // only exactly zero / non-numeric is rejected.
   if (existing.rows[0].is_custom) {
-    if (!finalPrice || finalPrice <= 0) {
-      const err = new Error("Enter a valid selling price for this part");
+    if (!Number.isFinite(finalPrice) || finalPrice === 0) {
+      const err = new Error("Enter a valid, non-zero selling price for this part");
       err.statusCode = 400;
       throw err;
     }
@@ -197,11 +207,11 @@ export const updateJobPart = async (id, data) => {
     const result = await pool.query(
       `
       UPDATE job_parts
-      SET quantity=$1, unit_price=$2, total_price=$3
-      WHERE id=$4
+      SET quantity=$1, unit_price=$2, total_price=$3, vatable=COALESCE($4, vatable)
+      WHERE id=$5
       RETURNING *
       `,
-      [quantity, finalPrice, total_price, id]
+      [quantity, finalPrice, total_price, vatableValue, id]
     );
     return result.rows[0];
   }
@@ -225,11 +235,11 @@ export const updateJobPart = async (id, data) => {
   const result = await pool.query(
     `
     UPDATE job_parts
-    SET quantity=$1, unit_price=$2, total_price=$3
-    WHERE id=$4
+    SET quantity=$1, unit_price=$2, total_price=$3, vatable=COALESCE($4, vatable)
+    WHERE id=$5
     RETURNING *
     `,
-    [quantity, finalPrice, total_price, id]
+    [quantity, finalPrice, total_price, vatableValue, id]
   );
 
   return result.rows[0];

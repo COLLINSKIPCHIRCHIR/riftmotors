@@ -140,13 +140,15 @@ export const getSupplierPaymentById = async (id) => {
 // ➤ Supplier statement — invoices and payments, kept as two separate
 //   lists (merging into one running-balance timeline is cheap to do
 //   client-side and keeps this query simple).
-export const getSupplierStatement = async (supplier_id) => {
+export const getSupplierStatement = async (supplier_id, { from_date, to_date } = {}) => {
+  const supplierResult = await pool.query(`SELECT * FROM suppliers WHERE id = $1`, [supplier_id]);
+  const supplier = supplierResult.rows[0];
+
   const invoicesResult = await pool.query(
-    `SELECT id, invoice_number, supplier_invoice_number, invoice_date, total, amount_paid, status,
-            (total - amount_paid) AS balance
+    `SELECT id, invoice_number, supplier_invoice_number, invoice_date, total
      FROM supplier_invoices
      WHERE supplier_id = $1 AND status != 'cancelled'
-     ORDER BY invoice_date ASC`,
+     ORDER BY invoice_date ASC, id ASC`,
     [supplier_id]
   );
 
@@ -154,12 +156,72 @@ export const getSupplierStatement = async (supplier_id) => {
     `SELECT id, amount, payment_date, payment_method, reference_number
      FROM supplier_payments
      WHERE supplier_id = $1
-     ORDER BY payment_date ASC`,
+     ORDER BY payment_date ASC, id ASC`,
     [supplier_id]
   );
 
+  // Normalize both kinds of rows into one shape: a debit (increases what
+  // we owe) or a credit (reduces it).
+  const invoiceLines = invoicesResult.rows.map((inv) => ({
+    date: inv.invoice_date,
+    type: "invoice",
+    id: inv.id,
+    reference: inv.invoice_number,
+    detail: inv.supplier_invoice_number || null,
+    debit: Number(inv.total),
+    credit: 0,
+  }));
+
+  const paymentLines = paymentsResult.rows.map((p) => ({
+    date: p.payment_date,
+    type: "payment",
+    id: p.id,
+    reference: p.reference_number || null,
+    detail: p.payment_method || null,
+    debit: 0,
+    credit: Number(p.amount),
+  }));
+
+  // Same-day tie-break: an invoice is treated as landing before a payment
+  // made the same day, since a payment made "today" is normally settling
+  // something already owed rather than something invoiced later today.
+  const allLines = [...invoiceLines, ...paymentLines].sort((a, b) => {
+    const dateDiff = new Date(a.date) - new Date(b.date);
+    if (dateDiff !== 0) return dateDiff;
+    if (a.type !== b.type) return a.type === "invoice" ? -1 : 1;
+    return a.id - b.id;
+  });
+
+  const fromDate = from_date ? new Date(from_date) : null;
+  const toDate = to_date ? new Date(to_date) : null;
+
+  let openingBalance = 0;
+  const linesInRange = [];
+
+  for (const line of allLines) {
+    const lineDate = new Date(line.date);
+    if (fromDate && lineDate < fromDate) {
+      openingBalance += line.debit - line.credit;
+      continue;
+    }
+    if (toDate && lineDate > toDate) {
+      continue;
+    }
+    linesInRange.push(line);
+  }
+
+  let runningBalance = openingBalance;
+  const transactions = linesInRange.map((line) => {
+    runningBalance += line.debit - line.credit;
+    return { ...line, balance: runningBalance };
+  });
+
   return {
-    invoices: invoicesResult.rows,
-    payments: paymentsResult.rows,
+    supplier,
+    from_date: from_date || null,
+    to_date: to_date || null,
+    opening_balance: openingBalance,
+    closing_balance: runningBalance,
+    transactions,
   };
 };

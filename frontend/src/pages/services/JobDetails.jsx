@@ -207,6 +207,12 @@ const [billToKraPin, setBillToKraPin] = useState("");
 const [savingBillTo, setSavingBillTo] = useState(false);
 
 
+   const [customServiceVatable, setCustomServiceVatable] = useState(true);
+   const [customPartVatable, setCustomPartVatable] = useState(true);
+   const [editServiceVatable, setEditServiceVatable] = useState(true);
+   const [editPartVatable, setEditPartVatable] = useState(true);
+
+
 const user = JSON.parse(localStorage.getItem("user") || "{}");
 
 useEffect(()=>{
@@ -600,6 +606,8 @@ setCustomServicePrice("");
 
 setCustomServiceQuantity(1);
 
+setCustomServiceVatable(true);
+
 }
 
 
@@ -641,7 +649,9 @@ custom_name:customServiceName.trim(),
 
 price:customServicePrice,
 
-quantity:customServiceQuantity || 1
+quantity:customServiceQuantity || 1,
+
+vatable: customServiceVatable
 
 });
 
@@ -655,6 +665,8 @@ setCustomServiceName("");
 setCustomServicePrice("");
 
 setCustomServiceQuantity(1);
+
+setCustomServiceVatable(true);
 
 }catch(err){
 
@@ -777,6 +789,7 @@ const startEditService = (service) => {
   setEditServiceQty(service.quantity);
   setEditServicePrice(service.price);
   setEditServiceName(service.is_custom ? service.service_name : "");
+  setEditServiceVatable(service.vatable !== false);
 };
 
 const cancelEditService = () => {
@@ -792,6 +805,7 @@ const handleSaveEditService = async (service) => {
       quantity: editServiceQty,
       price: editServicePrice,
       custom_name: service.is_custom ? editServiceName : undefined,
+      vatable: editServiceVatable,
     });
 
     const res = await getJobServices(id);
@@ -808,6 +822,7 @@ const startEditPart = (part) => {
   setEditingPartId(part.id);
   setEditPartQty(part.quantity);
   setEditPartPrice(part.unit_price ?? "");
+  setEditPartVatable(part.vatable !== false);
 };
 
 const cancelEditPart = () => {
@@ -819,6 +834,7 @@ const handleSaveEditPart = async (part) => {
     await updateJobPart(part.id, {
       quantity: editPartQty,
       unit_price: part.customer_supplied ? undefined : editPartPrice,
+      vatable: editPartVatable,
     });
 
     const res = await getJobParts(id);
@@ -973,6 +989,8 @@ setCustomPartNumber("");
 
 setCustomPartPrice("");
 
+setCustomPartVatable(true);
+
 }
 
 
@@ -985,7 +1003,7 @@ const isInventoryPriceInvalid =
 
 const isCustomPartInvalid =
   !customPartName.trim() ||
-  (customPartPrice !== "" && Number(customPartPrice) <= 0);
+  (customPartPrice !== "" && Number(customPartPrice) === 0);
 
 
 const isAddPartDisabled =
@@ -1020,7 +1038,9 @@ customer_supplied:true,
 
 part_name:customerPartName.trim(),
 
-quantity:partQuantity
+quantity:partQuantity,
+
+
 
 });
 
@@ -1063,8 +1083,8 @@ return;
 
 }
 
-if (customPartPrice !== "" && Number(customPartPrice) <= 0) {
-    alert("Price must be greater than 0");
+if (customPartPrice !== "" && Number(customPartPrice) === 0) {
+    alert("Price cannot be zero");
     return;
   }
 
@@ -1082,7 +1102,9 @@ part_number:customPartNumber.trim() || null,
 
 unit_price: customPartPrice === "" ? undefined : customPartPrice,
 
-quantity:partQuantity
+quantity:partQuantity,
+
+vatable: customPartVatable
 
 });
 
@@ -1098,6 +1120,8 @@ setCustomPartNumber("");
 setCustomPartPrice("");
 
 setPartQuantity(1);
+
+setCustomPartVatable(true);
 
 }catch(err){
 
@@ -1529,7 +1553,7 @@ last
 
 <PrintCell label="Date" value={new Date(job.created_at).toLocaleDateString()}/>
 
-<PrintCell label="Service Advisor" value={job.service_advisor}  value={user?.username}/>
+<PrintCell label="Service Advisor"   value={user?.username}/>
 
 <PrintCell label="Order Number" value={job.order_number}/>
 
@@ -1938,7 +1962,7 @@ value={new Date(job.created_at).toLocaleDateString()}
 
 />
 
-<DetailField label="Service Advisor" value={job.service_advisor}  value={user?.username}/>
+<DetailField label="Service Advisor"   value={user?.username}/>
 
 <DetailField label="Order Number" value={job.order_number}/>
 
@@ -2579,37 +2603,24 @@ Suggested range: KES {selectedCatalogService.min_price} - {selectedCatalogServic
 <div className="grid md:grid-cols-3 gap-3">
 
 <input
-
-type="text"
-
-placeholder="Service name"
-
-value={customServiceName}
-
-onChange={(e)=>
-setCustomServiceName(e.target.value)
-}
-
-className="border rounded-lg p-2"
-
+  type="text"
+  placeholder="Service name"
+  value={customServiceName}
+  onChange={(e)=>
+    setCustomServiceName(e.target.value)
+  }
+  className="border rounded-lg p-2"
 />
 
 <input
-
-type="number"
-
-min="1"
-
-value={customServiceQuantity}
-
-onChange={(e)=>
-setCustomServiceQuantity(e.target.value)
-}
-
-placeholder="Quantity"
-
-className="border rounded-lg p-2"
-
+  type="number"
+  min="1"
+  value={customServiceQuantity}
+  onChange={(e)=>
+    setCustomServiceQuantity(e.target.value)
+  }
+  placeholder="Quantity"
+  className="border rounded-lg p-2"
 />
 
 <input
@@ -2622,6 +2633,15 @@ className="border rounded-lg p-2"
   placeholder="Amount (KES)"
   className="border rounded-lg p-2"
 />
+
+<label className="flex items-center gap-2 text-sm col-span-3">
+  <input
+    type="checkbox"
+    checked={customServiceVatable}
+    onChange={(e)=>setCustomServiceVatable(e.target.checked)}
+  />
+  Subject to VAT
+</label>
 
 </div>
 
@@ -2725,6 +2745,16 @@ services.map(service=>(
             className="border rounded-lg p-2 w-1/2"
           />
         </div>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={editServiceVatable}
+            onChange={(e)=>setEditServiceVatable(e.target.checked)}
+          />
+          Subject to VAT
+        </label>
+
         <div className="flex gap-2">
           <button onClick={()=>handleSaveEditService(service)} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm">
             Save
@@ -2745,6 +2775,11 @@ services.map(service=>(
             )}
             {service.price == null && (
               <span className="text-xs font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Awaiting price</span>
+            )}
+            {!service.vatable && (
+              <span className="text-xs font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                VAT exempt
+              </span>
             )}
           </h3>
 
@@ -2987,8 +3022,6 @@ Selling price (KES)
 
 type="number"
 
-min="0.01"
-
 step="0.01"
 
 value={customPartPrice}
@@ -3011,6 +3044,21 @@ mt-1
 
 </div>
 
+
+
+}
+
+{
+partMode==="custom" &&
+
+<label className="flex items-center gap-2 text-sm mt-3">
+  <input
+    type="checkbox"
+    checked={customPartVatable}
+    onChange={(e)=>setCustomPartVatable(e.target.checked)}
+  />
+  Subject to VAT
+</label>
 }
 
 
@@ -3146,7 +3194,6 @@ parts.map(part=>(
           {!part.customer_supplied && (
             <input
               type="number"
-              min="0.01"
               step="0.01"
               value={editPartPrice}
               onChange={(e)=>setEditPartPrice(e.target.value)}
@@ -3155,6 +3202,15 @@ parts.map(part=>(
             />
           )}
         </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={editPartVatable}
+            onChange={(e)=>setEditPartVatable(e.target.checked)}
+          />
+          Subject to VAT
+        </label>
+
         <div className="flex gap-2">
           <button onClick={()=>handleSaveEditPart(part)} className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm">
             Save
@@ -3169,11 +3225,35 @@ parts.map(part=>(
         <div>
           <p className="font-semibold">
             {part.name}
-            {part.part_number && <span className="text-xs text-gray-400 ml-1">({part.part_number})</span>}
-            {part.customer_supplied && <span className="italic text-gray-500 text-sm ml-1">(customer supplied)</span>}
-            {part.is_custom && <span className="italic text-gray-500 text-sm ml-1">(custom)</span>}
+
+            {part.part_number && (
+              <span className="text-xs text-gray-400 ml-1">
+                ({part.part_number})
+              </span>
+            )}
+
+            {part.customer_supplied && (
+              <span className="italic text-gray-500 text-sm ml-1">
+                (customer supplied)
+              </span>
+            )}
+
+            {part.is_custom && (
+              <span className="italic text-gray-500 text-sm ml-1">
+                (custom)
+              </span>
+            )}
+
             {!part.customer_supplied && part.unit_price == null && (
-              <span className="text-xs font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded-full ml-1">Awaiting price</span>
+              <span className="text-xs font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded-full ml-1">
+                Awaiting price
+              </span>
+            )}
+
+            {!part.vatable && (
+              <span className="text-xs font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full ml-1">
+                VAT exempt
+              </span>
             )}
           </p>
           <p className="text-sm text-gray-500">Qty: {part.quantity}</p>

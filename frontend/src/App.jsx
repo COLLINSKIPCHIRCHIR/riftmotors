@@ -44,7 +44,7 @@ import SupplierInvoiceDetails from "./pages/spareparts/SupplierInvoiceDetails";
 import RecordInvoice from "./pages/spareparts/RecordInvoice";
 import SupplierPayments from "./pages/spareparts/SupplierPayments";
 import PaySupplier from "./pages/spareparts/PaySupplier";
-
+import SupplierStatement from "./pages/spareparts/SupplierStatement";
 
 import ServiceDashboard from "./pages/services/ServiceDashboard";
 import ServiceJobs from "./pages/services/ServiceJobs";
@@ -184,6 +184,11 @@ function App() {
           <Route path="spare-parts/purchases/:purchaseId/invoice" element={<RequirePermission permission="spareparts.purchase"><RecordInvoice /></RequirePermission>} />
           <Route path="spare-parts/supplier-payments" element={<RequirePermission permission="spareparts.purchase"><SupplierPayments /></RequirePermission>} />
           <Route path="spare-parts/supplier-payments/create" element={<RequirePermission permission="spareparts.purchase"><PaySupplier /></RequirePermission>} />
+          <Route
+            path="spare-parts/suppliers/:supplierId/statement"
+            element={<RequirePermission permission="spareparts.purchase"><SupplierStatement /></RequirePermission>}
+          />
+
 
 
           {/*sales */}

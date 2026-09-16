@@ -6,7 +6,8 @@ export const recalculateEstimateTotals = async (client, estimate_id) => {
   const items = await client.query(
     `
     SELECT
-    total_price
+    total_price,
+    vatable
 
     FROM service_estimate_items
 
@@ -21,11 +22,20 @@ export const recalculateEstimateTotals = async (client, estimate_id) => {
 
 
   let subtotal = 0;
+  let vatableSubtotal = 0;
 
 
   items.rows.forEach(item => {
 
-    subtotal += Number(item.total_price);
+    const lineTotal = Number(item.total_price);
+
+    subtotal += lineTotal;
+
+    if (item.vatable) {
+
+      vatableSubtotal += lineTotal;
+
+    }
 
   });
 
@@ -55,7 +65,7 @@ export const recalculateEstimateTotals = async (client, estimate_id) => {
 
 
   const taxAmount =
-    subtotal * (Number(data.tax_rate) / 100);
+    vatableSubtotal * (Number(data.tax_rate) / 100);
 
 
   let discountAmount = 0;
@@ -199,6 +209,7 @@ WHERE sj.id=$1
   js.created_at,
   js.service_id,
   js.is_custom,
+  js.vatable,
   COALESCE(sc.name, js.custom_name) AS name,
   js.quantity,
   js.price,
@@ -228,6 +239,7 @@ const parts = await client.query(
   jp.sparepart_id,
   jp.customer_supplied,
   jp.is_custom,
+  jp.vatable,
   COALESCE(sp.name, jp.part_name) AS name,
   jp.quantity,
   jp.unit_price
@@ -241,30 +253,47 @@ const parts = await client.query(
 
 
     let subtotal = 0;
+    let vatableSubtotal = 0;
 
 
 
 
     services.rows.forEach(item => {
 
-      subtotal +=
+      const lineTotal =
         Number(item.price) *
         Number(item.quantity);
+
+      subtotal += lineTotal;
+
+      if (item.vatable) {
+
+        vatableSubtotal += lineTotal;
+
+      }
 
     });
 
 
     parts.rows.forEach(item => {
 
-      subtotal +=
-        Number(item.unit_price) *
-        Number(item.quantity);
+      const lineTotal = item.customer_supplied
+        ? 0
+        : Number(item.unit_price) * Number(item.quantity);
+
+      subtotal += lineTotal;
+
+      if (item.vatable) {
+
+        vatableSubtotal += lineTotal;
+
+      }
 
     });
 
 
     const taxAmount =
-      subtotal * (Number(tax_rate) / 100);
+      vatableSubtotal * (Number(tax_rate) / 100);
 
 
 
@@ -396,10 +425,11 @@ for (const item of mergedItems) {
       min_price,
       max_price,
       customer_supplied,
-      is_custom
+      is_custom,
+      vatable
       )
 
-      VALUES($1,'service',$2,$3,$4,$5,$6,$7,$8,$9,$10,false,$11)
+      VALUES($1,'service',$2,$3,$4,$5,$6,$7,$8,$9,$10,false,$11,$12)
       `,
       [
         estimate_id,
@@ -412,7 +442,8 @@ for (const item of mergedItems) {
         finalPrice,
         item.min_price,
         item.max_price,
-        item.is_custom || false
+        item.is_custom || false,
+        item.vatable
       ]
     );
 
@@ -435,10 +466,11 @@ for (const item of mergedItems) {
       discount_type,
       discount_value,
       customer_supplied,
-      is_custom
+      is_custom,
+      vatable
       )
 
-      VALUES($1,'sparepart',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+      VALUES($1,'sparepart',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
       `,
       [
         estimate_id,
@@ -452,7 +484,8 @@ for (const item of mergedItems) {
         "amount",
         0,
         item.customer_supplied,
-        item.is_custom || false
+        item.is_custom || false,
+        item.vatable
       ]
     );
 
