@@ -134,7 +134,10 @@ export const createServiceEstimate = async (
     job_id,
     discount_type = "amount",
     discount = 0,
-    tax_rate = 0
+    tax_rate = 0,
+    bill_to_customer_id,
+    bill_to_name,
+    bill_to_kra_pin
   }) => {
 
 
@@ -181,10 +184,12 @@ WHERE sj.id=$1
 
     const job = jobResult.rows[0];
 
-    const billToCustomerId = job.bill_to_customer_id || null;
-    const billToName = job.bill_to_name || job.customer_name;
-    const billToKraPin = job.bill_to_kra_pin || job.customer_kra_pin;
-
+        const billToCustomerId =
+          bill_to_customer_id !== undefined
+            ? bill_to_customer_id
+            : (job.bill_to_customer_id || null);
+        const billToName = bill_to_name?.trim() || job.bill_to_name || job.customer_name;
+        const billToKraPin = bill_to_kra_pin?.trim() || job.bill_to_kra_pin || job.customer_kra_pin;
     // Estimate number always mirrors the job number so the two documents
     // are traceable at a glance (JOB-000123 -> EST-000123). If this job
     // already has an estimate, this will collide on re-generation - that's

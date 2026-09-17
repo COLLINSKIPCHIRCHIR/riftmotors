@@ -3487,7 +3487,8 @@ showEstimateModal &&
 <CreateEstimateModal
 
 jobId={id}
-
+job={job}
+customers={customers}
 
 onSubmit={handleCreateEstimate}
 
