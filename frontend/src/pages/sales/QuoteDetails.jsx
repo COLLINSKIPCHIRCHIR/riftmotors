@@ -442,7 +442,7 @@ const QuoteDetails = () => {
       >
 
         {/* =====================================================
-            HEADER — KEEPING ORIGINAL HEADER
+            HEADER — KEEPING ORIGINAL HEADER (left untouched)
         ===================================================== */}
 
         <div className="doc-header flex justify-center items-center gap-4 pb-2 print:gap-2 print:pb-1">
@@ -491,7 +491,7 @@ const QuoteDetails = () => {
             QUOTE REFERENCE / DATE
         ===================================================== */}
 
-        <div className="flex justify-between items-baseline text-[11px] mt-2 print:text-[10px] print:mt-1">
+        <div className="flex justify-between items-baseline text-[11px] mt-1 print:text-[10px] print:mt-0.5">
           <p>
             <span className="font-bold">
               Quote Ref:
@@ -505,7 +505,7 @@ const QuoteDetails = () => {
             </span>{" "}
             {new Date(
               quote.created_at
-            ).toLocaleDateString()}
+            ).toLocaleDateString("en-GB")}
           </p>
         </div>
 
@@ -514,11 +514,13 @@ const QuoteDetails = () => {
             DOCUMENT TITLE
         ===================================================== */}
 
-        <div className="doc-title text-center py-1 print:py-0.5">
-          <h2 className="text-sm font-bold tracking-[3px] uppercase">
-            PROFORMA INVOICE
+        <div className="doc-title text-center py-0.5 print:py-0.5">
+          <h2 className="text-base font-bold tracking-[5px] uppercase">
+            Proforma Invoice
           </h2>
         </div>
+
+        <div className="border-t-2 border-black"></div>
 
 
         {/* =====================================================
@@ -526,13 +528,13 @@ const QuoteDetails = () => {
             LINE ABOVE + LINE BELOW
         ===================================================== */}
 
-        <div className="border-t border-black border-b border-black py-1 print:py-0.5">
+        <div className="border-b border-black py-1 print:py-0.5">
           <p className="font-bold underline text-[11px] print:text-[10px]">
             Client Details
           </p>
         </div>
 
-        <div className="grid grid-cols-[90px_1fr_70px_1fr] gap-x-2 gap-y-1 text-[11px] mt-1 pb-2 print:text-[10px] print:mt-0.5 print:pb-1 print:gap-y-0.5">
+        <div className="grid grid-cols-[75px_1fr_60px_1fr] gap-x-2 gap-y-1 text-[11px] mt-1 pb-2 print:text-[10px] print:mt-0.5 print:pb-1 print:gap-y-0.5">
           <p className="font-bold">
             Name:
           </p>
@@ -590,7 +592,7 @@ const QuoteDetails = () => {
             VEHICLE IMAGE + SPECIFICATIONS
         ===================================================== */}
 
-        <div className="grid grid-cols-[46%_54%] gap-4 mt-1 print:gap-2 print:mt-1">
+        <div className="grid grid-cols-[44%_56%] gap-3 mt-1 print:gap-2 print:mt-1">
 
           {/* LEFT SIDE */}
 
@@ -616,7 +618,7 @@ const QuoteDetails = () => {
             {isNew &&
               (quote.warranty_text ||
                 quote.free_service_text) && (
-                <div className="text-[11px] mt-3 space-y-1 print:text-[9px] print:mt-1 print:space-y-0.5">
+                <div className="text-[10px] mt-2 space-y-0.5 print:text-[9px] print:mt-1">
                   {quote.warranty_text && (
                     <p>
                       {
@@ -641,7 +643,7 @@ const QuoteDetails = () => {
 
           <div className="text-[11px] print:text-[10px]">
 
-            <div className="grid grid-cols-[100px_1fr] gap-x-2 gap-y-1 print:gap-y-0.5">
+            <div className="grid grid-cols-[95px_1fr] gap-x-3 gap-y-0.5 print:gap-y-0.5">
 
               <p className="font-bold">
                 Make
@@ -802,28 +804,32 @@ const QuoteDetails = () => {
             PRICE BREAKDOWN RIGHT
         ===================================================== */}
 
-        <div className="grid grid-cols-[46%_54%] gap-4 mt-5 print:gap-2 print:mt-2">
+        <div className="grid grid-cols-[44%_56%] gap-3 mt-4 print:gap-2 print:mt-2">
 
           {/* =================================================
               BANK DETAILS — LEFT
           ================================================= */}
 
-          <div className="text-[11px] print:text-[10px]">
+          <div className="text-[11px] print:text-[10px] mt-6 print:mt-5">
 
-            <p className="font-bold mb-2 print:mb-1">
+            <p className="font-bold mb-1 print:mb-0.5">
               Amounts are payable to:
             </p>
 
-            <p>
-              Bank: THE CO-OPERATIVE BANK
+            <p className="mt-2 print:mt-1">
+              Bank: {field(quote.bank_name)}
             </p>
 
             <p>
-              Account Name: Rift Motors Ltd
+              Account Name: {field(quote.bank_account_name)}
             </p>
 
             <p>
-              Branch: Nakuru
+              Account No: {field(quote.bank_account_no)}
+            </p>
+
+            <p>
+              Branch: {field(quote.bank_branch)}
             </p>
 
           </div>
@@ -835,26 +841,34 @@ const QuoteDetails = () => {
 
           <div>
 
-            {/* KES HEADER */}
+            <table className="w-full text-[11px] border-collapse table-fixed print:text-[10px]">
 
-            <div className="text-right font-bold text-[11px] mb-1 print:text-[10px] print:mb-0.5">
-              KES
-            </div>
+              <colgroup>
+                <col style={{ width: "62%" }} />
+                <col style={{ width: "38%" }} />
+              </colgroup>
 
-            <table className="w-full text-[11px] border-collapse print:text-[10px]">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th className="text-right font-bold pb-1 print:pb-0.5">
+                    KES
+                  </th>
+                </tr>
+              </thead>
 
               <tbody>
 
                 {/* MAIN PRICE */}
 
                 <tr>
-                  <td className="py-1 print:py-0.5">
+                  <td className="py-0.5 print:py-0.5">
                     {isNew
-                      ? "List Price"
+                      ? "Duty Paid Price"
                       : "Unit Price"}
                   </td>
 
-                  <td className="py-1 text-right print:py-0.5">
+                  <td className="py-0.5 text-right print:py-0.5">
                     {formatMoney(
                       quote.quoted_price
                     )}
@@ -866,14 +880,14 @@ const QuoteDetails = () => {
 
                 {quote.trade_in_amount > 0 && (
                   <tr>
-                    <td className="py-1 print:py-0.5">
+                    <td className="py-0.5 print:py-0.5">
                       LESS:{" "}
                       {field(
                         quote.trade_in_reg_no
                       )}
                     </td>
 
-                    <td className="py-1 text-right print:py-0.5">
+                    <td className="py-0.5 text-right print:py-0.5">
                       -
                       {formatMoney(
                         quote.trade_in_amount
@@ -888,7 +902,7 @@ const QuoteDetails = () => {
                 {(quote.items || []).map(
                   (it) => (
                     <tr key={it.id}>
-                      <td className="py-1 print:py-0.5">
+                      <td className="py-0.5 print:py-0.5">
                         {it.item_name}
 
                         {it.quantity > 1
@@ -896,7 +910,7 @@ const QuoteDetails = () => {
                           : ""}
                       </td>
 
-                      <td className="py-1 text-right print:py-0.5">
+                      <td className="py-0.5 text-right print:py-0.5">
                         {formatMoney(
                           Number(it.price) *
                             Number(
@@ -914,11 +928,11 @@ const QuoteDetails = () => {
                 {isNew &&
                   quote.vat_amount > 0 && (
                     <tr>
-                      <td className="py-1 print:py-0.5">
+                      <td className="py-0.5 print:py-0.5">
                         VAT
                       </td>
 
-                      <td className="py-1 text-right print:py-0.5">
+                      <td className="py-0.5 text-right print:py-0.5 border-b border-black">
                         {formatMoney(
                           quote.vat_amount
                         )}
@@ -930,34 +944,16 @@ const QuoteDetails = () => {
                 {/* SUB TOTAL */}
 
                 {isNew && (
-                  <tr>
-                    <td
-                      colSpan="2"
-                      className="border-t border-black"
-                    ></td>
-                  </tr>
-                )}
-
-                {isNew && (
                   <tr className="font-bold">
-                    <td className="py-1 print:py-0.5">
+                    <td className="py-0.5 print:py-0.5">
                       Sub Total
                     </td>
 
-                    <td className="py-1 text-right print:py-0.5">
+                    <td className="py-0.5 text-right border-b border-black print:py-0.5">
                       {formatMoney(
                         subTotal
                       )}
                     </td>
-                  </tr>
-                )}
-
-                {isNew && (
-                  <tr>
-                    <td
-                      colSpan="2"
-                      className="border-b border-black"
-                    ></td>
                   </tr>
                 )}
 
@@ -968,11 +964,11 @@ const QuoteDetails = () => {
                   quote.registration_fee >
                     0 && (
                     <tr>
-                      <td className="py-1 print:py-0.5">
+                      <td className="py-0.5 print:py-0.5">
                         Registration
                       </td>
 
-                      <td className="py-1 text-right print:py-0.5">
+                      <td className="py-0.5 text-right print:py-0.5">
                         {formatMoney(
                           quote.registration_fee
                         )}
@@ -985,11 +981,11 @@ const QuoteDetails = () => {
 
                 {isNew && (
                   <tr>
-                    <td className="py-1 print:py-0.5">
+                    <td className="py-0.5 print:py-0.5">
                       Qty
                     </td>
 
-                    <td className="py-1 text-right print:py-0.5">
+                    <td className="py-0.5 text-right border-b border-black print:py-0.5">
                       1
                     </td>
                   </tr>
@@ -998,30 +994,16 @@ const QuoteDetails = () => {
 
                 {/* TOTAL */}
 
-                <tr>
-                  <td
-                    colSpan="2"
-                    className="border-t border-black"
-                  ></td>
-                </tr>
-
                 <tr className="font-bold">
-                  <td className="py-1 print:py-0.5">
+                  <td className="py-0.5 print:py-0.5">
                     Total
                   </td>
 
-                  <td className="py-1 text-right print:py-0.5">
+                  <td className="py-0.5 text-right border-b border-black print:py-0.5">
                     {formatMoney(
                       quote.total_price
                     )}
                   </td>
-                </tr>
-
-                <tr>
-                  <td
-                    colSpan="2"
-                    className="border-b border-black"
-                  ></td>
                 </tr>
 
               </tbody>
@@ -1037,7 +1019,7 @@ const QuoteDetails = () => {
             SIGNATURES
         ===================================================== */}
 
-        <div className="grid grid-cols-2 gap-16 mt-8 text-[11px] print:gap-8 print:mt-3 print:text-[10px]">
+        <div className="grid grid-cols-2 gap-16 mt-10 text-[11px] print:gap-8 print:mt-4 print:text-[10px]">
 
           <div>
             <div className="h-8 print:h-4"></div>
@@ -1059,11 +1041,13 @@ const QuoteDetails = () => {
 
 
           <div>
-            <div className="h-8 print:h-4"></div>
+            <div className="h-8 flex items-end print:h-4">
+              <span className="font-bold">for:</span>
+            </div>
 
             <div className="border-t border-black pt-1 print:pt-0.5">
               <p className="font-bold">
-                for: Managing Director
+                Managing Director
               </p>
 
               <p className="mt-1 print:mt-0.5">
