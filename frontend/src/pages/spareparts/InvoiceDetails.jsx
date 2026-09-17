@@ -484,6 +484,8 @@ export default function InvoiceDetails() {
                   <option value="cash">Cash</option>
                   <option value="mpesa">Mpesa</option>
                   <option value="card">Card</option>
+                  <option value="bank">Bank Transfer</option>
+                  <option value="cheque">Cheque</option>
                 </select>
 
                 <button

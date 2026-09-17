@@ -610,6 +610,7 @@ const handleSubmitCreditNote = async () => {
                 <option value="mpesa">M-Pesa</option>
                 <option value="card">Card</option>
                 <option value="bank">Bank Transfer</option>
+                <option value="cheque">Cheque</option>
                 </select>
 
                 <button
