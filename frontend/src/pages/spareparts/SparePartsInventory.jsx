@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import API from "../../api/api";
-import { FaEdit, FaTrash, FaSearch, FaSort } from "react-icons/fa";
+import { FaEdit, FaTrash, FaSearch, FaSort, FaFileExcel, FaChevronDown } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-
+import * as XLSX from "xlsx";
 
 const Card = ({ title, value }) => (
   <div className="bg-white border rounded-xl p-4 shadow-sm">
@@ -12,6 +12,18 @@ const Card = ({ title, value }) => (
     </h3>
   </div>
 );
+
+// All exportable columns: key = field on the row, label = Excel header
+const EXPORT_COLUMNS = [
+  { key: "part_number", label: "Part Number" },
+  { key: "name", label: "Name" },
+  { key: "category", label: "Category" },
+  { key: "supplier_name", label: "Supplier" },
+  { key: "quantity", label: "Qty" },
+  { key: "buying_price", label: "Buying Price" },
+  { key: "selling_price", label: "Selling Price" },
+  { key: "discount", label: "Discount (%)" },
+];
 
 export default function SparepartsInventory() {
   const navigate = useNavigate();
@@ -33,6 +45,95 @@ export default function SparepartsInventory() {
 
   const [sortField, setSortField] = useState("name");
   const [sortOrder, setSortOrder] = useState("asc");
+
+  // ===========================
+  // Export state
+  // ===========================
+  const [exportOpen, setExportOpen] = useState(false);
+  const [selectedColumns, setSelectedColumns] = useState(
+    EXPORT_COLUMNS.map((c) => c.key) // all selected by default
+  );
+  const [exporting, setExporting] = useState(false);
+  const exportRef = useRef(null);
+
+  // Close export dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (exportRef.current && !exportRef.current.contains(e.target)) {
+        setExportOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const toggleColumn = (key) => {
+    setSelectedColumns((prev) =>
+      prev.includes(key)
+        ? prev.filter((k) => k !== key)
+        : [...prev, key]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedColumns((prev) =>
+      prev.length === EXPORT_COLUMNS.length
+        ? []
+        : EXPORT_COLUMNS.map((c) => c.key)
+    );
+  };
+
+  const handleExportExcel = async () => {
+    if (selectedColumns.length === 0) {
+      alert("Select at least one column to export.");
+      return;
+    }
+
+    setExporting(true);
+
+    try {
+      const res = await API.get("/spareparts/export", {
+        params: { search },
+      });
+
+      const columnsToExport = EXPORT_COLUMNS.filter((c) =>
+        selectedColumns.includes(c.key)
+      );
+
+      const rows = res.data.map((item) => {
+        const row = {};
+        columnsToExport.forEach((col) => {
+          let value = item[col.key];
+
+          if (col.key === "buying_price" || col.key === "selling_price") {
+            value = Number(value);
+          }
+          if (col.key === "supplier_name") {
+            value = value || "—";
+          }
+          if (col.key === "discount") {
+            value = value || 0;
+          }
+
+          row[col.label] = value;
+        });
+        return row;
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Spare Parts");
+
+      XLSX.writeFile(workbook, `spareparts-inventory-${Date.now()}.xlsx`);
+
+      setExportOpen(false);
+    } catch (err) {
+      console.error("Export failed", err);
+      alert("Export failed. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // ===========================
   // Load Inventory
@@ -186,18 +287,74 @@ export default function SparepartsInventory() {
           Spare Parts Inventory
         </h1>
 
-        <div className="flex items-center bg-gray-100 border rounded-lg px-3 py-2 w-72">
-          <FaSearch className="text-gray-500 mr-2" />
-          <input
-            type="text"
-            placeholder="Search part..."
-            className="bg-transparent outline-none w-full"
-            value={search}
-            onChange={(e) => {
-              setCurrentPage(1);
-              setSearch(e.target.value);
-            }}
-          />
+        <div className="flex items-center gap-3">
+          <div className="flex items-center bg-gray-100 border rounded-lg px-3 py-2 w-72">
+            <FaSearch className="text-gray-500 mr-2" />
+            <input
+              type="text"
+              placeholder="Search part..."
+              className="bg-transparent outline-none w-full"
+              value={search}
+              onChange={(e) => {
+                setCurrentPage(1);
+                setSearch(e.target.value);
+              }}
+            />
+          </div>
+
+          {/* Export dropdown */}
+          <div className="relative" ref={exportRef}>
+            <button
+              onClick={() => setExportOpen((prev) => !prev)}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+            >
+              <FaFileExcel />
+              Export
+              <FaChevronDown className="text-xs" />
+            </button>
+
+            {exportOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-white border rounded-xl shadow-lg z-10 p-4">
+                <div className="flex justify-between items-center mb-3">
+                  <p className="text-sm font-semibold text-gray-700">
+                    Choose columns
+                  </p>
+                  <button
+                    onClick={toggleSelectAll}
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    {selectedColumns.length === EXPORT_COLUMNS.length
+                      ? "Clear all"
+                      : "Select all"}
+                  </button>
+                </div>
+
+                <div className="max-h-48 overflow-y-auto space-y-2 mb-4">
+                  {EXPORT_COLUMNS.map((col) => (
+                    <label
+                      key={col.key}
+                      className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedColumns.includes(col.key)}
+                        onChange={() => toggleColumn(col.key)}
+                      />
+                      {col.label}
+                    </label>
+                  ))}
+                </div>
+
+                <button
+                  onClick={handleExportExcel}
+                  disabled={exporting}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 rounded-lg disabled:opacity-50"
+                >
+                  {exporting ? "Exporting..." : "Download Excel"}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
