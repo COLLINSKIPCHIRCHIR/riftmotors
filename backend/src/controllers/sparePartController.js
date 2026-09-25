@@ -2,6 +2,7 @@
 import {
   addSparePart,
   getAllSpareParts,
+  getAllSparePartsForExport,
   getSparePartById,
   updateSparePart,
   deleteSparePart,
@@ -25,6 +26,17 @@ export const fetchSpareParts = async (req, res, next) => {
     const { search, category, page, limit } = req.query;
     const result = await getAllSpareParts({ search, category, page, limit });
     res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ➤ Export (all rows, no pagination)
+export const exportSpareParts = async (req, res, next) => {
+  try {
+    const { search, category } = req.query;
+    const parts = await getAllSparePartsForExport({ search, category });
+    res.json(parts);
   } catch (error) {
     next(error);
   }

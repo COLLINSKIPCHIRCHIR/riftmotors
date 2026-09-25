@@ -191,3 +191,45 @@ export const getInventoryStats = async () => {
   const result = await pool.query(query);
   return result.rows[0];
 };
+
+
+/* =========================================================
+   EXPORT — ALL SPARE PARTS (no pagination)
+========================================================= */
+export const getAllSparePartsForExport = async ({ search, category } = {}) => {
+  let conditions = ["sp.is_deleted IS NOT TRUE"];
+  let values = [];
+  let i = 1;
+
+  if (search) {
+    conditions.push(`(sp.name ILIKE $${i} OR sp.part_number ILIKE $${i})`);
+    values.push(`%${search}%`);
+    i++;
+  }
+
+  if (category) {
+    conditions.push(`sp.category = $${i++}`);
+    values.push(category);
+  }
+
+  const where = `WHERE ${conditions.join(" AND ")}`;
+
+  const query = `
+    SELECT 
+      sp.part_number,
+      sp.name,
+      sp.category,
+      COALESCE(s.name, sp.supplier) AS supplier_name,
+      sp.quantity,
+      sp.buying_price,
+      sp.selling_price,
+      sp.discount
+    FROM spareparts sp
+    LEFT JOIN suppliers s ON sp.supplier_id = s.id
+    ${where}
+    ORDER BY sp.name ASC;
+  `;
+
+  const result = await pool.query(query, values);
+  return result.rows;
+};
