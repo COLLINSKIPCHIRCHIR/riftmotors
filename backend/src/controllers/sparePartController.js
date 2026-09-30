@@ -23,8 +23,8 @@ export const createSparePart = async (req, res, next) => {
 // ➤ Get All
 export const fetchSpareParts = async (req, res, next) => {
   try {
-    const { search, category, page, limit } = req.query;
-    const result = await getAllSpareParts({ search, category, page, limit });
+    const { search, category, page, limit, sortField, sortOrder } = req.query;
+    const result = await getAllSpareParts({ search, category, page, limit, sortField, sortOrder });
     res.json(result);
   } catch (error) {
     next(error);
@@ -34,8 +34,8 @@ export const fetchSpareParts = async (req, res, next) => {
 // ➤ Export (all rows, no pagination)
 export const exportSpareParts = async (req, res, next) => {
   try {
-    const { search, category } = req.query;
-    const parts = await getAllSparePartsForExport({ search, category });
+    const { search, category, sortField, sortOrder } = req.query;
+    const parts = await getAllSparePartsForExport({ search, category, sortField, sortOrder });
     res.json(parts);
   } catch (error) {
     next(error);

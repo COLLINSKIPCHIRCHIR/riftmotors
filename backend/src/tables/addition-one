@@ -577,3 +577,7 @@ COMMENT ON COLUMN vehicles.duty_free_price IS 'Duty free price, VAT inclusive';
 COMMENT ON COLUMN vehicles.duty_paid_price IS 'Duty paid price, VAT inclusive';
 COMMENT ON COLUMN vehicles.duty_free_price_excl_vat IS 'Duty free price, VAT exclusive';
 COMMENT ON COLUMN vehicles.duty_paid_price_excl_vat IS 'Duty paid price, VAT exclusive';
+
+
+  CREATE INDEX idx_spareparts_partno_sort
+  ON spareparts ((regexp_replace(UPPER(part_number), '[^A-Z0-9]', '', 'g') COLLATE "C"));

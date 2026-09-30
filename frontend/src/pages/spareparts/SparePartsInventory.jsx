@@ -41,10 +41,12 @@ export default function SparepartsInventory() {
     limit: 20,
   });
 
+  const [sortField, setSortField] = useState("part_number");
+  const [sortOrder, setSortOrder] = useState("asc");
+
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [sortField, setSortField] = useState("name");
-  const [sortOrder, setSortOrder] = useState("asc");
+  
 
   // ===========================
   // Export state
@@ -93,7 +95,7 @@ export default function SparepartsInventory() {
 
     try {
       const res = await API.get("/spareparts/export", {
-        params: { search },
+        params: { search , sortField, sortOrder },
       });
 
       const columnsToExport = EXPORT_COLUMNS.filter((c) =>
@@ -139,43 +141,27 @@ export default function SparepartsInventory() {
   // Load Inventory
   // ===========================
   const loadSpareparts = async () => {
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      const res = await API.get("/spareparts", {
-        params: {
-          page: currentPage,
-          limit: 20,
-          search,
-        },
-      });
+  try {
+    const res = await API.get("/spareparts", {
+      params: {
+        page: currentPage,
+        limit: 20,
+        search,
+        sortField,
+        sortOrder,
+      },
+    });
 
-      let data = res.data.data || [];
-
-      // Sort current page only
-      data = [...data].sort((a, b) => {
-        const valueA = a[sortField] ?? "";
-        const valueB = b[sortField] ?? "";
-
-        if (typeof valueA === "string") {
-          return sortOrder === "asc"
-            ? valueA.localeCompare(valueB)
-            : valueB.localeCompare(valueA);
-        }
-
-        return sortOrder === "asc"
-          ? valueA - valueB
-          : valueB - valueA;
-      });
-
-      setSpareparts(data);
-      setPagination(res.data.pagination);
-    } catch (err) {
-      console.error("Failed to load inventory", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    setSpareparts(res.data.data || []);
+    setPagination(res.data.pagination);
+  } catch (err) {
+    console.error("Failed to load inventory", err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // ===========================
   // Inventory Statistics
@@ -201,13 +187,14 @@ export default function SparepartsInventory() {
   // Sorting
   // ===========================
   const handleSort = (field) => {
-    if (field === sortField) {
-      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortField(field);
-      setSortOrder("asc");
-    }
-  };
+  setCurrentPage(1);
+  if (field === sortField) {
+    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+  } else {
+    setSortField(field);
+    setSortOrder("asc");
+  }
+};
 
   // ===========================
   // Stock Badge

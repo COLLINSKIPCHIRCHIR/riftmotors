@@ -1,6 +1,33 @@
 import pool from "../config/db.js";
 import { paginatedQuery } from "../utils/paginate.js";
 
+
+// Alphanumeric order: case-insensitive, ignores spaces/hyphens/symbols,
+// digits before letters (matches the printed inventory sheets)
+const PART_NUMBER_ORDER = `
+  regexp_replace(UPPER(sp.part_number), '[^A-Z0-9]', '', 'g') COLLATE "C",
+  sp.part_number COLLATE "C",
+  sp.id
+`;
+
+const SORT_COLUMNS = {
+  part_number: `regexp_replace(UPPER(sp.part_number), '[^A-Z0-9]', '', 'g') COLLATE "C"`,
+  name: `UPPER(sp.name) COLLATE "C"`,
+  category: `UPPER(sp.category) COLLATE "C"`,
+  supplier_name: `UPPER(COALESCE(s.name, sp.supplier)) COLLATE "C"`,
+  quantity: `sp.quantity`,
+  buying_price: `sp.buying_price`,
+  selling_price: `sp.selling_price`,
+};
+
+const buildOrderBy = (sortField, sortOrder) => {
+  const col = SORT_COLUMNS[sortField];
+  if (!col) return `ORDER BY ${PART_NUMBER_ORDER}`; // default
+  const dir = sortOrder === "desc" ? "DESC" : "ASC"; // whitelist, no injection
+  return `ORDER BY ${col} ${dir}, sp.id`;
+};
+
+
 /* =========================================================
    1️⃣  ADD SPARE PART
    Supports:
@@ -47,7 +74,7 @@ export const addSparePart = async (data) => {
      supplier table name OR manual supplier text
    - Excludes soft deleted records
 ========================================================= */
-export const getAllSpareParts = async ({ search, category, page, limit } = {}) => {
+export const getAllSpareParts = async ({ search, category, page, limit , sortField, sortOrder } = {}) => {
   let conditions = ["sp.is_deleted IS NOT TRUE"];
   let values = [];
   let i = 1;
@@ -74,7 +101,7 @@ export const getAllSpareParts = async ({ search, category, page, limit } = {}) =
     FROM spareparts sp
     LEFT JOIN suppliers s ON sp.supplier_id = s.id
     ${where}
-    ORDER BY sp.id DESC
+    ${buildOrderBy(sortField, sortOrder)}
   `;
 
   return paginatedQuery(pool, baseQuery, values, page, limit);
@@ -196,7 +223,7 @@ export const getInventoryStats = async () => {
 /* =========================================================
    EXPORT — ALL SPARE PARTS (no pagination)
 ========================================================= */
-export const getAllSparePartsForExport = async ({ search, category } = {}) => {
+export const getAllSparePartsForExport = async ({ search, category, sortField, sortOrder} = {}) => {
   let conditions = ["sp.is_deleted IS NOT TRUE"];
   let values = [];
   let i = 1;
@@ -216,18 +243,13 @@ export const getAllSparePartsForExport = async ({ search, category } = {}) => {
 
   const query = `
     SELECT 
-      sp.part_number,
-      sp.name,
-      sp.category,
+      sp.part_number, sp.name, sp.category,
       COALESCE(s.name, sp.supplier) AS supplier_name,
-      sp.quantity,
-      sp.buying_price,
-      sp.selling_price,
-      sp.discount
+      sp.quantity, sp.buying_price, sp.selling_price, sp.discount
     FROM spareparts sp
     LEFT JOIN suppliers s ON sp.supplier_id = s.id
     ${where}
-    ORDER BY sp.name ASC;
+    ${buildOrderBy(sortField, sortOrder)}
   `;
 
   const result = await pool.query(query, values);
