@@ -37,6 +37,11 @@ const AddVehicle = () => {
     warrantyText: "",
     freeServiceText: "",
     images: [],
+    drivetrain: "",
+    bodyType: "",
+    dutyFreePriceExclVat: "",
+    dutyPaidPriceExclVat: "",
+    priceListDate: "",
   });
 
   const [previewImages, setPreviewImages] = useState([]);
@@ -124,6 +129,14 @@ const AddVehicle = () => {
     formData.append("tyre_size", vehicle.tyreSize);
     formData.append("warranty_text", vehicle.warrantyText);
     formData.append("free_service_text", vehicle.freeServiceText);
+    formData.append("drivetrain", vehicle.drivetrain);
+    formData.append("body_type", vehicle.bodyType);
+    formData.append("duty_free_price_excl_vat", vehicle.dutyFreePriceExclVat);
+    formData.append("duty_paid_price_excl_vat", vehicle.dutyPaidPriceExclVat);
+    formData.append(
+      "price_list_date",
+      vehicle.priceListDate ? `${vehicle.priceListDate}-01` : ""
+    );
 
     vehicle.images.forEach((img) => formData.append("images", img));
 
@@ -134,14 +147,44 @@ const AddVehicle = () => {
       toast.success("✅ Vehicle added successfully!");
 
       setVehicle({
-        consignor_id: "", make: "", model: "", model_code: "", year: "",
-        condition: "used", catalogOnly: false, chassis_no: "", engine_no: "",
-        registration_no: "", mileage: "", color: "", transmission: "", fuel_type: "",
-        bestPrice: "", sellingPrice: "", dutyFreePrice: "", dutyPaidPrice: "",
-        negotiable: false, visible: true, description: "", stockQuantity: "1",
-        engineRating: "", maxPower: "", maxTorque: "", braking: "",
-        seatingCapacity: "", fuelTankLitres: "", suspension: "", tyreSize: "",
-        warrantyText: "", freeServiceText: "", images: [],
+        consignor_id: "",
+        make: "",
+        model: "",
+        model_code: "",
+        year: "",
+        condition: "used",
+        catalogOnly: false,
+        chassis_no: "",
+        engine_no: "",
+        registration_no: "",
+        mileage: "",
+        color: "",
+        transmission: "",
+        fuel_type: "",
+        bestPrice: "",
+        sellingPrice: "",
+        dutyFreePrice: "",
+        dutyPaidPrice: "",
+        negotiable: false,
+        visible: true,
+        description: "",
+        stockQuantity: "1",
+        engineRating: "",
+        maxPower: "",
+        maxTorque: "",
+        braking: "",
+        seatingCapacity: "",
+        fuelTankLitres: "",
+        suspension: "",
+        tyreSize: "",
+        warrantyText: "",
+        freeServiceText: "",
+        drivetrain: "",
+        bodyType: "",
+        dutyFreePriceExclVat: "",
+        dutyPaidPriceExclVat: "",
+        priceListDate: "",
+        images: [],
       });
       setPreviewImages([]);
     } catch (err) {
@@ -236,8 +279,30 @@ const AddVehicle = () => {
 
               <input name="fuel_type" placeholder="Fuel Type" value={vehicle.fuel_type}
                 onChange={handleChange} className="border border-gray-300 rounded-md p-2" />
+
+                <select
+                  name="drivetrain"
+                  value={vehicle.drivetrain}
+                  onChange={handleChange}
+                  className="border border-gray-300 rounded-md p-2"
+                >
+                  <option value="">Select Drivetrain</option>
+                  <option value="2WD">2WD</option>
+                  <option value="4WD">4WD</option>
+                  <option value="AWD">AWD</option>
+                </select>
+
+                <input
+                  name="bodyType"
+                  placeholder="Body/Cab Type (e.g. D-Cab, S-Cab, Wagon)"
+                  value={vehicle.bodyType}
+                  onChange={handleChange}
+                  className="border border-gray-300 rounded-md p-2"
+                />
             </div>
           </div>
+
+          
 
           {isNew && (
             <div>
@@ -279,12 +344,49 @@ const AddVehicle = () => {
 
               {isNew && (
                 <>
-                  <input name="dutyFreePrice" type="number" placeholder="Duty Free Price (KES)"
-                    value={vehicle.dutyFreePrice} onChange={handleChange}
-                    className="border border-gray-300 rounded-md p-2" />
-                  <input name="dutyPaidPrice" type="number" placeholder="Duty Paid Price (KES)"
-                    value={vehicle.dutyPaidPrice} onChange={handleChange}
-                    className="border border-gray-300 rounded-md p-2" />
+                  <input
+                    name="dutyFreePrice"
+                    type="number"
+                    placeholder="Duty Free Price (KES)"
+                    value={vehicle.dutyFreePrice}
+                    onChange={handleChange}
+                    className="border border-gray-300 rounded-md p-2"
+                  />
+
+                  <input
+                    name="dutyPaidPrice"
+                    type="number"
+                    placeholder="Duty Paid Price (KES)"
+                    value={vehicle.dutyPaidPrice}
+                    onChange={handleChange}
+                    className="border border-gray-300 rounded-md p-2"
+                  />
+
+                  <input
+                    name="dutyFreePriceExclVat"
+                    type="number"
+                    placeholder="Duty Free Price excl. VAT (KES)"
+                    value={vehicle.dutyFreePriceExclVat}
+                    onChange={handleChange}
+                    className="border border-gray-300 rounded-md p-2"
+                  />
+
+                  <input
+                    name="dutyPaidPriceExclVat"
+                    type="number"
+                    placeholder="Duty Paid Price excl. VAT (KES)"
+                    value={vehicle.dutyPaidPriceExclVat}
+                    onChange={handleChange}
+                    className="border border-gray-300 rounded-md p-2"
+                  />
+
+                  <input
+                    name="priceListDate"
+                    type="month"
+                    value={vehicle.priceListDate}
+                    onChange={handleChange}
+                    className="border border-gray-300 rounded-md p-2"
+                  />
                 </>
               )}
             </div>

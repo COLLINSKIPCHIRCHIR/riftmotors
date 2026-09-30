@@ -43,6 +43,13 @@ export const addVehicle = async (vehicleData) => {
     warranty_text,
     free_service_text,
     stock_quantity,
+
+    // New vehicle pricing/specification fields
+    drivetrain,
+    body_type,
+    duty_free_price_excl_vat,
+    duty_paid_price_excl_vat,
+    price_list_date,
   } = vehicleData;
 
   const query = `
@@ -79,13 +86,18 @@ export const addVehicle = async (vehicleData) => {
         tyre_size,
         warranty_text,
         free_service_text,
-        stock_quantity
+        stock_quantity,
+        duty_free_price_excl_vat,
+        duty_paid_price_excl_vat,
+        drivetrain,
+        body_type,
+        price_list_date
       )
     VALUES
       (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,
         $17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,
-        $31,$32
+        $31,$32,$33,$34,$35,$36,$37
       )
     RETURNING *;
   `;
@@ -125,6 +137,13 @@ export const addVehicle = async (vehicleData) => {
     warranty_text || null,
     free_service_text || null,
     stock_quantity ?? 1,
+
+    // New pricing/specification fields
+    duty_free_price_excl_vat || null,
+    duty_paid_price_excl_vat || null,
+    drivetrain || null,
+    body_type || null,
+    price_list_date || null,
   ];
 
   const result = await pool.query(query, values);
@@ -243,6 +262,13 @@ export const updateVehicle = async (id, vehicleData) => {
     warranty_text,
     free_service_text,
     stock_quantity,
+
+    // New vehicle pricing/specification fields
+    drivetrain,
+    body_type,
+    duty_free_price_excl_vat,
+    duty_paid_price_excl_vat,
+    price_list_date,
   } = vehicleData;
 
   const query = `
@@ -270,7 +296,7 @@ export const updateVehicle = async (id, vehicleData) => {
       status = $20,
       description = $21,
 
-      -- New fields
+      -- New vehicle specification fields
       engine_rating = $22,
       max_power = $23,
       max_torque = $24,
@@ -281,9 +307,16 @@ export const updateVehicle = async (id, vehicleData) => {
       tyre_size = $29,
       warranty_text = $30,
       free_service_text = $31,
-      stock_quantity = $32
+      stock_quantity = $32,
 
-    WHERE id = $33
+      -- New pricing/specification fields
+      drivetrain = $33,
+      body_type = $34,
+      duty_free_price_excl_vat = $35,
+      duty_paid_price_excl_vat = $36,
+      price_list_date = $37
+
+    WHERE id = $38
     RETURNING *;
   `;
 
@@ -310,7 +343,7 @@ export const updateVehicle = async (id, vehicleData) => {
     status || "available",
     description || null,
 
-    // New fields
+    // New vehicle specification fields
     engine_rating || null,
     max_power || null,
     max_torque || null,
@@ -322,6 +355,13 @@ export const updateVehicle = async (id, vehicleData) => {
     warranty_text || null,
     free_service_text || null,
     stock_quantity ?? 1,
+
+    // New pricing/specification fields
+    drivetrain || null,
+    body_type || null,
+    duty_free_price_excl_vat || null,
+    duty_paid_price_excl_vat || null,
+    price_list_date || null,
 
     id,
   ];

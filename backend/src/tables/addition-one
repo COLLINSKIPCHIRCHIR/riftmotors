@@ -561,3 +561,19 @@ ALTER TABLE service_receipt_items ADD COLUMN vatable boolean NOT NULL DEFAULT tr
 
 
 ALTER TABLE spareparts ALTER COLUMN part_number DROP NOT NULL;
+
+
+
+////9/29/2026
+-- migration: add missing pricing/spec fields to vehicles
+ALTER TABLE vehicles
+  ADD COLUMN IF NOT EXISTS duty_free_price_excl_vat NUMERIC,
+  ADD COLUMN IF NOT EXISTS duty_paid_price_excl_vat NUMERIC,
+  ADD COLUMN IF NOT EXISTS drivetrain VARCHAR(10),   -- '2WD' | '4WD' | 'AWD'
+  ADD COLUMN IF NOT EXISTS body_type VARCHAR(50),    -- 'D-Cab', 'S-Cab', 'Wagon', 'SUV', etc.
+  ADD COLUMN IF NOT EXISTS price_list_date DATE;     -- which month's price list this price came from
+
+COMMENT ON COLUMN vehicles.duty_free_price IS 'Duty free price, VAT inclusive';
+COMMENT ON COLUMN vehicles.duty_paid_price IS 'Duty paid price, VAT inclusive';
+COMMENT ON COLUMN vehicles.duty_free_price_excl_vat IS 'Duty free price, VAT exclusive';
+COMMENT ON COLUMN vehicles.duty_paid_price_excl_vat IS 'Duty paid price, VAT exclusive';
