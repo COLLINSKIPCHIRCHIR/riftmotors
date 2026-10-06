@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import API from "../api/api";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "../utils/apiError";
+
 
 const AddVehicle = () => {
   const [vehicle, setVehicle] = useState({
@@ -189,7 +191,7 @@ const AddVehicle = () => {
       setPreviewImages([]);
     } catch (err) {
       console.error("❌ Error adding vehicle:", err);
-      toast.error(err.response?.data?.error || "Error adding vehicle!");
+      toast.error(getApiErrorMessage(err, "Error adding vehicle"), { duration: 7000 });
     } finally {
       setSaving(false);
     }

@@ -1,5 +1,6 @@
 // src/controllers/vehicleController.js
-
+import fs from "fs/promises";
+import path from "path";
 import {
   addVehicle,
   getAllVehicles,
@@ -16,6 +17,76 @@ import {
 } from "../models/vehicleImageModel.js";
 
 import pool from "../config/db.js";
+
+
+/*
+|--------------------------------------------------------------------------
+| Database Error Helper
+|--------------------------------------------------------------------------
+*/
+
+const describeVehicleError = (error) => {
+  switch (error.code) {
+    case "23505":
+      return {
+        status: 409,
+        message: `Duplicate value: ${
+          error.detail || error.constraint
+        }. A vehicle with this chassis/registration number may already exist.`,
+      };
+
+    case "23502":
+      return {
+        status: 400,
+        message: `Missing required field: "${error.column}".`,
+      };
+
+    case "23503":
+      return {
+        status: 400,
+        message: "The selected consignor does not exist.",
+      };
+
+    case "22P02":
+      return {
+        status: 400,
+        message: `A field has an invalid format (${error.message}). Check the number and date fields.`,
+      };
+
+    case "22003":
+      return {
+        status: 400,
+        message: "A number is too large for its field.",
+      };
+
+    case "42703":
+      return {
+        status: 500,
+        message: `Database is missing a column (${error.message}). Run the latest migration on this server.`,
+      };
+
+    case "42P01":
+      return {
+        status: 500,
+        message: `Database table missing (${error.message}).`,
+      };
+
+    case "EACCES":
+    case "ENOENT":
+      return {
+        status: 500,
+        message:
+          "The server cannot write to the uploads folder. Check folder permissions.",
+      };
+
+    default:
+      return {
+        status: 500,
+        message:
+          "Server error while saving the vehicle. Check the server logs.",
+      };
+  }
+};
 
 
 /*
@@ -69,10 +140,17 @@ export const createVehicle = async (req, res) => {
   } catch (error) {
     await client.query("ROLLBACK");
 
-    console.error("❌ Error adding vehicle:", error);
+    console.error("❌ Error adding vehicle:", {
+      code: error.code,
+      detail: error.detail,
+      constraint: error.constraint,
+      message: error.message,
+    });
 
-    res.status(500).json({
-      error: "Server error while adding vehicle",
+    const { status, message } = describeVehicleError(error);
+
+    res.status(status).json({
+      error: message,
     });
   } finally {
     client.release();
@@ -163,10 +241,17 @@ export const editVehicle = async (req, res) => {
       vehicle: updatedVehicle,
     });
   } catch (error) {
-    console.error("❌ Error updating vehicle:", error);
+    console.error("❌ Error updating vehicle:", {
+      code: error.code,
+      detail: error.detail,
+      constraint: error.constraint,
+      message: error.message,
+    });
 
-    res.status(500).json({
-      error: "Server error while updating vehicle",
+    const { status, message } = describeVehicleError(error);
+
+    res.status(status).json({
+      error: message,
     });
   }
 };
@@ -300,24 +385,38 @@ export const makeImagePrimary = async (req, res) => {
 
 export const removeVehicle = async (req, res) => {
   try {
-    const deletedVehicle = await deleteVehicle(
-      req.params.id
-    );
+    const deletedVehicle = await deleteVehicle(req.params.id);
 
     if (!deletedVehicle) {
-      return res.status(404).json({
-        error: "Vehicle not found",
+      return res.status(404).json({ error: "Vehicle not found" });
+    }
+
+    // Remove image files from disk (after the DB delete succeeded)
+    await Promise.allSettled(
+      (deletedVehicle.deletedImagePaths || [])
+        .filter((p) => p && p.startsWith("/uploads/"))
+        .map((p) =>
+          fs.unlink(path.join(process.cwd(), "uploads", path.basename(p)))
+        )
+    );
+
+    res.json({ message: "✅ Vehicle deleted successfully" });
+  } catch (error) {
+    console.error("❌ Error deleting vehicle:", {
+      code: error.code,
+      detail: error.detail,
+      table: error.table,
+      message: error.message,
+    });
+
+    if (error.code === "23503") {
+      return res.status(409).json({
+        error:
+          "This vehicle can't be deleted because it is used in other records (quotes, invoices or delivery notes). " +
+          "Set its status to Sold or hide it from inventory instead.",
       });
     }
 
-    res.json({
-      message: "✅ Vehicle deleted successfully",
-    });
-  } catch (error) {
-    console.error("❌ Error deleting vehicle:", error);
-
-    res.status(500).json({
-      error: "Server error while deleting vehicle",
-    });
+    res.status(500).json({ error: "Server error while deleting vehicle" });
   }
 };

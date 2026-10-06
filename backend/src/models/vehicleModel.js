@@ -439,13 +439,36 @@ export const adjustVehicleStock = async (id, delta) => {
 */
 
 export const deleteVehicle = async (id) => {
-  const query = `
-    DELETE FROM vehicles
-    WHERE id = $1
-    RETURNING *;
-  `;
+  const client = await pool.connect();
 
-  const result = await pool.query(query, [id]);
+  try {
+    await client.query("BEGIN");
 
-  return result.rows[0];
+    const images = await client.query(
+      `DELETE FROM vehicle_images WHERE vehicle_id = $1 RETURNING image_url`,
+      [id]
+    );
+
+    const vehicle = await client.query(
+      `DELETE FROM vehicles WHERE id = $1 RETURNING *`,
+      [id]
+    );
+
+    if (!vehicle.rows[0]) {
+      await client.query("ROLLBACK");
+      return null;
+    }
+
+    await client.query("COMMIT");
+
+    return {
+      ...vehicle.rows[0],
+      deletedImagePaths: images.rows.map((r) => r.image_url),
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 };

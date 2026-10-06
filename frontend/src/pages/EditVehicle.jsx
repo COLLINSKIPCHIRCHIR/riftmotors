@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import API, { API_ORIGIN } from "../api/api";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "../utils/apiError";
+
 
 const makes = ["Toyota", "Nissan", "Subaru", "Ford", "Mazda", "Isuzu", "GWM", "Suzuki", "Haval", "Ora"];
 
@@ -207,8 +209,7 @@ const EditVehicle = () => {
       navigate("/admin/vehicles");
     } catch (err) {
       console.error("❌ Error updating vehicle:", err);
-      toast.error(err.response?.data?.error || "Error updating vehicle!");
-    } finally {
+      toast.error(getApiErrorMessage(err, "Error updating vehicle"), { duration: 7000 });
       setSaving(false);
     }
   };

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import API, { API_ORIGIN } from "../api/api";
 import { useNavigate } from "react-router-dom";
 import { hasPermission } from "../utils/permissions";
+import toast from "react-hot-toast";
+
 
 const VehicleInventory = () => {
   const [vehicles, setVehicles] = useState([]);
@@ -20,6 +22,9 @@ const VehicleInventory = () => {
     }
   };
 
+
+
+
   useEffect(() => { fetchVehicles(); }, []);
 
   const filtered = vehicles.filter((v) => filter === "all" || v.condition === filter);
@@ -36,6 +41,24 @@ const VehicleInventory = () => {
     if (url.startsWith("http://") || url.startsWith("https://")) return url;
     return `${API_ORIGIN}${url}`;
   };
+
+
+  const handleDelete = async (v) => {
+  const name = `${v.make} ${v.model} (${v.year})`;
+  if (!window.confirm(`Delete ${name}?\n\nThis permanently removes the vehicle and its photos and cannot be undone.`)) return;
+
+  try {
+    await API.delete(`/vehicles/${v.id}`);
+    setVehicles((prev) => prev.filter((x) => x.id !== v.id));
+    toast.success("Vehicle deleted");
+  } catch (err) {
+    console.error("❌ Error deleting vehicle:", err);
+    toast.error(
+      err.response?.data?.error || "Could not delete vehicle. Check your connection and try again.",
+      { duration: 7000 }
+    );
+  }
+};
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
@@ -120,6 +143,13 @@ const VehicleInventory = () => {
                               <button onClick={() => navigate(`/admin/vehicles/${v.id}/edit`)}
                                 className="text-green-600 hover:underline text-sm">
                                 Edit
+                              </button>
+                            )}
+
+                            {hasPermission("vehicles.delete") && (
+                              <button onClick={() => handleDelete(v)}
+                                className="text-red-600 hover:underline text-sm">
+                                Delete
                               </button>
                             )}
                       </td>
