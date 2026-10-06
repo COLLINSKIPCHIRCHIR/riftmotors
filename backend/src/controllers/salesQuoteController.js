@@ -1,5 +1,5 @@
 // src/controllers/salesQuoteController.js
-import { createQuote, getAllQuotes, getQuoteById, updateQuoteStatus } from "../models/salesQuoteModel.js";
+import { createQuote, getAllQuotes, getQuoteById, updateQuoteStatus, getLastBankDetails, updateQuoteBankDetails,  } from "../models/salesQuoteModel.js";
 
 export const createSalesQuote = async (req, res) => {
   try {
@@ -48,5 +48,28 @@ export const changeQuoteStatus = async (req, res) => {
   } catch (error) {
     console.error("❌ Error updating quote status:", error);
     res.status(400).json({ error: error.message || "Server error while updating quote status" });
+  }
+};
+
+
+
+export const fetchLastBankDetails = async (req, res) => {
+  try {
+    const details = await getLastBankDetails();
+    res.json(details || {});
+  } catch (error) {
+    console.error("❌ Error fetching last bank details:", error);
+    res.status(500).json({ error: "Server error while fetching bank details" });
+  }
+};
+
+export const changeBankDetails = async (req, res) => {
+  try {
+    const updated = await updateQuoteBankDetails(req.params.id, req.body);
+    if (!updated) return res.status(404).json({ error: "Quote not found" });
+    res.json({ message: "✅ Bank details updated", quote: updated });
+  } catch (error) {
+    console.error("❌ Error updating bank details:", error);
+    res.status(400).json({ error: error.message || "Server error while updating bank details" });
   }
 };

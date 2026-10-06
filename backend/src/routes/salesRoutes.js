@@ -10,6 +10,8 @@ router.post("/", createSale);
 // ✅ Get all sales
 router.get("/", fetchAllSales);
 
+
+
 // ✅ Get single sale by ID
 router.get("/:id", fetchSaleById);
 

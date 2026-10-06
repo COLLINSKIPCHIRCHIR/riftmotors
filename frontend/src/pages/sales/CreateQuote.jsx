@@ -22,6 +22,10 @@ const CreateQuote = () => {
     registration_fee: "",
     valid_until: "",
     quote_ref: "", // optional — leave blank to auto-generate
+    bank_name: "",
+    bank_account_name: "",
+    bank_account_no: "",
+    bank_branch: "",
   });
 
   const [items, setItems] = useState([]); // [{ item_name, price, quantity }]
@@ -85,6 +89,26 @@ const CreateQuote = () => {
   }, [form.quoted_price, itemsTotal, vatManuallyEdited]);
 
   const resetVatToAuto = () => setVatManuallyEdited(false);
+
+    const useLastBankDetails = async () => {
+    try {
+      const res = await API.get("/sales-quotes/last-bank-details");
+      if (!res.data || !res.data.bank_name) {
+        toast("No previous bank details found");
+        return;
+      }
+      setForm((prev) => ({
+        ...prev,
+        bank_name: res.data.bank_name || "",
+        bank_account_name: res.data.bank_account_name || "",
+        bank_account_no: res.data.bank_account_no || "",
+        bank_branch: res.data.bank_branch || "",
+      }));
+    } catch (err) {
+      console.error(err);
+      toast.error("Could not load previous bank details");
+    }
+  };
 
   const grandTotal =
     (Number(form.quoted_price) || 0)
@@ -217,6 +241,32 @@ const CreateQuote = () => {
                 onChange={handleChange} className="border border-gray-300 rounded-md p-2" />
               <input name="trade_in_amount" type="number" placeholder="Trade-in Deduction (KES)"
                 value={form.trade_in_amount} onChange={handleChange}
+                className="border border-gray-300 rounded-md p-2" />
+            </div>
+          </div>
+
+          <div className="border-t pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-semibold text-gray-700">
+                Payment Details <span className="text-gray-400 font-normal">(shown on the proforma)</span>
+              </p>
+              <button type="button" onClick={useLastBankDetails}
+                className="text-blue-600 text-sm hover:underline">
+                Use last quote's details
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <input name="bank_name" placeholder="Bank (e.g. Equity Bank)"
+                value={form.bank_name} onChange={handleChange}
+                className="border border-gray-300 rounded-md p-2" />
+              <input name="bank_branch" placeholder="Branch"
+                value={form.bank_branch} onChange={handleChange}
+                className="border border-gray-300 rounded-md p-2" />
+              <input name="bank_account_name" placeholder="Account Name"
+                value={form.bank_account_name} onChange={handleChange}
+                className="border border-gray-300 rounded-md p-2" />
+              <input name="bank_account_no" placeholder="Account No."
+                value={form.bank_account_no} onChange={handleChange}
                 className="border border-gray-300 rounded-md p-2" />
             </div>
           </div>

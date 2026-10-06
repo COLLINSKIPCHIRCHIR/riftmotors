@@ -10,6 +10,7 @@ import AdminLayout from "./layouts/AdminLayout";
 // ✅ Import admin pages
 import AdminDashboard from "./pages/AdminDashboard";
 import AddVehicle from "./pages/AddVehicle";
+import EditVehicle from "./pages/EditVehicle";
 import VehicleInventory from "./pages/VehicleInventory";
 import VehicleDetail from "./pages/vehicles/VehicleDetails";
 import SellVehicle from "./pages/SellVehicle";
@@ -142,6 +143,7 @@ function App() {
 
           {/* ✅ Vehicle Sales Dropdown Pages */}
           <Route path="vehicles/add" element={<RequirePermission permission="vehicles.create"><AddVehicle /></RequirePermission>} />
+          <Route path="vehicles/:id/edit" element={<RequirePermission permission="vehicles.edit"><EditVehicle /></RequirePermission>} />
           <Route path="vehicles" element={<RequirePermission permission="vehicles.view"><VehicleInventory /></RequirePermission>} />
           <Route path="vehicles/:id" element={<RequirePermission permission="vehicles.view"><VehicleDetail /></RequirePermission>} />
           <Route path="vehicles/sell" element={<RequirePermission permission="vehicles.sell"><SellVehicle /></RequirePermission>} />

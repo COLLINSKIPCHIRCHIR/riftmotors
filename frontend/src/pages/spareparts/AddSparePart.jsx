@@ -135,6 +135,8 @@ export default function AddSparePart() {
               placeholder="Quantity"
               value={formData.quantity}
               onChange={handleChange}
+              step="0.01"
+              min="0"
               className="w-full p-3 border rounded-lg"
             />
 

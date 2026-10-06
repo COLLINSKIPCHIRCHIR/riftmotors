@@ -128,22 +128,27 @@ export default function EditSparePart() {
           </div>
 
           {[
-            { name: "quantity", label: "Quantity" },
-            { name: "buying_price", label: "Buying Price (Ksh)" },
-            { name: "selling_price", label: "Selling Price (Ksh)" },
-            { name: "discount", label: "Discount %" },
-          ].map((f) => (
-            <div key={f.name}>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">{f.label}</label>
-              <input
-                type="number"
-                name={f.name}
-                value={form[f.name]}
-                onChange={handleChange}
-                className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-          ))}
+  { name: "quantity", label: "Quantity", step: "0.01", min: "0" },
+  { name: "buying_price", label: "Buying Price (Ksh)", step: "0.01", min: "0" },
+  { name: "selling_price", label: "Selling Price (Ksh)", step: "0.01", min: "0" },
+  { name: "discount", label: "Discount %", step: "0.01", min: "0" },
+            ].map((f) => (
+              <div key={f.name}>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  {f.label}
+                </label>
+
+                <input
+                  type="number"
+                  name={f.name}
+                  value={form[f.name]}
+                  onChange={handleChange}
+                  step={f.step}
+                  min={f.min}
+                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+            ))}
 
           <div className="md:col-span-2 flex gap-3 pt-2">
             <button

@@ -115,6 +115,13 @@ const VehicleInventory = () => {
                           className="text-gray-600 hover:underline text-sm">
                           View
                         </button>
+
+                           {hasPermission("vehicles.edit") && (
+                              <button onClick={() => navigate(`/admin/vehicles/${v.id}/edit`)}
+                                className="text-green-600 hover:underline text-sm">
+                                Edit
+                              </button>
+                            )}
                       </td>
                     </tr>
                   );

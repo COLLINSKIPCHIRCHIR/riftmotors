@@ -24,6 +24,10 @@ export const createQuote = async (quoteData) => {
     valid_until,
     created_by,
     quote_ref: manualQuoteRef, // optional manual override
+    bank_name,
+    bank_account_name,
+    bank_account_no,
+    bank_branch,
     items,
   } = quoteData;
 
@@ -46,20 +50,25 @@ export const createQuote = async (quoteData) => {
       + Number(vat_amount || 0)
       + Number(registration_fee || 0);
 
-    const insertQuery = `
-      INSERT INTO sales_quotes
-        (quote_ref, vehicle_id, customer_id, quoted_price, trade_in_reg_no,
-         trade_in_amount, vat_amount, registration_fee, total_price,
-         valid_until, status, created_by)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pending',$11)
-      RETURNING *;
-    `;
-    const values = [
-      quote_ref, vehicle_id, customer_id, quoted_price,
-      trade_in_reg_no || null, trade_in_amount || 0,
-      vat_amount || 0, registration_fee || 0, total_price,
-      valid_until || null, created_by || null,
-    ];
+        const insertQuery = `
+          INSERT INTO sales_quotes
+            (quote_ref, vehicle_id, customer_id, quoted_price, trade_in_reg_no,
+            trade_in_amount, vat_amount, registration_fee, total_price,
+            valid_until, status, created_by,
+            bank_name, bank_account_name, bank_account_no, bank_branch)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pending',$11,$12,$13,$14,$15)
+          RETURNING *;
+        `;
+        const values = [
+          quote_ref, vehicle_id, customer_id, quoted_price,
+          trade_in_reg_no || null, trade_in_amount || 0,
+          vat_amount || 0, registration_fee || 0, total_price,
+          valid_until || null, created_by || null,
+          bank_name?.trim() || null,
+          bank_account_name?.trim() || null,
+          bank_account_no?.trim() || null,
+          bank_branch?.trim() || null,
+        ];
 
     let result;
     try {
@@ -159,6 +168,48 @@ export const updateQuoteStatus = async (id, status) => {
   const result = await pool.query(
     `UPDATE sales_quotes SET status = $1 WHERE id = $2 RETURNING *`,
     [status, id]
+  );
+  return result.rows[0];
+};
+
+
+export const getLastBankDetails = async () => {
+  const result = await pool.query(
+    `SELECT bank_name, bank_account_name, bank_account_no, bank_branch
+     FROM sales_quotes
+     WHERE bank_name IS NOT NULL OR bank_account_no IS NOT NULL
+     ORDER BY created_at DESC
+     LIMIT 1;`
+  );
+  return result.rows[0] || null;
+};
+
+
+export const updateQuoteBankDetails = async (id, details) => {
+  const existing = await pool.query(
+    `SELECT status FROM sales_quotes WHERE id = $1`,
+    [id]
+  );
+  if (existing.rows.length === 0) return null;
+  if (existing.rows[0].status !== "pending") {
+    throw new Error("Bank details can only be edited on pending quotes");
+  }
+
+  const { bank_name, bank_account_name, bank_account_no, bank_branch } = details;
+
+  const result = await pool.query(
+    `UPDATE sales_quotes
+     SET bank_name = $1, bank_account_name = $2,
+         bank_account_no = $3, bank_branch = $4
+     WHERE id = $5
+     RETURNING *`,
+    [
+      bank_name?.trim() || null,
+      bank_account_name?.trim() || null,
+      bank_account_no?.trim() || null,
+      bank_branch?.trim() || null,
+      id,
+    ]
   );
   return result.rows[0];
 };

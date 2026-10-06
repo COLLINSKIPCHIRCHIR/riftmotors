@@ -40,6 +40,15 @@ const QuoteDetails = () => {
   const [quote, setQuote] = useState(null);
   const [converting, setConverting] = useState(false);
 
+  const [editingBank, setEditingBank] = useState(false);
+  const [savingBank, setSavingBank] = useState(false);
+  const [bankForm, setBankForm] = useState({
+    bank_name: "",
+    bank_account_name: "",
+    bank_account_no: "",
+    bank_branch: "",
+  });
+
   const printRef = useRef();
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -62,6 +71,35 @@ const QuoteDetails = () => {
     toast.success("Quote cancelled");
 
     fetchQuote();
+  };
+
+    const startEditBank = () => {
+    setBankForm({
+      bank_name: quote.bank_name || "",
+      bank_account_name: quote.bank_account_name || "",
+      bank_account_no: quote.bank_account_no || "",
+      bank_branch: quote.bank_branch || "",
+    });
+    setEditingBank(true);
+  };
+
+  const handleBankChange = (e) => {
+    setBankForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const saveBankDetails = async () => {
+    setSavingBank(true);
+    try {
+      await API.patch(`/sales-quotes/${id}/bank-details`, bankForm);
+      toast.success("Bank details updated");
+      setEditingBank(false);
+      fetchQuote();
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.error || "Could not update bank details");
+    } finally {
+      setSavingBank(false);
+    }
   };
 
   const handleConvertToInvoice = async () => {
@@ -812,9 +850,20 @@ const QuoteDetails = () => {
 
           <div className="text-[11px] print:text-[10px] mt-6 print:mt-5">
 
-            <p className="font-bold mb-1 print:mb-0.5">
-              Amounts are payable to:
-            </p>
+            <div className="flex items-center gap-2 mb-1 print:mb-0.5">
+              <p className="font-bold">
+                Amounts are payable to:
+              </p>
+
+              {quote.status === "pending" && !editingBank && (
+                <button
+                  onClick={startEditBank}
+                  className="capture-hide print:hidden text-blue-600 text-[10px] hover:underline"
+                >
+                  Edit
+                </button>
+              )}
+            </div>
 
             <p className="mt-2 print:mt-1">
               Bank: {field(quote.bank_name)}
@@ -1154,6 +1203,41 @@ const QuoteDetails = () => {
           </button>
 
         </div>
+
+
+        {editingBank && (
+          <div className="my-3 p-3 border rounded-md bg-gray-50 print:hidden capture-hide">
+            <p className="text-sm font-semibold text-gray-700 mb-2">
+              Edit Payment Details
+            </p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <input name="bank_name" placeholder="Bank"
+                value={bankForm.bank_name} onChange={handleBankChange}
+                className="border border-gray-300 rounded-md p-2 text-sm" />
+              <input name="bank_branch" placeholder="Branch"
+                value={bankForm.bank_branch} onChange={handleBankChange}
+                className="border border-gray-300 rounded-md p-2 text-sm" />
+              <input name="bank_account_name" placeholder="Account Name"
+                value={bankForm.bank_account_name} onChange={handleBankChange}
+                className="border border-gray-300 rounded-md p-2 text-sm" />
+              <input name="bank_account_no" placeholder="Account No."
+                value={bankForm.bank_account_no} onChange={handleBankChange}
+                className="border border-gray-300 rounded-md p-2 text-sm" />
+            </div>
+
+            <div className="flex justify-end gap-2 mt-3">
+              <button onClick={() => setEditingBank(false)}
+                className="px-4 py-1.5 rounded border text-sm">
+                Cancel
+              </button>
+              <button onClick={saveBankDetails} disabled={savingBank}
+                className="bg-blue-700 text-white px-4 py-1.5 rounded text-sm disabled:opacity-50">
+                {savingBank ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        )}
 
 
         {/* =====================================================
