@@ -1,26 +1,44 @@
 // src/middleware/compressImages.js
-import sharp from "sharp";
 import path from "path";
 import fs from "fs/promises";
 
-const MAX_DIMENSION = 1600; // longest side in pixels
+const MAX_DIMENSION = 1600;
 const WEBP_QUALITY = 80;
+
+// Load sharp lazily so a missing/unsupported sharp can never crash the API
+let sharpPromise = null;
+const loadSharp = () => {
+  if (!sharpPromise) {
+    sharpPromise = import("sharp")
+      .then((m) => m.default)
+      .catch((err) => {
+        console.warn(
+          "⚠️ sharp unavailable, images will be stored without compression:",
+          err.message.split("\n")[0]
+        );
+        return null;
+      });
+  }
+  return sharpPromise;
+};
 
 export const compressImages = async (req, res, next) => {
   if (!req.files || req.files.length === 0) return next();
+
+  const sharp = await loadSharp();
+  if (!sharp) return next(); // keep originals
 
   const created = [];
 
   try {
     await Promise.all(
       req.files.map(async (file) => {
-        // "-opt" avoids input and output being the same path for .webp uploads
         const outName = `${path.parse(file.filename).name}-opt.webp`;
         const outPath = path.join(file.destination, outName);
         created.push(outPath);
 
         await sharp(file.path)
-          .rotate() // apply EXIF orientation so phone photos aren't sideways
+          .rotate()
           .resize({
             width: MAX_DIMENSION,
             height: MAX_DIMENSION,
@@ -30,7 +48,7 @@ export const compressImages = async (req, res, next) => {
           .webp({ quality: WEBP_QUALITY })
           .toFile(outPath);
 
-        await fs.unlink(file.path); // delete the large original
+        await fs.unlink(file.path);
 
         const { size } = await fs.stat(outPath);
         file.filename = outName;
@@ -44,7 +62,6 @@ export const compressImages = async (req, res, next) => {
   } catch (err) {
     console.error("❌ Image compression failed:", err);
 
-    // Remove anything we wrote or received so no orphan files are left
     await Promise.allSettled([
       ...created.map((p) => fs.unlink(p)),
       ...req.files.map((f) => fs.unlink(f.path)),
