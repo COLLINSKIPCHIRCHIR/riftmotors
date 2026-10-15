@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { getBusinessInvoiceReport } from "../api/reports";
 import toast from "react-hot-toast";
+import * as XLSX from "xlsx";
+
 
 const PRESETS = [
   { key: "today", label: "Today" },
@@ -55,6 +57,56 @@ export default function Reports() {
     setFrom("");
     setTo("");
   };
+
+  const exportToExcel = () => {
+  if (!rows.length) {
+    toast.error("No data to export");
+    return;
+  }
+
+  // Sheet 1: invoices (numbers stay numeric so Excel can sum them)
+  const invoiceData = rows.map((r) => ({
+    Type: r.type,
+    "Invoice #": r.invoice_number,
+    Customer: r.customer_name || "N/A",
+    Date: new Date(r.date).toLocaleDateString("en-KE", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }),
+    Total: Number(r.total || 0),
+    Paid: Number(r.amount_paid || 0),
+    Balance: Number(r.balance || 0),
+    Status: r.status,
+    "Receipt #": r.receipt_number || "",
+    "Payment Method": r.payment_method || "",
+  }));
+
+  const invoiceSheet = XLSX.utils.json_to_sheet(invoiceData);
+  invoiceSheet["!cols"] = [
+    { wch: 12 }, { wch: 16 }, { wch: 24 }, { wch: 14 }, { wch: 14 },
+    { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 16 }, { wch: 16 },
+  ];
+
+  // Sheet 2: summary
+  const summaryData = [
+    ["Period", `${range.from} to ${range.to}`],
+    ["Type", TYPES.find((t) => t.key === type)?.label],
+    [],
+    ["Total Invoiced", Number(summary?.total_invoiced || 0)],
+    ["Total Paid", Number(summary?.total_paid || 0)],
+    ["Outstanding", Number(summary?.total_outstanding || 0)],
+    ["Invoice Count", Number(summary?.count || 0)],
+  ];
+  const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+  summarySheet["!cols"] = [{ wch: 18 }, { wch: 28 }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, invoiceSheet, "Invoices");
+  XLSX.utils.book_append_sheet(wb, summarySheet, "Summary");
+
+  XLSX.writeFile(wb, `invoice-report_${range.from}_to_${range.to}.xlsx`);
+};
 
   const statusBadge = (status) => {
     const styles = {
@@ -140,6 +192,14 @@ export default function Reports() {
             className="bg-blue-600 text-white px-5 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-60"
           >
             {loading ? "Loading..." : "Apply"}
+          </button>
+
+          <button
+            onClick={exportToExcel}
+            disabled={loading || rows.length === 0}
+            className="bg-emerald-600 text-white px-5 py-2 rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-60"
+          >
+            Export Excel
           </button>
         </div>
 
