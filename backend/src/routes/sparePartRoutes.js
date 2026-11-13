@@ -10,7 +10,7 @@ import {
   fetchInventoryStats,
   exportSpareParts, 
 } from "../controllers/sparePartController.js";
-import { validateSparePart } from "../validators/sparePartValidators.js";
+import { validateSparePart, validateSparePartUpdate } from "../validators/sparePartValidators.js";
 import { validateRequest } from "../middleware/validateRequest.js";
 
 
@@ -23,7 +23,7 @@ router.get("/stats", fetchInventoryStats);
 router.get("/low-stock", fetchLowStockParts);
 router.get("/export", exportSpareParts); // ← added, must stay above "/:id"
 router.get("/:id", fetchSparePart);
-router.put("/:id", validateSparePart, validateRequest, editSparePart);
+router.put("/:id", validateSparePartUpdate, validateRequest, editSparePart);
 router.delete("/:id", removeSparePart);
 
 export default router;

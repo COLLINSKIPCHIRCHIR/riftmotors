@@ -3,6 +3,8 @@ import API from "../../api/api";
 import { FaEdit, FaTrash, FaSearch, FaSort, FaFileExcel, FaChevronDown } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
+import toast from "react-hot-toast";
+import { getApiErrorMessage } from "../../utils/apiError";
 
 const Card = ({ title, value }) => (
   <div className="bg-white border rounded-xl p-4 shadow-sm">
@@ -226,18 +228,23 @@ export default function SparepartsInventory() {
   // ===========================
   // Delete
   // ===========================
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this spare part?")) return;
 
-    try {
-      await API.delete(`/spareparts/${id}`);
+const handleDelete = async (id) => {
+  if (!window.confirm("Delete this spare part?")) return;
 
-      loadSpareparts();
-      loadInventoryStats();
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  try {
+    await API.delete(`/spareparts/${id}`);
+
+    toast.success("Spare part deleted successfully");
+
+    loadSpareparts();
+    loadInventoryStats();
+  } catch (err) {
+    toast.error(
+      getApiErrorMessage(err, "Could not delete the spare part")
+    );
+  }
+};
 
  return (
   <div className="p-6 min-h-screen bg-gray-100">

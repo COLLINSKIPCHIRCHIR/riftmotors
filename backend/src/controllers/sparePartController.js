@@ -16,6 +16,12 @@ export const createSparePart = async (req, res, next) => {
     const part = await addSparePart(req.body);
     res.status(201).json(part);
   } catch (error) {
+    if (error.code === "23505")
+      return res.status(409).json({ message: "Another spare part already uses this part number" });
+    if (error.code === "23503")
+      return res.status(400).json({ message: "The selected supplier does not exist" });
+    if (error.code === "22001")
+      return res.status(400).json({ message: "One of the text values is too long" });
     next(error);
   }
 };
@@ -57,8 +63,15 @@ export const fetchSparePart = async (req, res, next) => {
 export const editSparePart = async (req, res, next) => {
   try {
     const updated = await updateSparePart(req.params.id, req.body);
+    if (!updated) return res.status(404).json({ message: "Spare part not found or already deleted" });
     res.json(updated);
   } catch (error) {
+    if (error.code === "23505")
+      return res.status(409).json({ message: "Another spare part already uses this part number" });
+    if (error.code === "23503")
+      return res.status(400).json({ message: "The selected supplier does not exist" });
+    if (error.code === "22001")
+      return res.status(400).json({ message: "One of the text values is too long" });
     next(error);
   }
 };

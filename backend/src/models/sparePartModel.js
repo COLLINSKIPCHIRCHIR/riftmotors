@@ -28,13 +28,28 @@ const buildOrderBy = (sortField, sortOrder) => {
 };
 
 
+
+const clean = (data) => ({
+  ...data,
+  part_number: data.part_number?.toString().trim() || null,
+  name: data.name?.toString().trim(),
+  quantity: Number(data.quantity) || 0,
+  buying_price: Number(data.buying_price) || 0,
+  selling_price: Number(data.selling_price) || 0,
+  discount: Number(data.discount) || 0,
+  supplier_id: data.supplier_id || null,
+  supplier: data.supplier || null,
+});
+
+
 /* =========================================================
    1️⃣  ADD SPARE PART
    Supports:
    - supplier_id (system supplier)
    - supplier (manual text supplier)
 ========================================================= */
-export const addSparePart = async (data) => {
+export const addSparePart = async (raw) => {
+  const data = clean(raw);
   const query = `
     INSERT INTO spareparts (
       part_number,
@@ -130,7 +145,8 @@ export const getSparePartById = async (id) => {
    4️⃣  UPDATE SPARE PART
    Supports hybrid supplier update
 ========================================================= */
-export const updateSparePart = async (id, data) => {
+export const updateSparePart = async (id, raw) => {
+  const data = clean(raw);
   const query = `
     UPDATE spareparts
     SET part_number = $1,
