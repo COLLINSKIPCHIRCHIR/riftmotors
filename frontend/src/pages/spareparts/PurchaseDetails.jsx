@@ -308,7 +308,7 @@ const PurchaseDetails = () => {
                 </svg>
                 riftmotorsltd@gmail.com
               </p>
-              <p className="font-bold text-black text-[12px]">PIN: PO51561799Q</p>
+              <p className="font-bold text-black text-[12px]">PIN: P051551799Q</p>
             </div>
           </div>
 
@@ -542,7 +542,7 @@ const PurchaseDetails = () => {
             <tbody>
               <tr>
                 <td className="border border-black px-2 py-1 font-bold bg-gray-50">Company VAT Number</td>
-                <td className="border border-black px-2 py-1">PO51561799Q</td>
+                <td className="border border-black px-2 py-1">P051551799Q</td>
               </tr>
             </tbody>
           </table>

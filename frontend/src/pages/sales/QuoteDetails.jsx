@@ -516,7 +516,7 @@ const QuoteDetails = () => {
             </p>
 
             <p className="font-bold text-black text-[12px] print:text-[10px]">
-              PIN: PO51561799Q
+              PIN: P051551799Q
             </p>
           </div>
         </div>

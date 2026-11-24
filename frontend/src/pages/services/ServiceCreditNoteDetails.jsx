@@ -314,7 +314,7 @@ const handleRestockToggle = (itemId) => {
               <p>KFA - Show Ground Road, Nakuru</p>
               <p>+254 790 406 996</p>
               <p>info@riftmotors.com</p>
-              <p className="font-bold text-black text-[12px]">PIN: PO51561799Q</p>
+              <p className="font-bold text-black text-[12px]">PIN: P051551799Q</p>
             </div>
           </div>
 

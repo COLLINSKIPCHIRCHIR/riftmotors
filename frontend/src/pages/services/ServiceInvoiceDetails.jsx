@@ -498,7 +498,7 @@ const handleSubmitCreditNote = async () => {
                 riftmotorsltd@gmail.com
               </p>
               {/* PIN bumped up from the surrounding 9px block to 12px for visibility */}
-              <p className="font-bold text-black text-[12px]">PIN: PO51561799Q</p>
+              <p className="font-bold text-black text-[12px]">PIN: P051551799Q</p>
             </div>
 
           </div>
